@@ -1,2 +1,2 @@
-# yanco-art
-This is a personal project which would be a peronsonal art gallery.
+# This is a personal project which would be a personal art gallery. This project is done with learning purposes, and does not intent to generate any type of monetization, sell or similar.
+# This will be a project to practice, learn and develop coding skills as well as expand knowledge.
