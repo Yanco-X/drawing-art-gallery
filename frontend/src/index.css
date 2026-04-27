@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  /* Colors from DESIGN.md (Gallery Minimalist Dark) */
+  --color-surface: #141311;
+  --color-surface-dim: #141311;
+  --color-surface-bright: #3a3937;
+  --color-surface-container-lowest: #0f0e0c;
+  --color-surface-container-low: #1c1c19;
+  --color-surface-container: #20201d;
+  --color-surface-container-high: #2b2a28;
+  --color-surface-container-highest: #363532;
+
+  --color-on-surface: #e6e2de;
+  --color-on-surface-variant: #cac6bb;
+
+  --color-primary: #ffffff;
+  --color-on-primary: #323120;
+  --color-primary-container: #e7e3ca;
+  --color-on-primary-container: #676551;
+
+  --color-secondary: #cac6bb;
+  --color-on-secondary: #323129;
+  --color-secondary-container: #48473e;
+  --color-on-secondary-container: #b8b5aa;
+
+  --color-background: #141311;
+  --color-on-background: #e6e2de;
+
+  --color-outline: #939186;
+  --color-outline-variant: #48473e;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased;
+  }
+}
