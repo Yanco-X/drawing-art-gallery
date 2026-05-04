@@ -37,14 +37,14 @@ This document establishes the basic rules and guidelines for AI agents working o
 ## 7. Context & References
 - Take into account md files for context, these files are meant to be read.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
-- @project-overview.md contains full in depth description of the project, its goals, and context.
-- @DESIGN.md contains the design guidelines and rules.
-- @PROJECT.md contains the project pillars, goals.
-- @STRUCTURE.md contains the project structure.
+- @context/project-overview.md contains full in depth description of the project, its goals, and context.
+- @context/DESIGN.md contains the design guidelines and rules.
+- @context/PROJECT.md contains the project pillars, goals.
+- @context/STRUCTURE.md contains the project structure.
 - @README.md contains the overall project context and roadmap.
-- @ai-interactions.md contains the AI interaction guidelines.
-- @coding-preferences.md contains in depth coding preferences and rules.
-- @current-feature.md contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
+- @context/ai-interactions.md contains the AI interaction guidelines.
+- @context/coding-preferences.md contains in depth coding preferences and rules.
+- @context/current-feature.md contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
 
 # Commands
 
