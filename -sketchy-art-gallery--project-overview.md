@@ -279,15 +279,10 @@ alembic upgrade head
 
 ---
 
-## ❓ Open Questions (For)
+## ❓ Open Questions
 
 - [ ] Where will images be stored in production? (S3 vs R2 vs local)
-+ [x] For now, in development, local folder.
 - [ ] Will pieces support multiple images (e.g., process shots)?
-+ [ ] No for now.
 - [ ] Public-facing slug strategy for shareable URLs?
-+ [ ] Not for now.
 - [ ] Backup strategy for the DB and image storage?
-+ [ ] Not for now.
 - [ ] Search — full-text on titles/descriptions, or tag-only?
-+ [ ] Yes, for now just titles and descriptions.
