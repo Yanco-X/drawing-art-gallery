@@ -1,0 +1,223 @@
+"""
+End-to-end exercise of the collections API against in-memory SQLite.
+
+Runs the real Flask app and the real models -- only the database URL
+differs, which is why the models use SQLAlchemy's generic Uuid type rather
+than the Postgres dialect one. Plain asserts, no pytest, to avoid adding a
+dependency for a single file.
+
+    .venv/Scripts/python.exe tests/smoke_collections.py
+"""
+
+import os
+import sys
+import uuid
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+os.environ["OWNER_API_TOKEN"] = "test-token"
+
+from sqlalchemy import event, select  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
+
+from app import create_app  # noqa: E402
+from app.config import Config  # noqa: E402
+from app.db import Base, SessionLocal, engine as _engine, init_engine  # noqa: E402
+from app.models import Collection, Piece, Tag  # noqa: E402
+
+OWNER = {"X-Owner-Token": "test-token"}
+checks = []
+
+
+def check(label, condition, detail=""):
+    checks.append((label, bool(condition), detail))
+    mark = "PASS" if condition else "FAIL"
+    print(f"  [{mark}] {label}" + (f" -- {detail}" if detail else ""))
+
+
+class TestConfig(Config):
+    OWNER_API_TOKEN = "test-token"
+    DEBUG = False
+
+
+app = create_app(
+    TestConfig,
+    database_url="sqlite+pysqlite:///:memory:",
+    engine_options={
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    },
+)
+
+from app import db as db_module  # noqa: E402
+
+
+@event.listens_for(db_module.engine, "connect")
+def _enable_sqlite_fks(dbapi_connection, _record):
+    # SQLite ignores FK constraints unless asked, and we want the ON DELETE
+    # CASCADE behaviour exercised here, not just assumed for Postgres.
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+Base.metadata.create_all(db_module.engine)
+
+session = SessionLocal()
+tag = Tag(name="Charcoal", slug="charcoal")
+pieces = [
+    Piece(
+        title=f"Piece {i}",
+        image_url=f"/uploads/p{i}.jpg",
+        medium="Charcoal",
+        year=2020 + i,
+        width=1000,
+        height=1000 + i * 100,
+        tags=[tag] if i == 1 else [],
+    )
+    for i in range(1, 5)
+]
+session.add_all([tag, *pieces])
+session.commit()
+ids = [str(p.id) for p in pieces]
+session.close()
+
+client = app.test_client()
+
+print("\n== health & auth ==")
+check("health responds ok", client.get("/api/health").get_json() == {"status": "ok"})
+check(
+    "create without token is rejected",
+    client.post("/api/collections", json={"name": "X"}).status_code == 401,
+)
+check(
+    "delete without token is rejected",
+    client.delete(f"/api/collections/{uuid.uuid4()}").status_code == 401,
+)
+
+print("\n== create ==")
+res = client.post(
+    "/api/collections",
+    json={"name": "Night Calls", "description": "The series.", "pieceIds": ids[:3]},
+    headers=OWNER,
+)
+check("create returns 201", res.status_code == 201, str(res.status_code))
+created = res.get_json()
+cid = created["id"]
+check("slug derived from name", created["slug"] == "night-calls", created["slug"])
+check("pieceCount is 3", created["pieceCount"] == 3, str(created["pieceCount"]))
+check("pieces come back in given order", [p["id"] for p in created["pieces"]] == ids[:3])
+check(
+    "cover falls back to first piece",
+    created["coverImageUrl"] == "/uploads/p1.jpg",
+    str(created["coverImageUrl"]),
+)
+check("aspectRatio computed from stored dims", created["pieces"][0]["aspectRatio"] == 1000 / 1100)
+check("tags serialized", created["pieces"][0]["tags"][0]["slug"] == "charcoal")
+
+dupe = client.post("/api/collections", json={"name": "Night Calls"}, headers=OWNER)
+check(
+    "duplicate name gets a suffixed slug",
+    dupe.get_json()["slug"] == "night-calls-2",
+    dupe.get_json()["slug"],
+)
+
+print("\n== validation ==")
+check(
+    "blank name refused",
+    client.post("/api/collections", json={"name": "  "}, headers=OWNER).status_code == 400,
+)
+bad = client.put(
+    f"/api/collections/{cid}/pieces",
+    json={"pieceIds": [ids[0], ids[0]]},
+    headers=OWNER,
+)
+check("duplicate pieceIds refused", bad.status_code == 400, bad.get_json().get("error", ""))
+missing = client.put(
+    f"/api/collections/{cid}/pieces",
+    json={"pieceIds": [str(uuid.uuid4())]},
+    headers=OWNER,
+)
+check("unknown piece id refused with 404", missing.status_code == 404)
+check(
+    "membership unchanged after failed write",
+    client.get("/api/collections/night-calls").get_json()["pieceCount"] == 3,
+)
+
+print("\n== reorder & membership replace ==")
+reordered = client.put(
+    f"/api/collections/{cid}/pieces",
+    json={"pieceIds": [ids[2], ids[0], ids[3]]},
+    headers=OWNER,
+).get_json()
+check(
+    "order replaced exactly",
+    [p["id"] for p in reordered["pieces"]] == [ids[2], ids[0], ids[3]],
+)
+check("dropped piece is gone", ids[1] not in [p["id"] for p in reordered["pieces"]])
+session = SessionLocal()
+orders = session.scalars(
+    select(Collection).where(Collection.id == uuid.UUID(cid))
+).unique().first().piece_links
+check(
+    "display_order rewritten contiguously from 0",
+    [link.display_order for link in orders] == [0, 1, 2],
+    str([link.display_order for link in orders]),
+)
+session.close()
+
+print("\n== cover rules ==")
+rejected = client.patch(
+    f"/api/collections/{cid}", json={"coverPieceId": ids[1]}, headers=OWNER
+)
+check("cover outside the collection refused", rejected.status_code == 400)
+ok = client.patch(
+    f"/api/collections/{cid}", json={"coverPieceId": ids[3]}, headers=OWNER
+).get_json()
+check("explicit cover applied", ok["coverImageUrl"] == "/uploads/p4.jpg", str(ok["coverImageUrl"]))
+after = client.put(
+    f"/api/collections/{cid}/pieces", json={"pieceIds": [ids[0], ids[2]]}, headers=OWNER
+).get_json()
+check(
+    "cover reset when it leaves the collection",
+    after["coverImageUrl"] == "/uploads/p1.jpg",
+    str(after["coverImageUrl"]),
+)
+
+print("\n== visibility ==")
+client.patch(f"/api/collections/{cid}", json={"isPublic": False}, headers=OWNER)
+public = client.get("/api/collections").get_json()
+check("private hidden from the default list", cid not in [c["id"] for c in public])
+withprivate = client.get("/api/collections?includePrivate=1").get_json()
+check("private visible with includePrivate=1", cid in [c["id"] for c in withprivate])
+client.patch(f"/api/collections/{cid}", json={"isPublic": True}, headers=OWNER)
+
+print("\n== cascade safety ==")
+session = SessionLocal()
+session.delete(session.get(Piece, uuid.UUID(ids[0])))
+session.commit()
+session.close()
+survived = client.get("/api/collections/night-calls").get_json()
+check(
+    "deleting a piece removes only its membership",
+    [p["id"] for p in survived["pieces"]] == [ids[2]],
+    str([p["id"] for p in survived["pieces"]]),
+)
+
+check("delete collection returns 204", client.delete(f"/api/collections/{cid}", headers=OWNER).status_code == 204)
+check("collection is gone", client.get("/api/collections/night-calls").status_code == 404)
+session = SessionLocal()
+remaining = session.scalars(select(Piece.id)).all()
+check(
+    "pieces survive their collection being deleted",
+    len(remaining) == 3,
+    f"{len(remaining)} pieces left",
+)
+session.close()
+
+failed = [c for c in checks if not c[1]]
+print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")
+if failed:
+    for label, _, detail in failed:
+        print(f"  FAILED: {label} {detail}")
+    sys.exit(1)

@@ -32,44 +32,71 @@ SketchyArt Gallery is a personal web application built to store, organize, and s
 
 ## 3. UI/UX Design Direction
 
-* **Design Concept**: "The Silent Curator" (Modern Minimalist Dark).
-* **Color Palette**: Deep Ink / Charcoal surfaces (`#141311`), Muted Olive and Taupe accents.
-* **Typography**: Manrope for all headings, body, and label text.
-* **Grid & Layout**: 12-column fixed grid with generous negative space to emphasize artwork.
-* **Elevation**: Tonal layers and subtle ambient glows instead of heavy drop shadows.
+Full system in `context/DESIGN.md`.
+
+* **Design Concept**: "The Silent Curator" -- quiet, editorial, restrained.
+* **Themes**: Two of equal standing. Dark (`#0e0e10`) reads as a dim viewing room; light (`#f6f4ef`) as warm gallery paper. Swapped at runtime via `data-theme` on `<html>`, persisted to `localStorage`.
+* **Accent**: A single muted gold (`#c9a86a`), shared by both themes and used sparingly.
+* **Typography**: Instrument Serif for display and titles, Instrument Sans for UI.
+* **Grid & Layout**: Fluid, no media queries in content. Regions capped at 1400px with `clamp()` gutters. Artwork sits in a CSS multi-column masonry with user-selectable density.
+* **Elevation**: None. No shadows anywhere -- depth is a 1px border and the `surface`/`bg` split.
+* **Shapes**: Border radius 0 everywhere, deliberately.
 
 ---
 
 ## 4. Current Implementation Status
 
 ### Frontend (`/frontend`)
-* **Initialized**: React + TypeScript + Vite scaffolding.
-* **Routing**: Configured in `App.tsx` redirecting root `/` to `/home`.
-* **Components**:
-  * `Navbar.tsx` - Top navigation bar with branding, search input, and action button.
-  * `HeroSection.tsx` - Header banner section.
-  * `ArtworkCard.tsx` - Reusable image card for grid display.
-  * `Footer.tsx` - Bottom layout footer.
-* **Pages**:
-  * `LandingPage.tsx` - Base home view consuming layout components.
+* **Initialized**: React + TypeScript + Vite scaffolding, Tailwind CSS v4.
+* **Routing**: `App.tsx` redirects `/` to `/home`, serves `/piece/:id`, and sends unknown paths back to `/home`. `ScrollToTop` resets scroll on navigation.
+* **Landing page**: Rebuilt against the design system. Header, optional intro, collections row, and the "All work" masonry, in both themes.
+* **Piece page**: Artwork with a wall-label metadata rail, tags, collections, prev/next, and a not-found state.
+* **Components** (`src/components/`):
+  * `Header.tsx` - Wordmark, nav, theme toggle, owner/visitor action, mobile menu.
+  * `ThemeToggle.tsx` - Dark/light switch, labels the active theme.
+  * `IntroSection.tsx` - Eyebrow and display headline.
+  * `SectionHeader.tsx` - Shared "Collections" / "All work" heading row.
+  * `CollectionsSection.tsx`, `CollectionCard.tsx` - Collections row.
+  * `AllWorkSection.tsx`, `MasonryGrid.tsx`, `PieceCard.tsx` - Artwork grid.
+  * `DensityControl.tsx` - Airy / Comfortable / Dense preference.
+  * `SiteFooter.tsx`, `InertLink.tsx` - Footer, and a placeholder link for routes that do not exist yet.
+* **State** (`src/contexts/`, `src/hooks/`):
+  * `ThemeProvider` with `useTheme`, persisted and stamped before first paint.
+  * `useGridDensity` on a generic `usePersistentState`.
+  * `useFlipReflow` - animates the masonry when density changes.
 * **Data Layer**:
-  * `src/lib/mock-data.ts` - Local mock dataset for collections and artwork pieces.
+  * `frontend/src/lib/mock-data.ts` - Local mock dataset. Images and aspect ratios are real; titles, media and years are placeholders pending real metadata.
 
 ### Backend (`/backend`)
-* **Directory Structure**: Initialized with `backend/uploads` holding initial artwork assets.
-* **API & Database**: Models, endpoints, and migration scripts planned and documented, pending implementation.
+* **Framework**: Flask app factory with plain SQLAlchemy 2.0 and a scoped session.
+* **Database**: PostgreSQL 17 via `docker-compose.yml`. Schema created by the initial Alembic revision.
+* **Models**: `User`, `Piece`, `Collection`, `CollectionPiece`, `Tag`. Uses the generic `Uuid` type so the API can be exercised against SQLite.
+* **Endpoints**: Read routes for pieces and collections; owner-gated create, update, delete, and membership replacement for collections.
+* **Auth**: Placeholder `X-Owner-Token` shared secret that fails closed. Real sessions pending.
+* **Verification**: `tests/smoke_collections.py` runs the real app end to end against in-memory SQLite -- 27 checks.
+* **Storage**: `backend/uploads` holds artwork on disk (phase 1).
 
 ---
 
 ## 5. Active Feature & Next Steps
 
-### Active Track: Landing Page UI Layout & Refinement
-* **Phase 1**: Base layout, grid view, header search bar, dark theme integration, and `/home` route.
-* **Phase 2**: Dynamic integration of uploaded assets from `backend/uploads` into the mock data structure and collection linking.
-* **Phase 3**: Recent collections section and 10 most recent artwork items display.
+### Completed: Landing Page UI Rebuild
+The landing page was rebuilt against the new design system in `context/DESIGN.md`, followed by the piece detail view.
+
+### Completed: Collections Schema & API
+Backend schema and REST API for collections -- create, curate, reorder, publish. Not yet wired to the frontend, which still reads mock data.
+
+### Known Gaps
+* Collection cards, "View all", "Tags" nav and "Owner sign in" are inert pending routes. Piece cards now navigate.
+* Piece descriptions are empty in mock data; the block renders as soon as copy exists.
+* Tag filtering is not wired up; pieces carry tags but no filter UI is shown.
+* No loading or skeleton state for the grid.
+* Mock piece metadata (medium, year, most titles) is placeholder.
+* Uploaded images are served at full resolution -- roughly 30MB for one page load, with a 14MB single file. Thumbnail generation is needed.
 
 ### Upcoming Milestones
-1. Complete landing page UI phases with mock data.
-2. Initialize Flask REST API structure and endpoints.
-3. Configure PostgreSQL database, SQLAlchemy models, and Alembic migrations.
-4. Integrate frontend services to communicate with the Flask API.
+1. Real owner authentication, replacing the shared-secret guard.
+2. Upload endpoint: store the file, record width/height, generate thumbnails.
+3. Point the frontend at the API, replacing `frontend/src/lib/mock-data.ts`.
+4. Collection detail route and the owner curation UI.
+5. Tag filtering, restoring the chip row.

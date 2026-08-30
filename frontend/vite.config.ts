@@ -8,4 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    fs: {
+      // Mock data imports artwork from ../backend/uploads, which sits
+      // outside this Vite root. Drop this once images are served over HTTP.
+      allow: ['..'],
+    },
+  },
 })

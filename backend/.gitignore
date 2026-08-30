@@ -1,3 +1,10 @@
 # Ignore uploaded files
 uploads/*
 !uploads/.gitkeep
+
+# Local environment and Python artefacts
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

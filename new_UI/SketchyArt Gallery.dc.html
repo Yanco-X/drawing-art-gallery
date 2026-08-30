@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; font-family:'Instrument Sans', Helvetica, Arial, sans-serif; }
+  a { text-decoration:none; }
+  * { box-sizing:border-box; }
+</style>
+</helmet>
+<div style="min-height:100vh; display:flex; flex-direction:column; background:{{ t.bg }}; color:{{ t.text }}; transition:background 0.3s, color 0.3s;">
+
+  <header style="display:flex; align-items:center; justify-content:space-between; gap:24px; padding:20px clamp(20px, 5vw, 64px); position:sticky; top:0; backdrop-filter:blur(12px); z-index:10; border-bottom:1px solid {{ t.line }}; background:{{ t.bgTranslucent }};">
+    <a href="#" style="font-family:'Instrument Serif', Georgia, serif; font-size:24px; letter-spacing:0.02em; color:{{ t.text }};">Sketchy<span style="color:#c9a86a; font-style:italic;">Art</span></a>
+    <nav style="display:flex; align-items:center; gap:clamp(16px, 3vw, 36px); font-size:14px; letter-spacing:0.06em; text-transform:uppercase;">
+      <a href="#" style="border-bottom:1px solid #c9a86a; padding-bottom:2px; color:{{ t.text }};">Gallery</a>
+      <a href="#collections" style="color:{{ t.muted }};" style-hover="color:#c9a86a;">Collections</a>
+      <a href="#" style="color:{{ t.muted }};" style-hover="color:#c9a86a;">Tags</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <button onClick="{{ toggleTheme }}" title="Toggle theme" style="display:flex; align-items:center; gap:8px; font-family:inherit; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; background:transparent; cursor:pointer; padding:8px 12px; color:{{ t.muted }}; border:1px solid {{ t.line }};" style-hover="border-color:#c9a86a; color:#c9a86a;">
+        <span style="font-size:14px; line-height:1;">{{ t.icon }}</span>
+        <span>{{ t.label }}</span>
+      </button>
+      <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ false }}">
+        <button style="font-family:inherit; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; background:#c9a86a; color:#0e0e10; border:none; padding:10px 20px; cursor:pointer;">+ Upload</button>
+      </sc-if>
+      <sc-if value="{{ isVisitor }}" hint-placeholder-val="{{ true }}">
+        <a href="#" style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:{{ t.faint }};">Owner sign in</a>
+      </sc-if>
+    </div>
+  </header>
+
+  <sc-if value="{{ showIntro }}" hint-placeholder-val="{{ true }}">
+    <section style="padding:clamp(48px, 9vw, 120px) clamp(20px, 5vw, 64px) clamp(32px, 5vw, 72px); max-width:1400px; width:100%; margin:0 auto;">
+      <p style="margin:0 0 16px; font-size:12px; letter-spacing:0.24em; text-transform:uppercase; color:{{ t.faint }};">A personal gallery</p>
+      <h1 style="margin:0; font-family:'Instrument Serif', Georgia, serif; font-weight:400; font-size:clamp(36px, 6vw, 72px); line-height:1.05; max-width:14em; text-wrap:pretty;">Drawings, kept quietly in one place.</h1>
+    </section>
+  </sc-if>
+
+  <section id="collections" style="padding:0 clamp(20px, 5vw, 64px) clamp(40px, 6vw, 80px); max-width:1400px; width:100%; margin:0 auto;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:24px;">
+      <h2 style="margin:0; font-family:'Instrument Serif', Georgia, serif; font-weight:400; font-size:22px; color:{{ t.dim }};">Collections</h2>
+      <a href="#" style="font-size:13px; color:{{ t.faint }};">View all</a>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
+      <sc-for list="{{ collections }}" as="col" hint-placeholder-count="4">
+        <a href="#" style="display:flex; flex-direction:column; gap:12px; padding:20px; transition:border-color 0.2s; border:1px solid {{ t.line }}; background:{{ t.surface }};" style-hover="border-color:#c9a86a;">
+          <div style="height:90px; opacity:0.85; background:{{ col.swatch }};"></div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font-family:'Instrument Serif', Georgia, serif; font-size:18px; color:{{ t.text }};">{{ col.name }}</span>
+            <span style="font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:{{ t.faint }};">{{ col.count }} pieces</span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding:0 clamp(20px, 5vw, 64px) clamp(56px, 8vw, 96px); max-width:1400px; width:100%; margin:0 auto;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:24px; flex-wrap:wrap;">
+      <h2 style="margin:0; font-family:'Instrument Serif', Georgia, serif; font-weight:400; font-size:22px; color:{{ t.dim }};">All work</h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <sc-for list="{{ tags }}" as="tag" hint-placeholder-count="5">
+          <a href="#" style="font-size:12px; letter-spacing:0.06em; padding:6px 12px; color:{{ t.muted }}; border:1px solid {{ t.line }};" style-hover="border-color:#c9a86a; color:#c9a86a;">{{ tag }}</a>
+        </sc-for>
+      </div>
+    </div>
+    <div style="column-gap:20px; columns:{{ columnRule }};">
+      <sc-for list="{{ pieces }}" as="p" hint-placeholder-count="8">
+        <a href="#" style="display:flex; flex-direction:column; gap:10px; break-inside:avoid; margin-bottom:20px;">
+          <div style="width:100%; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s; aspect-ratio:{{ p.ratio }}; background:{{ t.hatch }}; border:1px solid {{ t.line }};" style-hover="border-color:#c9a86a;">
+            <span style="font-family:ui-monospace, Menlo, monospace; font-size:11px; letter-spacing:0.05em; color:{{ t.faint }};">{{ p.placeholder }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-size:14px; color:{{ t.text }};">{{ p.title }}</span>
+            <span style="font-size:12px; color:{{ t.faint }};">{{ p.meta }}</span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <footer style="margin-top:auto; padding:28px clamp(20px, 5vw, 64px); display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; border-top:1px solid {{ t.line }};">
+    <span style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:{{ t.faint }};">SketchyArt Gallery — the silent curator</span>
+    <span style="font-size:12px; color:{{ t.faint }};">© 2026</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;theme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;dark&quot;, &quot;light&quot;], &quot;default&quot;: &quot;dark&quot;, &quot;tsType&quot;: &quot;\&quot;dark\&quot; | \&quot;light\&quot;&quot;, &quot;section&quot;: &quot;View&quot; },
+  &quot;role&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;visitor&quot;, &quot;owner&quot;], &quot;default&quot;: &quot;visitor&quot;, &quot;tsType&quot;: &quot;\&quot;visitor\&quot; | \&quot;owner\&quot;&quot;, &quot;section&quot;: &quot;View&quot; },
+  &quot;showIntro&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;View&quot; },
+  &quot;gridDensity&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;airy&quot;, &quot;comfortable&quot;, &quot;dense&quot;], &quot;default&quot;: &quot;comfortable&quot;, &quot;tsType&quot;: &quot;\&quot;airy\&quot; | \&quot;comfortable\&quot; | \&quot;dense\&quot;&quot;, &quot;section&quot;: &quot;Grid&quot; }
+}">
+const THEMES = {
+  dark: {
+    bg: "#0e0e10", bgTranslucent: "rgba(14,14,16,0.92)", surface: "#131316",
+    line: "#1e1e22", text: "#e8e6e1", dim: "#b7b4ac", muted: "#8a8880", faint: "#57554f",
+    hatch: "repeating-linear-gradient(45deg, #17171a 0px, #17171a 10px, #131316 10px, #131316 20px)",
+    icon: "☾", label: "Dark"
+  },
+  light: {
+    bg: "#f6f4ef", bgTranslucent: "rgba(246,244,239,0.92)", surface: "#fffdf8",
+    line: "#e0dcd2", text: "#1c1b18", dim: "#4a4842", muted: "#6f6c63", faint: "#9a968b",
+    hatch: "repeating-linear-gradient(45deg, #ece8e0 0px, #ece8e0 10px, #f4f1ea 10px, #f4f1ea 20px)",
+    icon: "☀", label: "Light"
+  }
+};
+
+class Component extends DCLogic {
+  state = { theme: null };
+
+  componentDidMount() {
+    let saved = null;
+    try { saved = localStorage.getItem("sketchyart-theme"); } catch (e) {}
+    if (saved === "light" || saved === "dark") this.setState({ theme: saved });
+  }
+
+  get theme() {
+    return this.state.theme || this.props.theme || "dark";
+  }
+
+  renderVals() {
+    const role = this.props.role ?? "visitor";
+    const density = this.props.gridDensity ?? "comfortable";
+    const swatches = this.theme === "light"
+      ? ["linear-gradient(135deg, #e8dcc6, #cbb68c)",
+         "linear-gradient(135deg, #d9e2e6, #adc0c8)",
+         "linear-gradient(135deg, #e2d7e6, #c2aecb)",
+         "linear-gradient(135deg, #d9e3da, #aec4b3)"]
+      : ["linear-gradient(135deg, #2b2620, #4a3d2a)",
+         "linear-gradient(135deg, #1f2428, #2e3a40)",
+         "linear-gradient(135deg, #26202b, #3d2e44)",
+         "linear-gradient(135deg, #202822, #2c4033)"];
+    const collections = [
+      { name: "Ink Studies", count: 14 },
+      { name: "Figure Drawing", count: 22 },
+      { name: "Urban Sketches", count: 9 },
+      { name: "Charcoal Portraits", count: 11 }
+    ].map((c, i) => ({ ...c, swatch: swatches[i % swatches.length] }));
+    const pieces = [
+      ["Morning at the Docks", "Ink · 2026", "3/4"],
+      ["Seated Figure No. 4", "Charcoal · 2026", "2/3"],
+      ["Old Town Stairway", "Pen & wash · 2025", "4/5"],
+      ["Study of Hands", "Graphite · 2025", "1/1"],
+      ["Cafe Window", "Ink · 2025", "3/4"],
+      ["Portrait of E.", "Charcoal · 2025", "2/3"],
+      ["Rooftops After Rain", "Watercolor · 2024", "16/10"],
+      ["Gesture Sheet 12", "Graphite · 2024", "1/1"],
+      ["The Quiet Bridge", "Ink · 2024", "4/5"],
+      ["Reclining Figure", "Charcoal · 2024", "16/10"],
+      ["Market Corner", "Pen & wash · 2023", "3/4"],
+      ["Self Portrait, Winter", "Graphite · 2023", "2/3"]
+    ].map(([title, meta, ratio]) => ({ title, meta, ratio, placeholder: "[ artwork ]" }));
+    const next = this.theme === "dark" ? "light" : "dark";
+    return {
+      t: THEMES[this.theme],
+      toggleTheme: () => {
+        try { localStorage.setItem("sketchyart-theme", next); } catch (e) {}
+        this.setState({ theme: next });
+      },
+      isOwner: role === "owner",
+      isVisitor: role === "visitor",
+      showIntro: this.props.showIntro ?? true,
+      collections,
+      pieces,
+      columnRule: density === "dense" ? "5 300px" : density === "airy" ? "3 380px" : "4 320px",
+      tags: ["All", "Ink", "Charcoal", "Graphite", "Watercolor"]
+    };
+  }
+}
+</script>
+</body>
+</html>

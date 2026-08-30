@@ -8,7 +8,7 @@ This document establishes the basic rules and guidelines for AI agents working o
 - Break down complex tasks into smaller, manageable steps.
 
 ## 2. Tech Stack Consistency
-- Stick to the defined tech stack: **React + TypeScript** for the frontend, and **Python + Flask + MongoDB** for the backend.
+- Stick to the defined tech stack: **React + TypeScript** for the frontend, and **Python + Flask + PostgreSQL** for the backend.
 - Avoid introducing unnecessary third-party libraries without explicit approval.
 
 ## 3. Step-by-Step Implementation

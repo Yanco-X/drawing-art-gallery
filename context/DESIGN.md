@@ -1,145 +1,292 @@
 ---
-name: Gallery Minimalist Dark
-colors:
-  surface: '#141311'
-  surface-dim: '#141311'
-  surface-bright: '#3a3937'
-  surface-container-lowest: '#0f0e0c'
-  surface-container-low: '#1c1c19'
-  surface-container: '#20201d'
-  surface-container-high: '#2b2a28'
-  surface-container-highest: '#363532'
-  on-surface: '#e6e2de'
-  on-surface-variant: '#cac6bb'
-  inverse-surface: '#e6e2de'
-  inverse-on-surface: '#31302e'
-  outline: '#939186'
-  outline-variant: '#48473e'
-  surface-tint: '#cac7af'
-  primary: '#ffffff'
-  on-primary: '#323120'
-  primary-container: '#e7e3ca'
-  on-primary-container: '#676551'
-  inverse-primary: '#615f4b'
-  secondary: '#cac6bb'
-  on-secondary: '#323129'
-  secondary-container: '#48473e'
-  on-secondary-container: '#b8b5aa'
-  tertiary: '#ffffff'
-  on-tertiary: '#253335'
-  tertiary-container: '#d6e5e8'
-  on-tertiary-container: '#59676a'
-  error: '#ffb4ab'
-  on-error: '#690005'
-  error-container: '#93000a'
-  on-error-container: '#ffdad6'
-  primary-fixed: '#e7e3ca'
-  primary-fixed-dim: '#cac7af'
-  on-primary-fixed: '#1d1c0d'
-  on-primary-fixed-variant: '#494835'
-  secondary-fixed: '#e6e2d6'
-  secondary-fixed-dim: '#cac6bb'
-  on-secondary-fixed: '#1c1c15'
-  on-secondary-fixed-variant: '#48473e'
-  tertiary-fixed: '#d6e5e8'
-  tertiary-fixed-dim: '#bac9cc'
-  on-tertiary-fixed: '#101e20'
-  on-tertiary-fixed-variant: '#3b494c'
-  background: '#141311'
-  on-background: '#e6e2de'
-  surface-variant: '#363532'
+name: SketchyArt Gallery
+accent:
+  accent: '#c9a86a'
+  on-accent: '#0e0e10'
+themes:
+  dark:
+    bg: '#0e0e10'
+    bg-translucent: 'rgba(14,14,16,0.92)'
+    surface: '#131316'
+    line: '#1e1e22'
+    text: '#e8e6e1'
+    dim: '#b7b4ac'
+    muted: '#8a8880'
+    faint: '#57554f'
+    hatch: 'repeating-linear-gradient(45deg, #17171a 0px, #17171a 10px, #131316 10px, #131316 20px)'
+  light:
+    bg: '#f6f4ef'
+    bg-translucent: 'rgba(246,244,239,0.92)'
+    surface: '#fffdf8'
+    line: '#e0dcd2'
+    text: '#1c1b18'
+    dim: '#4a4842'
+    muted: '#6f6c63'
+    faint: '#9a968b'
+    hatch: 'repeating-linear-gradient(45deg, #ece8e0 0px, #ece8e0 10px, #f4f1ea 10px, #f4f1ea 20px)'
+swatches:
+  dark: ['#2b2620 to #4a3d2a', '#1f2428 to #2e3a40', '#26202b to #3d2e44', '#202822 to #2c4033']
+  light: ['#e8dcc6 to #cbb68c', '#d9e2e6 to #adc0c8', '#e2d7e6 to #c2aecb', '#d9e3da to #aec4b3']
 typography:
-  headline-xl:
-    fontFamily: Manrope
-    fontSize: 40px
-    fontWeight: '700'
-    lineHeight: '1.2'
-    letterSpacing: -0.02em
-  headline-lg:
-    fontFamily: Manrope
-    fontSize: 32px
-    fontWeight: '600'
-    lineHeight: '1.25'
-    letterSpacing: -0.01em
-  headline-md:
-    fontFamily: Manrope
+  display:
+    fontFamily: Instrument Serif
+    fontWeight: '400'
+    fontSize: clamp(36px, 6vw, 72px)
+    lineHeight: '1.05'
+  section-heading:
+    fontFamily: Instrument Serif
+    fontWeight: '400'
+    fontSize: 22px
+  wordmark:
+    fontFamily: Instrument Serif
     fontSize: 24px
-    fontWeight: '600'
-    lineHeight: '1.3'
-  body-lg:
-    fontFamily: Manrope
-    fontSize: 18px
-    fontWeight: '400'
-    lineHeight: '1.6'
-  body-md:
-    fontFamily: Manrope
-    fontSize: 16px
-    fontWeight: '400'
-    lineHeight: '1.6'
-  label-md:
-    fontFamily: Manrope
-    fontSize: 14px
-    fontWeight: '600'
-    lineHeight: '1.4'
-    letterSpacing: 0.01em
-  label-sm:
-    fontFamily: Manrope
-    fontSize: 12px
-    fontWeight: '500'
-    lineHeight: '1.4'
     letterSpacing: 0.02em
+  card-title:
+    fontFamily: Instrument Serif
+    fontSize: 18px
+  nav:
+    fontFamily: Instrument Sans
+    fontSize: 14px
+    letterSpacing: 0.06em
+    textTransform: uppercase
+  body:
+    fontFamily: Instrument Sans
+    fontSize: 14px
+  button:
+    fontFamily: Instrument Sans
+    fontSize: 13px
+    letterSpacing: 0.08em
+    textTransform: uppercase
+  meta:
+    fontFamily: Instrument Sans
+    fontSize: 12px
+  eyebrow:
+    fontFamily: Instrument Sans
+    fontSize: 12px
+    letterSpacing: 0.24em
+    textTransform: uppercase
+  placeholder:
+    fontFamily: ui-monospace
+    fontSize: 11px
+    letterSpacing: 0.05em
 rounded:
-  sm: 0.125rem
-  DEFAULT: 0.25rem
-  md: 0.375rem
-  lg: 0.5rem
-  xl: 0.75rem
-  full: 9999px
+  DEFAULT: 0
 spacing:
-  base: 4px
-  xs: 8px
-  sm: 16px
-  md: 24px
-  lg: 40px
-  xl: 64px
-  gutter: 20px
-  margin: 32px
+  base: 2px
+  scale: [2, 4, 8, 10, 12, 16, 20, 24, 28]
+  gutter: clamp(20px, 5vw, 64px)
+  intro-top: clamp(48px, 9vw, 120px)
+  intro-bottom: clamp(32px, 5vw, 72px)
+  section-sm: clamp(40px, 6vw, 80px)
+  section-lg: clamp(56px, 8vw, 96px)
+  content-max: 1400px
+motion:
+  hover: 200ms
+  theme-swap: 300ms
+  layout-reflow: 300ms cubic-bezier(0.2, 0, 0, 1)
 ---
 
 ## Brand & Style
-The design system is rooted in the concept of a "Silent Curator." It prioritizes the artwork above all else, using a minimalist framework to provide a sophisticated, professional backdrop that doesn't compete with the creator's vision. By shifting to a dark mode aesthetic, the system evokes the atmosphere of a dimly lit, high-end private gallery or a digital darkroom, where light is reserved strictly for the art itself.
 
-The UI utilizes deep, charcoal-toned surfaces and generous whitespace to evoke a sense of prestige and focus. The personality is curated and high-end, utilizing organic, muted tones to feel more human and less clinical than traditional high-contrast dark portfolios.
+The design system is rooted in the concept of a "Silent Curator." It prioritizes the artwork above all else, using a restrained framework that provides a backdrop rather than competing with the work on the wall.
 
-## Colors
-The palette has transitioned to a sophisticated dark mode. The foundation is built on "Deep Ink" and "Charcoal" surfaces, providing a low-light foundation that makes artwork colors pop. This dark base is complemented by "Muted Olive" and "Earthy Taupe" which are used for primary actions and structural elements, creating a naturalistic, low-energy visual rhythm.
+The personality is quiet and editorial: a serif display face, sharp corners, hairline rules, and a single warm gold accent used sparingly. Nothing glows, nothing floats, nothing bounces. Where the previous system reached for tonal layers and ambient depth, this one reaches for a 1px line and a change of background. The restraint is the point -- every visual effect the UI does not spend is attention returned to the drawings.
 
-Light grays and off-whites are used for text to ensure legibility without being jarring. A very pale "Arctic Wash" serves as the tertiary accent, used for subtle highlights or background fills where a breath of coolness is needed to balance the earthy tones of the primary palette.
+The system ships two full themes of equal standing. Dark reads as a dim private viewing room; light reads as warm gallery paper, not as a white screen.
+
+## Themes & Color
+
+Every colour is a semantic token, defined once per theme. Components never reference a hex directly -- the only literal in component code is the accent, which is shared by both themes.
+
+### Text hierarchy
+
+Four steps, from loudest to quietest. Picking the right step is most of the work of styling text in this system.
+
+| Token | Role | Dark | Light |
+|---|---|---|---|
+| `text` | Primary -- headline, piece titles, wordmark, active nav | `#e8e6e1` | `#1c1b18` |
+| `dim` | Section headings ("Collections", "All work") | `#b7b4ac` | `#4a4842` |
+| `muted` | Nav links, control labels | `#8a8880` | `#6f6c63` |
+| `faint` | Meta, counts, eyebrow, footer, "View all" | `#57554f` | `#9a968b` |
+
+### Surface and structure
+
+| Token | Role | Dark | Light |
+|---|---|---|---|
+| `bg` | Page background | `#0e0e10` | `#f6f4ef` |
+| `bg-translucent` | Sticky header behind a 12px blur | `rgba(14,14,16,0.92)` | `rgba(246,244,239,0.92)` |
+| `surface` | Raised panels (collection cards) | `#131316` | `#fffdf8` |
+| `line` | Every border and divider in the UI | `#1e1e22` | `#e0dcd2` |
+| `hatch` | Diagonal placeholder for missing artwork | see frontmatter | see frontmatter |
+
+In the light theme `surface` and `bg` are nearly identical. The 1px `line` border is doing almost all of the work of defining a card -- get it wrong and the light theme collapses into a flat sheet.
+
+### Accent
+
+`#c9a86a`, a muted gold, shared by both themes. On-accent text is `#0e0e10`.
+
+It is the only accent in the system and appears in exactly five places: hover borders, the active nav underline, the Upload button, active control states, and the italic "Art" in the wordmark. Adding a second accent colour, or spending this one on decoration, breaks the system.
+
+### Collection swatches
+
+Four gradients at 135 degrees, cycled by index, used only as a placeholder where a collection has no cover image. They are decorative and carry no meaning -- do not use them to identify a collection. Values are in the frontmatter.
 
 ## Typography
-This design system utilizes **Manrope** for all type treatments. Its geometric yet slightly condensed nature offers a technical precision that aligns with digital craftsmanship while remaining highly legible against dark backgrounds. 
 
-Headlines use tighter letter-spacing and heavier weights to create a strong visual anchor on the page. Body text is set with generous line height to ensure readability in descriptions and artist statements. Labels are frequently used in all-caps or medium weights to differentiate metadata from primary content.
+Two families, loaded from Google Fonts today and to be self-hosted before production.
+
+* **Instrument Serif** (400, with italic) -- display headline, section headings, collection and card names, wordmark.
+* **Instrument Sans** (400-600) -- all UI and body text.
+* **System monospace** -- the `[ artwork ]` placeholder label only.
+
+Sizes in use: 11, 12, 13, 14, 18, 22, 24, `clamp(22px, 2.4vw, 32px)` for a piece title, and `clamp(36px, 6vw, 72px)` for the display headline. Resist adding steps -- the piece title deliberately takes 22 as its floor rather than introducing a new fixed size.
+
+Letter-spacing carries meaning and pairs with case:
+
+| Tracking | Applied to | Case |
+|---|---|---|
+| `0.02em` | Wordmark | Mixed |
+| `0.06em` | Nav, control labels, collection counts | Uppercase, except control labels |
+| `0.08em` | Buttons, footer, "Owner sign in" | Uppercase |
+| `0.24em` | Eyebrow | Uppercase |
+
+Line-height is `1.05` on the display headline and default everywhere else.
 
 ## Layout & Spacing
-The layout follows a **Fixed Grid** philosophy for gallery views to ensure artwork aspect ratios remain consistent across large displays. A 12-column grid is standard, with generous margins to prevent the content from feeling "crowded."
 
-The spacing rhythm is based on a 4px baseline, but defaults to larger increments (16px and 24px) to maintain the minimalist breathability. Internal component padding is kept tight to maintain a crisp, professional look, while external margins between sections are intentionally large to signify distinct shifts in content.
+Fluid, with no media queries in the content regions. Horizontal padding and headline size scale with `clamp()`; the collections grid and masonry reflow by column count on their own.
+
+* Content regions are capped at **1400px** and centred, with `clamp(20px, 5vw, 64px)` horizontal gutters.
+* The header and footer span the full viewport -- their background and border are edge to edge -- but their **inner content is capped to the same 1400px** so it lines up with the page below.
+* Collections use `repeat(auto-fill, minmax(220px, 1fr))` at a 16px gap.
+* The masonry is CSS multi-column with a 20px column gap. See Components for density values.
+* Spacing steps: 2, 4, 8, 10, 12, 16, 20, 24, 28. Section rhythm uses the fluid values in the frontmatter.
+
+There are two breakpoints in the system, and no others:
+
+* **640px** -- below this the header collapses (see Components).
+* **1024px** -- below this the piece page stacks its artwork and wall label into one column. A fluid `auto-fit` was rejected here because it would give the label equal width to the artwork, which inverts the hierarchy.
 
 ## Elevation & Depth
-Depth is conveyed through **Tonal Layers** and **Ambient Glows**. In this dark theme, surfaces are layered using subtle increases in lightness rather than heavy drop shadows. Higher elevation levels are represented by slightly lighter shades of charcoal or taupe.
 
-When shadows are used—primarily for cards and modals—they are extra-diffused and low-opacity, often tinted with a hint of the neutral taupe to keep them feeling integrated with the background. This "low-altitude" elevation strategy ensures that the UI feels tactile but never bulky, maintaining the clean lines characteristic of modern art platforms.
+There is no elevation model. **No shadows anywhere.**
+
+Depth comes from exactly two devices: a 1px `line` border, and the `surface` against `bg` split. Every border in the UI is `1px solid` in the `line` token -- there are no 2px borders, no coloured borders except the accent on hover, and no dividers that are not this.
 
 ## Shapes
-The design system employs a **Soft** shape language. A 0.25rem (4px) base radius is applied to standard components like buttons and input fields, while larger containers like cards and image thumbnails utilize a 0.5rem (8px) radius.
 
-This subtle rounding removes the clinical sharpness of a purely architectural grid without veering into "playful" territory. It reflects the professional precision of a curated platform with the slightly more approachable feel found in contemporary boutique digital spaces.
+**Border radius is 0 everywhere.** Buttons, cards, thumbnails, controls, inputs. The sharp corners are a deliberate identity choice, not an oversight, and they are the single easiest thing to destroy by reaching for a familiar `rounded-*` utility.
+
+## Motion
+
+The motion budget is deliberately small.
+
+| Duration | Applied to |
+|---|---|
+| 200ms | Hover transitions -- border colour and text colour |
+| 300ms | Theme swap (background and colour) |
+| 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
+
+No stagger, no scale, no entrance animations. Motion acknowledges an action and gets out of the way.
+
+All motion must be skipped under `prefers-reduced-motion: reduce`.
 
 ## Components
-- **Buttons:** Primary buttons use the Muted Olive for the background with dark text. Secondary buttons are outlined with a 1px border in taupe. 
-- **Cards:** Artwork cards are the core component. They feature a minimal footer for the artist's name and view counts. On hover, a subtle ambient glow or surface lightening is applied to indicate interactivity.
-- **Input Fields:** Minimalist design with a deep charcoal fill and a bottom-border focus state in Muted Olive.
-- **Chips/Tags:** Used for art categories (e.g., "3D", "Character Design"). These use a muted taupe or olive-grey background to remain unobtrusive.
-- **Lists:** Clean, horizontal dividers using a low-opacity version of the secondary taupe. 
-- **Additional Components:** An "Artwork Detail Modal" which uses a backdrop blur to keep the user focused on the high-resolution image, and "Artist Stat Badges" which use the pale Arctic Wash for subtle background highlights or verified status icons.
+
+### Header
+
+Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, bottom border in `line`. Padding `20px` vertical.
+
+* **Wordmark** -- "Sketchy" in `text` plus "Art" in accent italic, Instrument Serif 24px.
+* **Nav** -- Gallery / Collections / Tags, 14px uppercase. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a three-cluster `space-between` row and is correct.
+* **Theme toggle** -- 1px `line` border, transparent fill, glyph plus label. **The label names the theme currently active, not the one it switches to.** The accessible name states the action.
+* **Owner state** -- a solid accent "+ Upload" button. **Visitor state** -- an "Owner sign in" text link in `faint`.
+* **Below 640px** -- the nav collapses behind a menu button drawn as three 1px bars, the toggle drops to its glyph, and "Owner sign in" moves into the menu panel.
+
+### Intro
+
+Optional. Eyebrow in `faint` at 12px / `0.24em`, then the display headline capped at `14em` with `text-wrap: pretty`. Shown on the root gallery view; hidden on filtered and collection routes.
+
+### Collection card
+
+1px `line` border, `surface` background, 20px padding, 12px column gap, border goes accent on hover over 200ms. Contains a 90px cover strip at 85% opacity (the cover image, or a gradient swatch as fallback), then a 4px-gap block of the name in Instrument Serif 18px and the count in 12px uppercase `faint`.
+
+### Piece card
+
+A 10px-gap column: thumbnail, then a 2px-gap block of title (14px `text`) and meta (12px `faint`, formatted `{medium} · {year}`).
+
+The thumbnail carries a 1px `line` border that goes accent on hover, and its `aspect-ratio` comes from the piece's stored image dimensions. The `hatch` gradient sits behind the image so a slow or failed load shows the placeholder rather than a hole; on error the `[ artwork ]` monospace label is shown.
+
+**Aspect ratios must be persisted at upload time, never measured in the browser.** The masonry reserves each card's height from that value; deriving it after load would reflow the entire grid as images arrive.
+
+### Masonry grid
+
+CSS multi-column. Children use `break-inside: avoid` and a 20px bottom margin.
+
+Reading order runs top-to-bottom down each column rather than left-to-right across rows. This is an accepted trade-off of the CSS-columns approach; a JS or grid masonry would be required to change it.
+
+Density is a persisted user preference:
+
+| Density | `columns` | At 1400px content |
+|---|---|---|
+| Airy | `3 380px` | 3 columns |
+| Comfortable | `4 290px` | 4 columns |
+| Dense | `5 230px` | 5 columns |
+
+The second value is a *threshold* for how many columns fit, not the rendered column width -- actual width is `(container - gaps) / count`. All three stay visually distinct down to roughly a 1200px viewport; below that the available width genuinelyñ cannot support three separate column counts and they begin to coincide.
+
+Changing density animates via FLIP: positions are captured, the reflow is applied, and each card is played from its old offset back to zero on `transform` only. `columns` is not an animatable property, so nothing else would work.
+
+### Density control
+
+A single group with one 1px `line` border and hairline dividers between options -- deliberately *not* three separate chips, so it reads as one control. Options are 12px with `0.06em` tracking and chip padding, sentence case. The active option is filled accent with `on-accent` text.
+
+### Piece page
+
+Not present in the original handoff -- designed against this system as a **gallery wall label**. The artwork keeps the room; the metadata sits beside it, small and quiet, separated by a hairline rather than boxed in a panel. No new visual vocabulary was introduced.
+
+* **Layout** -- a two-column grid, `minmax(0, 1fr)` for the artwork and a fixed `320px` rail. Below 1024px the two stack and the dividing rule turns from a left border into a top border.
+* **Artwork** -- capped at `78vh` so a tall portrait still sits beside its label instead of pushing it below the fold, and centred in its column, since the cap often leaves it narrower than the column and hugging one edge would strand the rule. 1px `line` border and the `hatch` behind it, exactly as in the grid.
+* **Wall label** -- title at `clamp(22px, 2.4vw, 32px)` serif, then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
+* **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
+* **Tags render as static bordered chips, not links** -- there is no tag route to point at, and a chip that looks clickable but is not is worse than a plain one.
+* **Prev/next** -- neighbours in gallery order, sharing the back-link row above the artwork and right-aligned against it. Same treatment as the back link (13px uppercase, `0.08em`, `faint`, accent on hover), so the row reads as one set of quiet actions. Piece titles move to the tooltip and the accessible name; at this size the labels alone carry the action, and keeping them short is what lets the control stay above the fold. Ends are open rather than wrapping, and the unavailable side renders disabled at 40% opacity rather than being omitted, so the row does not reflow between pieces.
+* **Not found** -- an unknown id gets the eyebrow-plus-headline treatment from the intro, at a reduced size, with a link back.
+
+### Footer
+
+Top border in `line`, 28px vertical padding, content split left and right and allowed to wrap. Both strings are 12px `faint`.
+
+## Implementation Notes
+
+* **Tailwind CSS v4.** Tokens live in `@theme inline` in `frontend/src/index.css`, mapping to plain custom properties defined under `:root` and `:root[data-theme="light"]`. `inline` is what makes utilities resolve the variable at the use site, which is what allows a live theme swap.
+* **Theme is stamped on `<html>` as `data-theme`** by an inline script in `index.html` that runs before first paint, so there is no flash of the wrong palette. It resolves stored choice, then `prefers-color-scheme`, then dark.
+* **Storage keys**: `sketchyart-theme` (`"dark"` | `"light"`) and `sketchyart-grid-density` (`"airy"` | `"comfortable"` | `"dense"`). A theme is written only on an explicit toggle -- writing on mount would freeze the OS-derived default for a visitor who never chose.
+* **A no-JS fallback** honours `prefers-color-scheme` through a media query guarded as `:root:not([data-theme="dark"])`.
+
+### Inline style exceptions
+
+`coding-preferences.md` forbids inline styles, and the rule holds everywhere a value is known ahead of time. Three values in this UI are resolved at runtime and cannot be expressed as static utility classes, because Tailwind only emits classes it can see in the source:
+
+1. `aspect-ratio` on a piece thumbnail -- a continuous value from stored image dimensions.
+2. `columns` on the masonry -- selected from the density map at runtime.
+3. The collection swatch gradient -- selected by card index.
+
+Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as static class lookups. Case 1 cannot. These are the only sanctioned exceptions; anything else uses a token.
+
+## Accessibility
+
+* The `faint` token does not meet WCAG AA for normal text in either theme -- roughly 2.6:1 dark and 2.7:1 light, against a 4.5:1 bar. It carries meta, counts, the eyebrow and the footer, all at 12px. This is a deliberate aesthetic choice and is documented here so it is a decision rather than an accident. Raising it to `#807d75` (dark) and `#6e6a60` (light) would clear 4.5:1 and is a two-line change.
+* Accent gold on the light background is roughly 1.9:1, which matters where it is used as light-theme nav hover text.
+* Controls that toggle carry `aria-pressed`; the density group carries `role="group"` and a label; the menu button carries `aria-expanded` and `aria-controls`.
+* All motion is skipped under `prefers-reduced-motion: reduce`.
+
+## Deviations From The Prototype
+
+Recorded so they are not mistaken for drift:
+
+1. **Header and footer inner content is capped at 1400px.** The prototype left them full-bleed, which put the wordmark outside the headline's left edge above 1400px.
+2. **Density values were retuned** from `4 320px` / `5 300px`. Inside the 1400px cap those both collapsed back to three columns, making all three densities render identically.
+3. **The density control is new.** The prototype exposed density as a developer knob with no UI.
+4. **Tag filter chips are not currently shown.** Pieces still carry tags; the chip row was removed pending real filtering work.
+5. **A per-image failure fallback was added**, which the prototype did not design.

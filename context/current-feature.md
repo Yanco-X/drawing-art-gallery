@@ -1,38 +1,46 @@
 # Current Feature
 
-Landing Page (Home UI) Layout and Refinement
+Collections -- schema and REST API.
 
 ## Status
 
-In Progress
+Backend complete and verified. Frontend not yet wired to it.
 
 ## Goals
 
-### Phase 1: Base Layout & Grid
-- Set up the Home route at `/home`.
-- Establish the main home layout and global styles (dark mode by default).
-- Create a top header bar with a search input and a "new item" button (display only).
-- Build the main content area using a grid layout.
-- Render each piece as a square image card with a link to `/piece/[id]`.
-- *Note: No sidebar for now.*
+### Phase 1: Schema -- done
+- `Collection` with name, slug, description, cover, visibility, timestamps.
+- `CollectionPiece` join table carrying curated `display_order`.
+- Backfilled `Piece` with `medium`, `year`, `width`, `height` -- fields the
+  UI already renders but the schema draft never had.
+- Initial Alembic revision; upgrade and downgrade both verified.
 
-### Phase 2: Collections Integration
-- Ensure piece cards correctly link to their respective `/piece/[id]`.
-- Implement a "Favorite Collections" section.
-- Implement a "Most recent collections" section.
-- Use data directly from `src/lib/mock-data.ts`.
+### Phase 2: API -- done
+- Read: `GET /api/collections`, `/api/collections/<slug>`, `/api/pieces`.
+- Owner: create, patch, delete, and `PUT .../pieces` to replace membership
+  and order in one idempotent write.
+- Cover rules: must be a member; resets to the first-piece fallback when the
+  chosen piece leaves the collection.
+- Owner guard on a shared secret that fails closed, pending real auth.
 
-### Phase 3: Recent Items & Refinement
-- Finalize the "Recent collections" section.
-- Display the 10 most recent items in their respective section.
-- Ensure seamless data integration from the mock data file.
+### Phase 3: Frontend integration -- not started
+- Replace `frontend/src/lib/mock-data.ts` with API calls in `services/`.
+- Split `Collection` into summary and detail types so the collections row
+  stops over-fetching every piece.
+- Collection detail route at `/collections/<slug>`, replacing `InertLink`.
+- Owner curation UI: pick pieces, arrange, save.
 
 ## Notes
 
-- **References**: `@context/feature/landing-phase-1-spec.md`, `@context/feature/landing-phase-2-spec.md`, `@context/feature/landing-phase-3-spec.md`.
-- **Mock Data**: Use the static data from `src/lib/mock-data.ts` until the backend and database are fully implemented.
-- **Design**: Rely on the minimalist, dark aesthetic specified in the `DESIGN.md` and the reference screenshots.
+- **Run it**: see `backend/README.md`. Needs Docker Desktop running for
+  PostgreSQL, or use the SQLite smoke test to exercise the API without it.
+- **Decisions**: recorded in `context/project-overview.md` under Data Model.
+- **Blocked on**: real authentication, before any owner UI can ship.
 
 ## History
 
-- **2026-05-05**: Feature goals initialized based on the 3-phase landing spec. Ready to begin Phase 1.
+- **2026-05-05**: Feature goals initialized based on the 3-phase landing spec.
+- **2026-08-25**: Landing page rebuilt against the `new_UI` design system.
+- **2026-08-26**: Piece detail view designed and built. Collections schema
+  and API implemented; PostgreSQL confirmed as the database, resolving the
+  MongoDB reference that had been sitting in `AGENTS.md`.

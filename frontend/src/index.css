@@ -1,40 +1,162 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+/* ─────────────────────────────────────────────────────────────
+   Theme palettes
 
-  /* Colors from DESIGN.md (Gallery Minimalist Dark) */
-  --color-surface: #141311;
-  --color-surface-dim: #141311;
-  --color-surface-bright: #3a3937;
-  --color-surface-container-lowest: #0f0e0c;
-  --color-surface-container-low: #1c1c19;
-  --color-surface-container: #20201d;
-  --color-surface-container-high: #2b2a28;
-  --color-surface-container-highest: #363532;
+   Raw values live here as plain custom properties so they can be
+   swapped at runtime by flipping [data-theme] on <html>. The
+   @theme inline block below maps them onto Tailwind utilities;
+   `inline` makes those utilities resolve the var at the use site
+   instead of baking in a value, which is what lets the swap work.
 
-  --color-on-surface: #e6e2de;
-  --color-on-surface-variant: #cac6bb;
+   Token names match new_UI/README.md exactly — keep them in sync.
+   ───────────────────────────────────────────────────────────── */
 
-  --color-primary: #ffffff;
-  --color-on-primary: #323120;
-  --color-primary-container: #e7e3ca;
-  --color-on-primary-container: #676551;
+:root {
+  --sa-bg: #0e0e10;
+  --sa-bg-translucent: rgba(14, 14, 16, 0.92);
+  --sa-surface: #131316;
+  --sa-line: #1e1e22;
+  --sa-text: #e8e6e1;
+  --sa-dim: #b7b4ac;
+  --sa-muted: #8a8880;
+  --sa-faint: #57554f;
+  --sa-hatch: repeating-linear-gradient(
+    45deg,
+    #17171a 0px,
+    #17171a 10px,
+    #131316 10px,
+    #131316 20px
+  );
+  --sa-swatch-1: linear-gradient(135deg, #2b2620, #4a3d2a);
+  --sa-swatch-2: linear-gradient(135deg, #1f2428, #2e3a40);
+  --sa-swatch-3: linear-gradient(135deg, #26202b, #3d2e44);
+  --sa-swatch-4: linear-gradient(135deg, #202822, #2c4033);
+}
 
-  --color-secondary: #cac6bb;
-  --color-on-secondary: #323129;
-  --color-secondary-container: #48473e;
-  --color-on-secondary-container: #b8b5aa;
+/* No stored preference and no JS to stamp [data-theme]: follow the OS.
+   Must precede the explicit blocks below — equal specificity, last wins. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --sa-bg: #f6f4ef;
+    --sa-bg-translucent: rgba(246, 244, 239, 0.92);
+    --sa-surface: #fffdf8;
+    --sa-line: #e0dcd2;
+    --sa-text: #1c1b18;
+    --sa-dim: #4a4842;
+    --sa-muted: #6f6c63;
+    --sa-faint: #9a968b;
+    --sa-hatch: repeating-linear-gradient(
+      45deg,
+      #ece8e0 0px,
+      #ece8e0 10px,
+      #f4f1ea 10px,
+      #f4f1ea 20px
+    );
+    --sa-swatch-1: linear-gradient(135deg, #e8dcc6, #cbb68c);
+    --sa-swatch-2: linear-gradient(135deg, #d9e2e6, #adc0c8);
+    --sa-swatch-3: linear-gradient(135deg, #e2d7e6, #c2aecb);
+    --sa-swatch-4: linear-gradient(135deg, #d9e3da, #aec4b3);
+  }
+}
 
-  --color-background: #141311;
-  --color-on-background: #e6e2de;
+:root[data-theme="light"] {
+  --sa-bg: #f6f4ef;
+  --sa-bg-translucent: rgba(246, 244, 239, 0.92);
+  --sa-surface: #fffdf8;
+  --sa-line: #e0dcd2;
+  --sa-text: #1c1b18;
+  --sa-dim: #4a4842;
+  --sa-muted: #6f6c63;
+  --sa-faint: #9a968b;
+  --sa-hatch: repeating-linear-gradient(
+    45deg,
+    #ece8e0 0px,
+    #ece8e0 10px,
+    #f4f1ea 10px,
+    #f4f1ea 20px
+  );
+  --sa-swatch-1: linear-gradient(135deg, #e8dcc6, #cbb68c);
+  --sa-swatch-2: linear-gradient(135deg, #d9e2e6, #adc0c8);
+  --sa-swatch-3: linear-gradient(135deg, #e2d7e6, #c2aecb);
+  --sa-swatch-4: linear-gradient(135deg, #d9e3da, #aec4b3);
+}
 
-  --color-outline: #939186;
-  --color-outline-variant: #48473e;
+:root[data-theme="dark"] {
+  --sa-bg: #0e0e10;
+  --sa-bg-translucent: rgba(14, 14, 16, 0.92);
+  --sa-surface: #131316;
+  --sa-line: #1e1e22;
+  --sa-text: #e8e6e1;
+  --sa-dim: #b7b4ac;
+  --sa-muted: #8a8880;
+  --sa-faint: #57554f;
+  --sa-hatch: repeating-linear-gradient(
+    45deg,
+    #17171a 0px,
+    #17171a 10px,
+    #131316 10px,
+    #131316 20px
+  );
+  --sa-swatch-1: linear-gradient(135deg, #2b2620, #4a3d2a);
+  --sa-swatch-2: linear-gradient(135deg, #1f2428, #2e3a40);
+  --sa-swatch-3: linear-gradient(135deg, #26202b, #3d2e44);
+  --sa-swatch-4: linear-gradient(135deg, #202822, #2c4033);
+}
+
+@theme inline {
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, Helvetica, Arial,
+    sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  --color-bg: var(--sa-bg);
+  --color-bg-translucent: var(--sa-bg-translucent);
+  --color-surface: var(--sa-surface);
+  --color-line: var(--sa-line);
+  --color-text: var(--sa-text);
+  --color-dim: var(--sa-dim);
+  --color-muted: var(--sa-muted);
+  --color-faint: var(--sa-faint);
+
+  /* Shared by both themes. */
+  --color-accent: #c9a86a;
+  --color-on-accent: #0e0e10;
+
+  --tracking-wordmark: 0.02em;
+  --tracking-nav: 0.06em;
+  --tracking-btn: 0.08em;
+  --tracking-eyebrow: 0.24em;
+
+  --spacing-gutter: clamp(20px, 5vw, 64px);
+  --spacing-intro-top: clamp(48px, 9vw, 120px);
+  --spacing-intro-bottom: clamp(32px, 5vw, 72px);
+  --spacing-section-sm: clamp(40px, 6vw, 80px);
+  --spacing-section-lg: clamp(56px, 8vw, 96px);
+
+  --container-content: 1400px;
+}
+
+/* Diagonal-stripe placeholder standing in for artwork that is
+   missing or failed to load. */
+@utility hatch {
+  background-image: var(--sa-hatch);
 }
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-sans antialiased;
+    @apply bg-bg text-text font-sans antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Design rule: radius 0 everywhere, no shadows. Depth comes from
+     1px borders and the surface/bg split. Don't reach for rounded-*
+     or shadow-* utilities in this UI. */
+  button {
+    border-radius: 0;
   }
 }

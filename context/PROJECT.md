@@ -32,7 +32,7 @@ It won't. This is purely a personal gallery and learning project.
 
 ## 7. UI/UX
 **How should this look and feel?**
-Outlined in `DESIGN.md`. A "Silent Curator" approach utilizing a Modern Minimalist Dark aesthetic, keeping the focus strictly on the artwork.
+Outlined in `DESIGN.md`. A "Silent Curator" approach: quiet and editorial, with sharp corners, hairline rules, a single gold accent, and no shadows. Dark and light themes of equal standing. Every visual effect the UI does not spend is attention returned to the drawings.
 
 ## 8. Documentation
 **Docs & Context**

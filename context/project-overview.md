@@ -79,6 +79,7 @@ erDiagram
     USER ||--o{ PIECE : uploads
     PIECE ||--o{ COLLECTION_PIECE : "appears in"
     COLLECTION ||--o{ COLLECTION_PIECE : "contains"
+    COLLECTION }o--o| PIECE : "cover"
     PIECE }o--o{ TAG : "tagged with"
 
     USER {
@@ -93,16 +94,24 @@ erDiagram
         string title
         text description
         string image_url
+        string medium
+        int year
+        int width
+        int height
         date created_date
         uuid user_id FK
         datetime created_at
+        datetime updated_at
     }
     COLLECTION {
         uuid id PK
         string name
         text description
         string slug
+        uuid cover_piece_id FK
+        bool is_public
         datetime created_at
+        datetime updated_at
     }
     COLLECTION_PIECE {
         uuid collection_id FK
@@ -116,110 +125,50 @@ erDiagram
     }
 ```
 
-### Rough SQLAlchemy Draft
+### Models
 
-> 📝 **Rough draft only.** Field types, constraints, and indexes will likely change once API endpoints and queries are designed. Uses SQLAlchemy 2.0 declarative style with `Mapped` / `mapped_column`.
+The schema is implemented in [`backend/app/models.py`](../backend/app/models.py)
+and created by the initial Alembic revision. It is no longer duplicated here --
+read the models; they are the source of truth.
 
-```python
-# ROUGH DRAFT — schema reference, expect changes
-# models.py
+Decisions worth knowing, made when the collections feature was built:
 
-import uuid
-from datetime import datetime, date
-from enum import Enum
-from sqlalchemy import String, Text, ForeignKey, DateTime, Date, Integer, Table, Column
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+- **`Uuid` (generic) rather than the Postgres dialect type.** Renders as a
+  native `uuid` on Postgres and `CHAR(32)` elsewhere, which lets the API be
+  exercised against in-memory SQLite without a second set of models.
+- **`Piece` gained `medium`, `year`, `width`, `height`.** The first two are
+  rendered on every card; the last two produce the aspect ratio the masonry
+  needs. Measuring dimensions in the browser instead would reflow the grid
+  as images load, so they are recorded at upload.
+- **`Collection.cover_piece_id`** is a nullable FK to one of its own pieces,
+  `ON DELETE SET NULL`. Chosen over a separate cover upload: no extra
+  storage, no orphaned files, and a cover can never show artwork the
+  collection does not contain. Falls back to the first member, then to a
+  gradient swatch in the UI.
+- **`Collection.is_public`** lets the owner curate before publishing.
+- **`display_order` is not unique.** Membership is replaced as one ordered
+  list, and a uniqueness constraint would trip on the transient duplicates
+  any reshuffle passes through. The composite primary key already prevents
+  a piece appearing twice in one collection.
+- **Cascades delete memberships, never artwork.** Removing a collection or a
+  piece clears the join rows; the pieces themselves survive.
+- **`pieceCount` is derived, not stored.** A counter column would be one bug
+  away from drifting for no measurable gain at this scale.
 
-
-class Base(DeclarativeBase):
-    pass
-
-
-class Role(str, Enum):
-    OWNER = "owner"
-    VISITOR = "visitor"
-
-
-# Association table: Piece <-> Tag (many-to-many)
-piece_tags = Table(
-    "piece_tags",
-    Base.metadata,
-    Column("piece_id", UUID(as_uuid=True), ForeignKey("pieces.id"), primary_key=True),
-    Column("tag_id", UUID(as_uuid=True), ForeignKey("tags.id"), primary_key=True),
-)
-
-
-class User(Base):
-    __tablename__ = "users"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[Role] = mapped_column(String(20), default=Role.VISITOR, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    pieces: Mapped[list["Piece"]] = relationship(back_populates="user")
-
-
-class Piece(Base):
-    __tablename__ = "pieces"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    image_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    created_date: Mapped[date | None] = mapped_column(Date)  # when the artwork was made
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="pieces")
-    collections: Mapped[list["CollectionPiece"]] = relationship(back_populates="piece")
-    tags: Mapped[list["Tag"]] = relationship(secondary=piece_tags, back_populates="pieces")
-
-
-class Collection(Base):
-    __tablename__ = "collections"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    pieces: Mapped[list["CollectionPiece"]] = relationship(back_populates="collection")
-
-
-class CollectionPiece(Base):
-    __tablename__ = "collection_pieces"
-
-    collection_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("collections.id"), primary_key=True)
-    piece_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pieces.id"), primary_key=True)
-    display_order: Mapped[int] = mapped_column(Integer, default=0)
-
-    collection: Mapped["Collection"] = relationship(back_populates="pieces")
-    piece: Mapped["Piece"] = relationship(back_populates="collections")
-
-
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-
-    pieces: Mapped[list["Piece"]] = relationship(secondary=piece_tags, back_populates="tags")
-```
-
-**Migration tooling:** use [Alembic](https://alembic.sqlalchemy.org) for schema versioning. Initial setup:
+**Migration tooling:** [Alembic](https://alembic.sqlalchemy.org), already set
+up in `backend/migrations`. Full instructions in
+[`backend/README.md`](../backend/README.md):
 
 ```bash
-pip install flask-sqlalchemy alembic psycopg2-binary
-alembic init migrations
-alembic revision --autogenerate -m "initial schema"
-alembic upgrade head
+cd backend
+.venv/Scripts/alembic.exe revision --autogenerate -m "what changed"
+.venv/Scripts/alembic.exe upgrade head
 ```
+
+> Note: the stack is plain **SQLAlchemy 2.0**, not Flask-SQLAlchemy -- the
+> models stay importable outside an app context, which is what lets the
+> smoke test run them against SQLite. The driver is **psycopg 3**, not
+> `psycopg2-binary`, which has no wheels for Python 3.14.
 
 ---
 
@@ -250,13 +199,15 @@ alembic upgrade head
 
 ## 🎭 UI/UX Direction
 
-**Concept:** *The Silent Curator* — Modern Minimalist Dark aesthetic.
+**Concept:** *The Silent Curator* — quiet, editorial, restrained.
 
 **Principles**
 - The artwork is the protagonist; the UI disappears.
 - Generous negative space.
 - Restrained typography and chromeless navigation.
-- Dark background to reduce visual competition with pieces.
+- Sharp corners, hairline rules, no shadows. Depth is a 1px border, nothing more.
+- A single muted gold accent, spent sparingly.
+- Dark and light themes of equal standing, chosen by the viewer and remembered.
 
 📄 Full direction lives in [`DESIGN.md`](./DESIGN.md).
 
