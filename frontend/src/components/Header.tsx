@@ -59,7 +59,13 @@ const OwnerSignIn = ({ className = '' }: { className?: string }) => (
   </InertLink>
 );
 
-export const Header = ({ role }: { role: Role }) => {
+export const Header = ({
+  role,
+  onUploadClick,
+}: {
+  role: Role;
+  onUploadClick?: () => void;
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
   const navItems = buildNavItems(pathname);
@@ -88,7 +94,8 @@ export const Header = ({ role }: { role: Role }) => {
           {role === 'owner' ? (
             <button
               type="button"
-              className="cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase tracking-btn text-on-accent"
+              onClick={onUploadClick}
+              className="cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90"
             >
               + Upload
             </button>

@@ -93,7 +93,8 @@ erDiagram
         uuid id PK
         string title
         text description
-        string image_url
+        string original_ext
+        int byte_size
         string medium
         int year
         int width
@@ -227,6 +228,7 @@ cd backend
 | `PROJECT.md` | High-level pillars (this overview is its expanded form) |
 | `AGENTS.md` | Rules and context for AI/agentic workflows |
 | `DESIGN.md` | Visual identity, design tokens, UX principles |
+| `STORAGE.md` | Data and image storage, upload pipeline, storage adapter |
 
 ---
 

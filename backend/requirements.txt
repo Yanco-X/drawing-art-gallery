@@ -5,3 +5,8 @@ alembic>=1.14
 # and would need a local C toolchain to build.
 psycopg[binary]>=3.2.10
 python-dotenv>=1.0
+# Image decoding, EXIF handling, resizing, WebP encoding.
+Pillow>=11.0
+# S3-compatible object storage. Works against AWS S3, Cloudflare R2,
+# Backblaze, and MinIO -- only the endpoint and credentials differ.
+boto3>=1.35

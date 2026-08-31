@@ -63,7 +63,12 @@ class Piece(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    image_url: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # No path or URL column: every object key derives from this row's id, so
+    # there is nothing to keep in sync and nothing to migrate when the
+    # storage backend changes. The API composes public URLs at read time.
+    original_ext: Mapped[str] = mapped_column(String(10), nullable=False)
+    byte_size: Mapped[int | None] = mapped_column(Integer)
 
     # Rendered as "{medium} · {year}" on the card and the wall label.
     medium: Mapped[str | None] = mapped_column(String(100))
@@ -97,6 +102,22 @@ class Piece(Base):
         if not self.width or not self.height:
             return None
         return self.width / self.height
+
+    @property
+    def storage_prefix(self) -> str:
+        return f"{self.id}/"
+
+    def key(self, variant: str) -> str:
+        """
+        Object key for one rendition.
+
+        `original` keeps its uploaded format; the derivatives are WebP.
+        Deriving these rather than storing them is what keeps the row free
+        of anything backend-specific.
+        """
+        if variant == "original":
+            return f"{self.id}/original.{self.original_ext}"
+        return f"{self.id}/{variant}.webp"
 
 
 class Collection(Base):

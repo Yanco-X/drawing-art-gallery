@@ -13,6 +13,7 @@ themes:
     dim: '#b7b4ac'
     muted: '#8a8880'
     faint: '#57554f'
+    danger: '#c96a5a'
     hatch: 'repeating-linear-gradient(45deg, #17171a 0px, #17171a 10px, #131316 10px, #131316 20px)'
   light:
     bg: '#f6f4ef'
@@ -23,6 +24,7 @@ themes:
     dim: '#4a4842'
     muted: '#6f6c63'
     faint: '#9a968b'
+    danger: '#a33f2f'
     hatch: 'repeating-linear-gradient(45deg, #ece8e0 0px, #ece8e0 10px, #f4f1ea 10px, #f4f1ea 20px)'
 swatches:
   dark: ['#2b2620 to #4a3d2a', '#1f2428 to #2e3a40', '#26202b to #3d2e44', '#202822 to #2c4033']
@@ -117,6 +119,7 @@ Four steps, from loudest to quietest. Picking the right step is most of the work
 | `bg-translucent` | Sticky header behind a 12px blur | `rgba(14,14,16,0.92)` | `rgba(246,244,239,0.92)` |
 | `surface` | Raised panels (collection cards) | `#131316` | `#fffdf8` |
 | `line` | Every border and divider in the UI | `#1e1e22` | `#e0dcd2` |
+| `danger` | Irreversible actions, and only those | `#c96a5a` | `#a33f2f` |
 | `hatch` | Diagonal placeholder for missing artwork | see frontmatter | see frontmatter |
 
 In the light theme `surface` and `bg` are nearly identical. The 1px `line` border is doing almost all of the work of defining a card -- get it wrong and the light theme collapses into a flat sheet.
@@ -125,7 +128,15 @@ In the light theme `surface` and `bg` are nearly identical. The 1px `line` borde
 
 `#c9a86a`, a muted gold, shared by both themes. On-accent text is `#0e0e10`.
 
-It is the only accent in the system and appears in exactly five places: hover borders, the active nav underline, the Upload button, active control states, and the italic "Art" in the wordmark. Adding a second accent colour, or spending this one on decoration, breaks the system.
+It is the only accent in the system and appears in exactly six places: hover borders, the active nav underline, the Upload button, active control states, the italic "Art" in the wordmark, and form focus with its required marks and errors. Adding a second accent colour, or spending this one on decoration, breaks the system.
+
+### Danger
+
+The one sanctioned exception to "no second colour", and it is a semantic token rather than an accent: it names a consequence, appears only where an action cannot be undone, and is never decorative. At the time of writing that is exactly two places -- the "Delete piece" hover state and the confirming button in a destructive dialog.
+
+Unlike the accent, it is defined per theme: `#c96a5a` on the dark ground, `#a33f2f` on the light one. A single red cannot carry on both. Both clear WCAG AA against their own background (5.2:1 and 5.8:1).
+
+The reasoning is worth keeping. Reusing the gold would have made "Delete permanently" look identical to "Add to gallery", and the muscle memory that gold means *proceed* is exactly what a destructive step needs to interrupt.
 
 ### Collection swatches
 
@@ -252,6 +263,30 @@ Not present in the original handoff -- designed against this system as a **galle
 * **Tags render as static bordered chips, not links** -- there is no tag route to point at, and a chip that looks clickable but is not is worse than a plain one.
 * **Prev/next** -- neighbours in gallery order, sharing the back-link row above the artwork and right-aligned against it. Same treatment as the back link (13px uppercase, `0.08em`, `faint`, accent on hover), so the row reads as one set of quiet actions. Piece titles move to the tooltip and the accessible name; at this size the labels alone carry the action, and keeping them short is what lets the control stay above the fold. Ends are open rather than wrapping, and the unavailable side renders disabled at 40% opacity rather than being omitted, so the row does not reflow between pieces.
 * **Not found** -- an unknown id gets the eyebrow-plus-headline treatment from the intro, at a reduced size, with a link back.
+
+### Upload modal
+
+The first form in the system, so it defines the form vocabulary the rest will inherit. Built on a native `<dialog>`: focus trapping, Escape, an inert background and top-layer stacking come from the platform rather than from a hand-rolled trap.
+
+* **Panel** -- `surface` on a 1px `line` border, `min(94vw, 940px)` wide, capped at `90vh` with the body scrolling inside. Header and footer are divided by hairlines, not by elevation. The backdrop is `black/70` under a 3px blur, echoing the sticky header.
+* **Two columns above 640px** -- artwork left, fields right, stacking below. The image is given the larger half because it is the subject.
+* **Drop zone** -- `hatch` when empty, which is already the system's mark for absent artwork, so nothing new was invented. `line` border turning `accent` on hover and while a file is dragged over it. On drop it becomes the preview, `object-contain` under a 420px cap, with filename and size in 12px `faint` below.
+* **Field labels use `muted`, not `faint`.** Meta text is allowed to recede; an instruction is not. This is the one place the eyebrow letterform (12px, uppercase, `0.24em`) is paired with a louder colour, and the reason is legibility.
+* **Inputs** -- `bg` inside a `surface` panel, so the recess reads as a change of background rather than an inset shadow. 1px `line` border, radius 0, 14px `text`, placeholders in `faint`. Focus takes an `accent` border *and* a 1px `accent` outline: a border change alone is too quiet at this line weight, and an outline is a focus ring, not elevation.
+* **Tag chips** -- typed into the field and committed with Enter or comma; Backspace on an empty field removes the last. Same bordered chip as the wall label, but interactive here, so they take the `accent` hover the static ones do not. Duplicates collapse case-insensitively because the backend slugifies.
+* **Required marks** -- an `accent` asterisk. The sixth and last place the accent is spent.
+* **Errors** in `accent`, bottom-left, `role="alert"`, and cleared by any edit -- a message that outlives the problem it describes reads as though the form is still refusing.
+* **Actions** -- bordered ghost "Cancel", solid `accent` "Add to gallery". Both disable during upload, and Escape is refused mid-request so a stray keypress cannot abandon work already in flight.
+
+### Destructive confirmation
+
+Deleting a piece removes the row, the original, and both renditions, with no undo. The design carries that weight in three places rather than one.
+
+* **The affordance is quiet and out of the way.** "Delete piece" is the last item in the wall label rail, below a hairline, at 13px uppercase `faint` -- the same treatment as the back link. It never appears in the top row beside prev/next, where a cursor is already moving between pieces. Hover is the only place it takes `danger`; at rest it is as quiet as the metadata around it.
+* **Owner only.** The prop is omitted for visitors, so the block does not render at all rather than rendering disabled.
+* **The dialog does the persuading.** Native `<dialog>`, 480px, no close ×. Omitting the × means the first focusable element is Cancel, so the dialog opens with focus on the safe choice and a stray Enter does nothing. Escape and backdrop clicks cancel, and both are refused mid-request.
+* **It names the piece and states the consequence** in two short paragraphs: what is removed from where, then that it cannot be undone and what the owner is left with. Generic "Are you sure?" copy is not enough when the thing being destroyed is the only copy.
+* **The confirming button is outlined, not filled.** A filled button is an invitation and this is not one. It fills on hover, which is the moment the choice is actually being made.
 
 ### Footer
 

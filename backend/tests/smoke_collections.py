@@ -22,6 +22,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
+from app.storage import MemoryStorage  # noqa: E402
 from app.db import Base, SessionLocal, engine as _engine, init_engine  # noqa: E402
 from app.models import Collection, Piece, Tag  # noqa: E402
 
@@ -38,6 +39,7 @@ def check(label, condition, detail=""):
 class TestConfig(Config):
     OWNER_API_TOKEN = "test-token"
     DEBUG = False
+    STORAGE_BACKEND = "memory"
 
 
 app = create_app(
@@ -47,6 +49,7 @@ app = create_app(
         "connect_args": {"check_same_thread": False},
         "poolclass": StaticPool,
     },
+    storage=MemoryStorage(),
 )
 
 from app import db as db_module  # noqa: E402
@@ -68,7 +71,7 @@ tag = Tag(name="Charcoal", slug="charcoal")
 pieces = [
     Piece(
         title=f"Piece {i}",
-        image_url=f"/uploads/p{i}.jpg",
+        original_ext="jpg",
         medium="Charcoal",
         year=2020 + i,
         width=1000,
@@ -85,7 +88,7 @@ session.close()
 client = app.test_client()
 
 print("\n== health & auth ==")
-check("health responds ok", client.get("/api/health").get_json() == {"status": "ok"})
+check("health responds ok", client.get("/api/health").get_json()["status"] == "ok")
 check(
     "create without token is rejected",
     client.post("/api/collections", json={"name": "X"}).status_code == 401,
@@ -109,7 +112,7 @@ check("pieceCount is 3", created["pieceCount"] == 3, str(created["pieceCount"]))
 check("pieces come back in given order", [p["id"] for p in created["pieces"]] == ids[:3])
 check(
     "cover falls back to first piece",
-    created["coverImageUrl"] == "/uploads/p1.jpg",
+    created["coverImageUrl"] == f"/media/{ids[0]}/thumb.webp",
     str(created["coverImageUrl"]),
 )
 check("aspectRatio computed from stored dims", created["pieces"][0]["aspectRatio"] == 1000 / 1100)
@@ -174,13 +177,17 @@ check("cover outside the collection refused", rejected.status_code == 400)
 ok = client.patch(
     f"/api/collections/{cid}", json={"coverPieceId": ids[3]}, headers=OWNER
 ).get_json()
-check("explicit cover applied", ok["coverImageUrl"] == "/uploads/p4.jpg", str(ok["coverImageUrl"]))
+check(
+    "explicit cover applied",
+    ok["coverImageUrl"] == f"/media/{ids[3]}/thumb.webp",
+    str(ok["coverImageUrl"]),
+)
 after = client.put(
     f"/api/collections/{cid}/pieces", json={"pieceIds": [ids[0], ids[2]]}, headers=OWNER
 ).get_json()
 check(
     "cover reset when it leaves the collection",
-    after["coverImageUrl"] == "/uploads/p1.jpg",
+    after["coverImageUrl"] == f"/media/{ids[0]}/thumb.webp",
     str(after["coverImageUrl"]),
 )
 

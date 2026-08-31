@@ -19,11 +19,15 @@ python -m venv .venv
 cp .env.example .env        # then set OWNER_API_TOKEN
 ```
 
-Start the database (needs Docker Desktop running):
+Start PostgreSQL and MinIO (needs Docker Desktop running):
 
 ```bash
-docker compose up -d db
+docker compose up -d
 ```
+
+MinIO is S3-compatible object storage, used to develop and exercise the
+phase 2 code path locally. Console at http://localhost:9001
+(sketchyart / sketchyart).
 
 Apply migrations:
 
@@ -43,11 +47,20 @@ The models use SQLAlchemy's generic `Uuid` type rather than the Postgres
 dialect one, so the whole API can be exercised against in-memory SQLite:
 
 ```bash
-.venv/Scripts/python.exe tests/smoke_collections.py
+.venv/Scripts/python.exe tests/smoke_collections.py   # 27 checks
+.venv/Scripts/python.exe tests/smoke_uploads.py       # 33 checks
 ```
 
-That runs the real app and real models end to end -- only the database URL
-differs. Useful before the database container is up.
+Those run the real app, real models, and real image processing end to end --
+only the database URL and storage backend differ. Useful before the
+containers are up.
+
+With PostgreSQL and MinIO running, the live integration exercises real
+artwork through real object storage:
+
+```bash
+STORAGE_BACKEND=s3 .venv/Scripts/python.exe tests/integration_live.py   # 23 checks
+```
 
 ## Auth
 
@@ -65,6 +78,9 @@ wholesale when sessions land; nothing else depends on how it works.
 | GET | `/api/health` | - | Liveness |
 | GET | `/api/pieces` | - | All pieces, newest first |
 | GET | `/api/pieces/<id>` | - | One piece |
+| POST | `/api/pieces` | owner | Upload a piece (multipart) |
+| DELETE | `/api/pieces/<id>` | owner | Delete the row and its objects |
+| GET | `/media/<key>` | - | Local storage backend only |
 | GET | `/api/collections` | - | Summaries; `?includePrivate=1` for drafts |
 | GET | `/api/collections/<slug>` | - | Detail with pieces in curated order |
 | POST | `/api/collections` | owner | Create |
@@ -96,3 +112,28 @@ a cover that stops being a member is reset to the first-piece fallback.
 
 The URL comes from `DATABASE_URL`; `alembic.ini` holds no credentials.
 Set `ALEMBIC_DATABASE_URL` to point a migration run somewhere else.
+
+## Storage
+
+Set by `STORAGE_BACKEND`:
+
+| Value | Behaviour |
+|---|---|
+| `local` (default) | Files under `backend/uploads`, served by Flask at `/media/<key>` |
+| `s3` | Any S3-compatible bucket. MinIO locally, R2 or S3 in production |
+| `memory` | In-process, for tests |
+
+Uploading stores three renditions per piece, keyed by its id:
+
+```
+<piece-id>/original.<ext>     archival, private
+<piece-id>/display.webp       long edge 1600px
+<piece-id>/thumb.webp         long edge 600px
+```
+
+Nothing in the database records a path or URL -- keys derive from the piece
+id and the API composes URLs at read time, so switching backends needs no
+data migration. Under `s3`, derivatives live in a public-read bucket and
+originals in a private one, reached through a presigned URL.
+
+Full design and rationale: [`../context/STORAGE.md`](../context/STORAGE.md).

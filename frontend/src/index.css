@@ -21,6 +21,7 @@
   --sa-dim: #b7b4ac;
   --sa-muted: #8a8880;
   --sa-faint: #57554f;
+  --sa-danger: #c96a5a;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #17171a 0px,
@@ -46,6 +47,7 @@
     --sa-dim: #4a4842;
     --sa-muted: #6f6c63;
     --sa-faint: #9a968b;
+    --sa-danger: #a33f2f;
     --sa-hatch: repeating-linear-gradient(
       45deg,
       #ece8e0 0px,
@@ -69,6 +71,7 @@
   --sa-dim: #4a4842;
   --sa-muted: #6f6c63;
   --sa-faint: #9a968b;
+  --sa-danger: #a33f2f;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #ece8e0 0px,
@@ -91,6 +94,7 @@
   --sa-dim: #b7b4ac;
   --sa-muted: #8a8880;
   --sa-faint: #57554f;
+  --sa-danger: #c96a5a;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #17171a 0px,
@@ -118,6 +122,9 @@
   --color-dim: var(--sa-dim);
   --color-muted: var(--sa-muted);
   --color-faint: var(--sa-faint);
+  /* Destructive confirmation only. Not a second accent: it names one
+     kind of consequence and is spent nowhere else. */
+  --color-danger: var(--sa-danger);
 
   /* Shared by both themes. */
   --color-accent: #c9a86a;

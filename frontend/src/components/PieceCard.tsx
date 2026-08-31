@@ -4,6 +4,9 @@ import type { Piece } from '../types';
 
 export const PieceCard = ({ piece }: { piece: Piece }) => {
   const [failed, setFailed] = useState(false);
+  // Both are optional on an uploaded piece, so the separator is only
+  // drawn between values that exist.
+  const meta = [piece.medium, piece.year].filter(Boolean).join(' · ');
 
   return (
     <Link to={`/piece/${piece.id}`} className="group flex flex-col gap-2.5">
@@ -23,7 +26,7 @@ export const PieceCard = ({ piece }: { piece: Piece }) => {
           </span>
         ) : (
           <img
-            src={piece.imageUrl}
+            src={piece.thumbnailUrl ?? piece.imageUrl}
             alt={piece.title}
             loading="lazy"
             onError={() => setFailed(true)}
@@ -34,9 +37,7 @@ export const PieceCard = ({ piece }: { piece: Piece }) => {
 
       <div className="flex flex-col gap-0.5">
         <span className="text-[14px] text-text">{piece.title}</span>
-        <span className="text-[12px] text-faint">
-          {piece.medium} · {piece.year}
-        </span>
+        {meta && <span className="text-[12px] text-faint">{meta}</span>}
       </div>
     </Link>
   );

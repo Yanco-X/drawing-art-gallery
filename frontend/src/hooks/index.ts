@@ -1,3 +1,5 @@
+export { useAsync } from './useAsync';
+export type { Async } from './useAsync';
 export { useFlipReflow } from './useFlipReflow';
 export { usePersistentState } from './usePersistentState';
 export { useTheme } from './useTheme';

@@ -1,8 +1,8 @@
-import type { Collection } from '../types';
+import type { CollectionSummary } from '../types';
 import { InertLink } from './InertLink';
 
 interface CollectionCardProps {
-  collection: Collection;
+  collection: CollectionSummary;
   /** Position in the row; picks one of the four gradient swatches. */
   index: number;
 }

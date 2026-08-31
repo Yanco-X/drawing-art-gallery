@@ -1,10 +1,11 @@
 # Current Feature
 
-Collections -- schema and REST API.
+Real data end to end -- uploads, storage, and a gallery that reads the API.
 
 ## Status
 
-Backend complete and verified. Frontend not yet wired to it.
+The gallery runs on PostgreSQL and MinIO. Mock data is gone.
+Collections have a backend but no data and no UI.
 
 ## Goals
 
@@ -23,12 +24,25 @@ Backend complete and verified. Frontend not yet wired to it.
   chosen piece leaves the collection.
 - Owner guard on a shared secret that fails closed, pending real auth.
 
-### Phase 3: Frontend integration -- not started
-- Replace `frontend/src/lib/mock-data.ts` with API calls in `services/`.
-- Split `Collection` into summary and detail types so the collections row
-  stops over-fetching every piece.
-- Collection detail route at `/collections/<slug>`, replacing `InertLink`.
-- Owner curation UI: pick pieces, arrange, save.
+### Phase 3: Storage and uploads -- done
+Specification and outcome in `@context/STORAGE.md`. Derived keys instead of
+`pieces.image_url`, storage behind a four-method adapter, MinIO for the S3
+path, and an upload pipeline that validates, strips EXIF, measures, derives
+thumb and display, stores, then commits.
+
+### Phase 4: Frontend integration -- done, except collections
+- `mock-data.ts` deleted. `services/pieces.ts` reads the API; `useAsync`
+  carries the loading and error states.
+- Owner upload modal with drag and drop, wired to `POST /api/pieces`.
+- `Collection` split into `CollectionRef`, `CollectionSummary`, and
+  `Collection`, so the row no longer implies fetching every piece.
+- Still open: collection detail route at `/collections/<slug>` replacing
+  `InertLink`, and the owner curation UI.
+
+### Phase 5: Editing -- not started
+No `PATCH /api/pieces/<id>`. A piece cannot be corrected after upload, and
+re-uploading mints a new id, so its URL changes. The import manifest is the
+only workaround for imported work. Pinned by the owner on 2026-08-30.
 
 ## Notes
 
@@ -44,3 +58,7 @@ Backend complete and verified. Frontend not yet wired to it.
 - **2026-08-26**: Piece detail view designed and built. Collections schema
   and API implemented; PostgreSQL confirmed as the database, resolving the
   MongoDB reference that had been sitting in `AGENTS.md`.
+- **2026-08-26**: Storage adapter, image pipeline, and upload endpoints.
+- **2026-08-30**: `pieces.original_filename` dropped. Upload modal built.
+  The eleven existing images imported, and the gallery switched off mock
+  data onto PostgreSQL and MinIO.

@@ -39,6 +39,7 @@ This document establishes the basic rules and guidelines for AI agents working o
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
 - @context/project-overview.md contains full in depth description of the project, its goals, and context.
 - @context/DESIGN.md contains the design guidelines and rules.
+- @context/STORAGE.md contains how data and image files are stored, the upload pipeline, and the storage adapter.
 - @context/PROJECT.md contains the project pillars, goals.
 - @context/STRUCTURE.md contains the project structure.
 - @README.md contains the overall project context and roadmap.

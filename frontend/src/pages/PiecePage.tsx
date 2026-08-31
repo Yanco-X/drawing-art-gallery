@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
 import { PieceWallLabel } from '../components/PieceWallLabel';
-import {
-  getAdjacentPieces,
-  getCollectionsForPiece,
-  getPieceById,
-} from '../lib/mock-data';
+import { useAsync } from '../hooks';
+import { CURRENT_ROLE } from '../lib/session';
+import { ApiError, deletePiece, fetchPieces } from '../services';
 import type { Piece } from '../types';
 
 const BackLink = () => (
@@ -19,13 +18,19 @@ const BackLink = () => (
   </Link>
 );
 
-const NotFound = () => (
+const Message = ({
+  eyebrow,
+  headline,
+}: {
+  eyebrow: string;
+  headline: string;
+}) => (
   <section className="mx-auto flex w-full max-w-content flex-col gap-6 px-gutter pt-intro-top pb-section-lg">
     <p className="text-[12px] uppercase tracking-eyebrow text-faint">
-      Not found
+      {eyebrow}
     </p>
     <h1 className="max-w-[14em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
-      That piece isn't here.
+      {headline}
     </h1>
     <div>
       <BackLink />
@@ -65,20 +70,73 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
   );
 };
 
+/** Neighbours in gallery order. Ends are open rather than wrapping. */
+const adjacent = (pieces: Piece[], index: number) => ({
+  previous: index > 0 ? pieces[index - 1] : undefined,
+  next: index < pieces.length - 1 ? pieces[index + 1] : undefined,
+});
+
 const PiecePage = () => {
   const { id } = useParams<{ id: string }>();
-  const piece = id ? getPieceById(id) : undefined;
+  const navigate = useNavigate();
+  // One request rather than two: the list carries this piece and the
+  // neighbours either side of it, and it is metadata only.
+  const load = useAsync(fetchPieces);
 
-  if (!piece) {
+  // Declared before the early returns below — hooks cannot be conditional.
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  if (load.status === 'loading') {
     return (
       <PageShell>
-        <NotFound />
+        <section className="mx-auto w-full max-w-content px-gutter pt-intro-top pb-section-lg">
+          <p className="text-[12px] uppercase tracking-eyebrow text-faint">
+            Loading
+          </p>
+        </section>
       </PageShell>
     );
   }
 
-  const collections = getCollectionsForPiece(piece.id);
-  const { previous, next } = getAdjacentPieces(piece.id);
+  if (load.status === 'error') {
+    return (
+      <PageShell>
+        <Message eyebrow="Unavailable" headline={load.message} />
+      </PageShell>
+    );
+  }
+
+  const index = load.data.findIndex((candidate) => candidate.id === id);
+  if (index === -1) {
+    return (
+      <PageShell>
+        <Message eyebrow="Not found" headline="That piece isn't here." />
+      </PageShell>
+    );
+  }
+
+  const piece = load.data[index];
+  const { previous, next } = adjacent(load.data, index);
+
+  const remove = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deletePiece(piece.id);
+      // replace: true so Back does not return to a page that no longer
+      // exists. Leaving the route remounts the gallery, which refetches.
+      navigate('/home', { replace: true });
+    } catch (caught) {
+      setDeleteError(
+        caught instanceof ApiError
+          ? caught.message
+          : 'Could not reach the API. Is the backend running?',
+      );
+      setDeleting(false);
+    }
+  };
 
   return (
     <PageShell>
@@ -99,9 +157,45 @@ const PiecePage = () => {
           <figure className="flex items-start justify-center">
             <PieceImage piece={piece} />
           </figure>
-          <PieceWallLabel piece={piece} collections={collections} />
+          {/*
+            The list payload omits `collections` — only GET /api/pieces/<id>
+            carries them, since resolving them per row would be a query per
+            piece. Fetch the detail route here once collections exist and
+            the block has something to show.
+          */}
+          <PieceWallLabel
+            piece={piece}
+            collections={piece.collections ?? []}
+            onDelete={
+              CURRENT_ROLE === 'owner' ? () => setConfirming(true) : undefined
+            }
+          />
         </div>
       </article>
+
+      <ConfirmDialog
+        open={confirming}
+        title="Delete this piece?"
+        confirmLabel="Delete permanently"
+        busyLabel="Deleting…"
+        busy={deleting}
+        error={deleteError}
+        onCancel={() => {
+          setConfirming(false);
+          setDeleteError(null);
+        }}
+        onConfirm={remove}
+      >
+        <p>
+          <span className="text-text">{piece.title}</span> will be removed
+          from the database, and its original and both renditions deleted
+          from storage.
+        </p>
+        <p>
+          This cannot be undone. The only copy left will be whatever you
+          still have on your own disk.
+        </p>
+      </ConfirmDialog>
     </PageShell>
   );
 };

@@ -17,5 +17,30 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible object storage, so the phase 2 code path can be developed
+  # and exercised locally. Speaks the real S3 protocol -- the same boto3 code
+  # runs unchanged against AWS S3, Cloudflare R2, or Backblaze.
+  #   API:     http://localhost:9000
+  #   Console: http://localhost:9001  (sketchyart / sketchyart)
+  minio:
+    image: minio/minio
+    container_name: sketchyart-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sketchyart
+      MINIO_ROOT_PASSWORD: sketchyart
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - sketchyart-minio:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   sketchyart-pgdata:
+  sketchyart-minio:

@@ -50,7 +50,7 @@ Full system in `context/DESIGN.md`.
 * **Initialized**: React + TypeScript + Vite scaffolding, Tailwind CSS v4.
 * **Routing**: `App.tsx` redirects `/` to `/home`, serves `/piece/:id`, and sends unknown paths back to `/home`. `ScrollToTop` resets scroll on navigation.
 * **Landing page**: Rebuilt against the design system. Header, optional intro, collections row, and the "All work" masonry, in both themes.
-* **Piece page**: Artwork with a wall-label metadata rail, tags, collections, prev/next, and a not-found state.
+* **Piece page**: Artwork with a wall-label metadata rail, tags, collections, prev/next, and a not-found state. Owners get a delete affordance at the foot of the rail, behind a confirmation that names the piece.
 * **Components** (`src/components/`):
   * `Header.tsx` - Wordmark, nav, theme toggle, owner/visitor action, mobile menu.
   * `ThemeToggle.tsx` - Dark/light switch, labels the active theme.
@@ -59,22 +59,30 @@ Full system in `context/DESIGN.md`.
   * `CollectionsSection.tsx`, `CollectionCard.tsx` - Collections row.
   * `AllWorkSection.tsx`, `MasonryGrid.tsx`, `PieceCard.tsx` - Artwork grid.
   * `DensityControl.tsx` - Airy / Comfortable / Dense preference.
+  * `UploadModal.tsx` - Owner upload: drag and drop, metadata fields, tag chips.
+  * `ConfirmDialog.tsx` - Reusable confirmation for actions with no undo.
+  * `SectionState.tsx` - The quiet line a section shows while loading, on failure, or when empty.
   * `SiteFooter.tsx`, `InertLink.tsx` - Footer, and a placeholder link for routes that do not exist yet.
 * **State** (`src/contexts/`, `src/hooks/`):
   * `ThemeProvider` with `useTheme`, persisted and stamped before first paint.
   * `useGridDensity` on a generic `usePersistentState`.
   * `useFlipReflow` - animates the masonry when density changes.
-* **Data Layer**:
-  * `frontend/src/lib/mock-data.ts` - Local mock dataset. Images and aspect ratios are real; titles, media and years are placeholders pending real metadata.
+* **Data Layer**: No mock data. Every view reads the API.
+  * `frontend/src/services/pieces.ts` - `fetchPieces`, `fetchPiece`, `fetchCollections`, `createPiece`. Vite proxies `/api` and `/media` to Flask, so the frontend stays same-origin and no CORS is configured.
+  * `frontend/src/hooks/useAsync.ts` - One remote read with loading and error states. Not a cache: the gallery makes two requests on load.
+  * `frontend/src/lib/session.ts` - Role derived from `VITE_OWNER_TOKEN`, so the Upload button appears only when uploading would succeed.
 
 ### Backend (`/backend`)
 * **Framework**: Flask app factory with plain SQLAlchemy 2.0 and a scoped session.
 * **Database**: PostgreSQL 17 via `docker-compose.yml`. Schema created by the initial Alembic revision.
 * **Models**: `User`, `Piece`, `Collection`, `CollectionPiece`, `Tag`. Uses the generic `Uuid` type so the API can be exercised against SQLite.
-* **Endpoints**: Read routes for pieces and collections; owner-gated create, update, delete, and membership replacement for collections.
+* **Endpoints**: Read routes for pieces and collections; owner-gated create and delete for pieces, and create, update, delete, and membership replacement for collections. `GET /api/pieces/<id>` also carries the collections a piece appears in; the list route does not, since resolving them per row would be a query per piece.
+* **Import**: `scripts/import_uploads.py` backfills artwork that predates the pipeline, through the same processing the API uses. Metadata comes from an editable `scripts/import-manifest.json`.
 * **Auth**: Placeholder `X-Owner-Token` shared secret that fails closed. Real sessions pending.
-* **Verification**: `tests/smoke_collections.py` runs the real app end to end against in-memory SQLite -- 27 checks.
-* **Storage**: `backend/uploads` holds artwork on disk (phase 1).
+* **Verification**: 82 checks total. `tests/smoke_collections.py` (27) and `tests/smoke_uploads.py` (33) run against SQLite and in-memory storage; `tests/integration_live.py` (22) runs against real PostgreSQL and MinIO with real artwork.
+* **Storage**: Pluggable via `STORAGE_BACKEND`. `LocalStorage` writes to `backend/uploads` and Flask serves `/media/<key>`; `S3Storage` targets any S3-compatible bucket. Full design in `context/STORAGE.md`.
+* **Uploads**: `POST /api/pieces` validates by decoding, applies EXIF orientation, strips metadata, records width/height, and derives WebP thumb and display renditions. `DELETE` clears the row and the objects.
+* **Object storage**: MinIO in `docker-compose.yml` runs the phase 2 code path locally. Public bucket for derivatives, private bucket for originals via presigned URL.
 
 ---
 
@@ -84,19 +92,31 @@ Full system in `context/DESIGN.md`.
 The landing page was rebuilt against the new design system in `context/DESIGN.md`, followed by the piece detail view.
 
 ### Completed: Collections Schema & API
-Backend schema and REST API for collections -- create, curate, reorder, publish. Not yet wired to the frontend, which still reads mock data.
+Backend schema and REST API for collections -- create, curate, reorder, publish.
+
+### Completed: Upload UI
+Owner-only "+ Upload" opens a modal with drag and drop, a preview, title, description, medium, year, date made, and tag chips. Uploads POST to the live API and appear at the head of the grid.
+
+### Completed: Storage & Uploads
+Storage adapter, image pipeline, and upload/delete endpoints. Runs against local disk or S3-compatible object storage. Development runs on MinIO (`STORAGE_BACKEND=s3`).
+
+### Completed: Delete
+Owner-only "Delete piece" on the piece page removes the row and every stored object, behind a confirmation dialog. Returns to the gallery with `replace: true`, so Back does not land on a page that no longer exists.
+
+### Completed: Real Data End to End
+The eleven existing images were imported and `mock-data.ts` deleted. The gallery, the piece page, and prev/next all read PostgreSQL, and the browser fetches artwork from the MinIO bucket. Only titles were carried over from mock data -- its media, years and tags were invented, and are not in the database.
 
 ### Known Gaps
-* Collection cards, "View all", "Tags" nav and "Owner sign in" are inert pending routes. Piece cards now navigate.
-* Piece descriptions are empty in mock data; the block renders as soon as copy exists.
+* Collection cards, "View all", "Tags" nav and "Owner sign in" are inert pending routes. Piece cards navigate.
+* **No `PATCH /api/pieces/<id>`.** A piece cannot be edited after upload; correcting a title means delete and re-upload, which mints a new id and changes its URL. Imported work can be corrected by editing the manifest and re-running with `--replace`. Pinned by the owner on 2026-08-30.
+* Imported pieces have no medium, year, description or tags. The card and wall label omit what is absent rather than guessing.
+* No collections exist. The row shows its empty state, and the wall label omits the block.
 * Tag filtering is not wired up; pieces carry tags but no filter UI is shown.
-* No loading or skeleton state for the grid.
-* Mock piece metadata (medium, year, most titles) is placeholder.
-* Uploaded images are served at full resolution -- roughly 30MB for one page load, with a 14MB single file. Thumbnail generation is needed.
+* The grid has a text loading state, not a skeleton.
+* Under StrictMode the two landing-page reads are issued twice in development. React's intentional double-invoke; the fetch cleanup discards the first response, and a production build issues one each.
 
 ### Upcoming Milestones
-1. Real owner authentication, replacing the shared-secret guard.
-2. Upload endpoint: store the file, record width/height, generate thumbnails.
-3. Point the frontend at the API, replacing `frontend/src/lib/mock-data.ts`.
-4. Collection detail route and the owner curation UI.
-5. Tag filtering, restoring the chip row.
+1. `PATCH /api/pieces/<id>` and an edit affordance, so an upload can be corrected.
+2. Real owner authentication, replacing the shared-secret guard.
+3. Collections: create them, a detail route, and the owner curation UI.
+4. Tag filtering, restoring the chip row.

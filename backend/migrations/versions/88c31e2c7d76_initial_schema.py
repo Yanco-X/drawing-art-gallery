@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: da64abe2dd65
+Revision ID: 88c31e2c7d76
 Revises: 
-Create Date: 2026-08-26 18:13:46.934988
+Create Date: 2026-08-30 19:40:38.492149
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'da64abe2dd65'
+revision: str = '88c31e2c7d76'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -42,7 +42,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('image_url', sa.String(length=500), nullable=False),
+    sa.Column('original_ext', sa.String(length=10), nullable=False),
+    sa.Column('original_filename', sa.String(length=255), nullable=True),
+    sa.Column('byte_size', sa.Integer(), nullable=True),
     sa.Column('medium', sa.String(length=100), nullable=True),
     sa.Column('year', sa.Integer(), nullable=True),
     sa.Column('width', sa.Integer(), nullable=True),
@@ -54,7 +56,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_pieces_user_id', 'pieces', ['user_id'], unique=False)
+    op.create_index(op.f('ix_pieces_user_id'), 'pieces', ['user_id'], unique=False)
     op.create_table('collections',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -83,12 +85,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['piece_id'], ['pieces.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('collection_id', 'piece_id')
     )
-    op.create_index(
-        'ix_collection_pieces_order',
-        'collection_pieces',
-        ['collection_id', 'display_order'],
-        unique=False,
-    )
+    op.create_index('ix_collection_pieces_order', 'collection_pieces', ['collection_id', 'display_order'], unique=False)
     # ### end Alembic commands ###
 
 
@@ -99,7 +96,7 @@ def downgrade() -> None:
     op.drop_table('collection_pieces')
     op.drop_table('piece_tags')
     op.drop_table('collections')
-    op.drop_index('ix_pieces_user_id', table_name='pieces')
+    op.drop_index(op.f('ix_pieces_user_id'), table_name='pieces')
     op.drop_table('pieces')
     op.drop_table('users')
     op.drop_table('tags')
