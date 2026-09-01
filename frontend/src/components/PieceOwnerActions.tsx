@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PieceDetailsDialog } from './PieceDetailsDialog';
 import { useAsync } from '../hooks';
 import {
   ApiError,
@@ -100,7 +101,7 @@ export const PieceOwnerActions = ({
   onDeleted,
 }: PieceOwnerActionsProps) => {
   const [dialog, setDialog] = useState<
-    'waive' | 'restore' | 'delete' | 'collections' | null
+    'waive' | 'restore' | 'delete' | 'collections' | 'edit' | null
   >(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +185,16 @@ export const PieceOwnerActions = ({
   return (
     <>
       <div className="flex flex-wrap items-center gap-5">
+        {/* Offered on waived work too: correcting a label has nothing to do
+            with whether the piece is on the wall, and the reserve is where
+            it would be tidied up before going back. */}
+        <button
+          type="button"
+          onClick={() => setDialog('edit')}
+          className={`${ACTION} hover:text-accent`}
+        >
+          Edit details
+        </button>
         {piece.waivedAt ? (
           <>
             <button
@@ -220,6 +231,19 @@ export const PieceOwnerActions = ({
           </>
         )}
       </div>
+
+      {/* Mounted only while open, so its fields always start from the piece
+          as it stands. */}
+      {dialog === 'edit' && (
+        <PieceDetailsDialog
+          piece={piece}
+          onClose={close}
+          onSaved={(saved) => {
+            setDialog(null);
+            onChanged(saved);
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={dialog === 'waive'}

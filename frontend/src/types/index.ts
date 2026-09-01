@@ -90,6 +90,25 @@ export interface NewPiece {
 }
 
 /**
+ * A correction to a piece's wall label. Omitted keys are left alone.
+ *
+ * `year` carries the raw input string rather than a number: `Number('abc')`
+ * is NaN, and `JSON.stringify` turns NaN into null, which would quietly
+ * erase a year the owner mistyped. Sent as typed, the API validates it and
+ * says so.
+ */
+export interface PiecePatch {
+  title?: string;
+  description?: string;
+  medium?: string;
+  year?: string | number | null;
+  /** YYYY-MM-DD, or null to clear. */
+  createdDate?: string | null;
+  /** The whole list — an omitted tag is a removed one. */
+  tags?: string[];
+}
+
+/**
  * A partial update. Omitted keys are left alone by the API.
  *
  * `slug` is deliberately absent: the API only re-slugs when it is sent, so

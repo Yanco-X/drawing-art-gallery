@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { DragEvent, FormEvent, KeyboardEvent } from 'react';
+import type { DragEvent, FormEvent } from 'react';
 import { ApiError, createPiece } from '../services';
 import type { NewPiece, Piece } from '../types';
+import { TagInput } from './TagInput';
 
 /*
  * Add work.
@@ -71,7 +72,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
 
   const [fields, setFields] = useState(EMPTY_FIELDS);
   const [tags, setTags] = useState<string[]>([]);
-  const [tagDraft, setTagDraft] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -104,7 +104,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
   const reset = () => {
     setFields(EMPTY_FIELDS);
     setTags([]);
-    setTagDraft('');
     setFile(null);
     setError(null);
     dragDepth.current = 0;
@@ -137,28 +136,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     }
     setError(null);
     setFile(candidate);
-  };
-
-  const addTag = (raw: string) => {
-    const value = raw.replace(/,+$/, '').trim();
-    if (!value) return;
-    // The backend slugifies, so "Ink" and "ink" would collapse into one row.
-    if (tags.some((tag) => tag.toLowerCase() === value.toLowerCase())) {
-      setTagDraft('');
-      return;
-    }
-    setTags((current) => [...current, value]);
-    setTagDraft('');
-  };
-
-  const onTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === ',') {
-      // Enter inside a form would otherwise submit it.
-      event.preventDefault();
-      addTag(tagDraft);
-    } else if (event.key === 'Backspace' && !tagDraft) {
-      setTags((current) => current.slice(0, -1));
-    }
   };
 
   const onDragEnter = (event: DragEvent) => {
@@ -365,38 +342,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label htmlFor={fieldId + '-tags'} className={LABEL}>
-                Tags
-              </label>
-              {tags.length > 0 && (
-                <ul className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <li key={tag}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setTags((current) => current.filter((t) => t !== tag))
-                        }
-                        aria-label={'Remove ' + tag}
-                        className="cursor-pointer border border-line bg-bg px-2.5 py-1 text-[12px] text-dim transition-colors duration-200 hover:border-accent hover:text-accent"
-                      >
-                        {tag} <span aria-hidden="true">&times;</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <input
-                id={fieldId + '-tags'}
-                value={tagDraft}
-                onChange={(event) => setTagDraft(event.target.value)}
-                onKeyDown={onTagKeyDown}
-                onBlur={() => addTag(tagDraft)}
-                placeholder="Charcoal, Portrait — enter to add"
-                className={FIELD}
-              />
-            </div>
+            <TagInput id={fieldId + '-tags'} tags={tags} onChange={setTags} />
           </div>
         </div>
 

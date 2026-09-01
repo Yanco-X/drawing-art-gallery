@@ -6,6 +6,7 @@ import type {
   NewCollection,
   NewPiece,
   Piece,
+  PiecePatch,
 } from '../types';
 
 /** An error the API reported, carrying its per-field details when present. */
@@ -130,6 +131,29 @@ export const fetchAllCollections = async (): Promise<CollectionSummary[]> => {
  */
 export const fetchVisibleCollections = (): Promise<CollectionSummary[]> =>
   CURRENT_ROLE === 'owner' ? fetchAllCollections() : fetchCollections();
+
+/**
+ * Corrects a piece's wall label. The image is not replaceable — that would
+ * mean re-deriving both renditions behind an id people already hold.
+ *
+ * Returns the detail shape, collections included, so the piece page can use
+ * the response directly instead of refetching.
+ */
+export const updatePiece = async (
+  id: string,
+  patch: PiecePatch,
+): Promise<Piece> => {
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id), {
+    method: 'PATCH',
+    headers: {
+      'X-Owner-Token': OWNER_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
 
 /**
  * Removes the row and every stored object for a piece. Irreversible: the

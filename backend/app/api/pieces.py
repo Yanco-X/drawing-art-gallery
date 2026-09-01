@@ -80,6 +80,32 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
+def _parse_year(raw):
+    """
+    A year from a form string or a JSON number.
+
+    Shared by upload and edit so the two cannot disagree about what counts
+    as a year. Empty string and null both mean "no year", not "invalid".
+    """
+    if raw is None or raw == "":
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        raise ApiError("year must be a number.", details={"year": raw})
+
+
+def _parse_created_date(raw):
+    if raw is None or raw == "":
+        return None
+    try:
+        return date.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        raise ApiError(
+            "createdDate must be YYYY-MM-DD.", details={"createdDate": raw}
+        )
+
+
 @bp.post("")
 @require_owner
 def create_piece():
@@ -112,19 +138,8 @@ def create_piece():
     except InvalidImage as exc:
         raise ApiError(str(exc), details={"image": "invalid"})
 
-    year_raw = request.form.get("year")
-    try:
-        year = int(year_raw) if year_raw else None
-    except ValueError:
-        raise ApiError("year must be a number.", details={"year": year_raw})
-
-    created_raw = request.form.get("createdDate")
-    try:
-        created = date.fromisoformat(created_raw) if created_raw else None
-    except ValueError:
-        raise ApiError(
-            "createdDate must be YYYY-MM-DD.", details={"createdDate": created_raw}
-        )
+    year = _parse_year(request.form.get("year"))
+    created = _parse_created_date(request.form.get("createdDate"))
 
     # The id is generated here, before anything is written: every object key
     # derives from it, so it cannot wait for the INSERT to assign one.
@@ -159,6 +174,66 @@ def create_piece():
         raise
 
     return jsonify(piece_to_dict(piece)), 201
+
+
+@bp.patch("/<uuid:piece_id>")
+@require_owner
+def update_piece(piece_id):
+    """
+    Correct a piece's wall label.
+
+    Only keys actually present in the body are touched, so a form that sends
+    one field cannot blank the rest. Sending null or an empty string for an
+    optional field does clear it -- that is an edit, not an omission.
+
+    The image is deliberately not replaceable here. Swapping the bytes behind
+    an id would mean re-deriving both renditions and invalidating every URL
+    already handed out, which is a different act from fixing a title.
+
+    A piece has no slug -- it is addressed by its id -- so unlike a
+    collection there is no address here that a rename could break.
+
+    A waived piece can be edited. Correcting a label has nothing to do with
+    whether the work is on the wall, and the reserve is exactly where it
+    would be tidied up before going back.
+    """
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ApiError("Expected a JSON object body.")
+
+    session = SessionLocal()
+    piece = session.get(Piece, piece_id)
+    if piece is None:
+        raise ApiError("Piece not found.", status=404)
+
+    if "title" in data:
+        title = (data.get("title") or "").strip()
+        if not title:
+            raise ApiError("A piece needs a title.", details={"title": "required"})
+        piece.title = title
+
+    if "description" in data:
+        piece.description = (data.get("description") or "").strip() or None
+
+    if "medium" in data:
+        piece.medium = (data.get("medium") or "").strip() or None
+
+    if "year" in data:
+        piece.year = _parse_year(data["year"])
+
+    if "createdDate" in data:
+        piece.created_date = _parse_created_date(data["createdDate"])
+
+    if "tags" in data:
+        if not isinstance(data["tags"], list):
+            raise ApiError("tags must be an array.", details={"tags": "array"})
+        # Replaces the whole set, so an omitted tag is a removed tag. Rows in
+        # `tags` are left behind on purpose: they are shared, and another
+        # piece may still be using one.
+        piece.tags = _resolve_tags(session, data["tags"])
+
+    session.commit()
+    return jsonify(piece_detail_to_dict(piece))
 
 
 @bp.delete("/<uuid:piece_id>")

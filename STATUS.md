@@ -30,10 +30,10 @@ drawing-art-gallery/
 │   │   └── services/      storage adapters, images, slugs
 │   ├── migrations/        alembic, 3 revisions
 │   ├── scripts/           import_uploads.py
-│   └── tests/             4 suites, 146 checks
-├── frontend/              44 .ts/.tsx files
+│   └── tests/             4 suites, 170 checks
+├── frontend/              52 .ts/.tsx files
 │   └── src/
-│       ├── components/    23
+│       ├── components/    31
 │       ├── contexts/      3  (theme, role, ...)
 │       ├── hooks/         6  (incl. useAsync)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
@@ -110,12 +110,17 @@ credentials are the same pair.
 Seven tables: `pieces`, `collections`, `collection_pieces`, `tags`,
 `piece_tags`, `users`, `alembic_version`.
 
-**`pieces`** — id (UUID), title, slug, description, medium, year,
-`width_px`, `height_px`, `content_type`, `file_size`, `created_at`,
-`waived_at`.
+**`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
+medium, year, width, height, `created_date`, `user_id`, `created_at`,
+`updated_at`, `waived_at`.
 
-**`collections`** — id, name, slug, description, `is_public`,
-`cover_piece_id`, `created_at`.
+**A piece has no slug.** It is addressed by id everywhere — the route is
+`/piece/:id`, and object keys derive from the id. Worth stating because
+collections do have one, and the rule that protects a collection's URL
+across a rename has no equivalent here: there is no address to protect.
+
+**`collections`** — id, name, slug, description, `cover_piece_id`,
+`is_public`, `created_at`, `updated_at`.
 
 **`collection_pieces`** — the join, carrying `display_order`. This is the
 curation: a collection's order lives here and nowhere else.
@@ -179,7 +184,7 @@ Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ## 5. API
 
-15 routes. Everything under `/api`. `[owner]` means the route requires the
+16 routes. Everything under `/api`. `[owner]` means the route requires the
 owner token in `X-Owner-Token`.
 
 ### Pieces
@@ -189,6 +194,7 @@ owner token in `X-Owner-Token`.
 | `GET` | `/api/pieces` | Exhibited only. `?waived=true` `[owner]` returns the reserve, newest waived first |
 | `GET` | `/api/pieces/<id>` | Detail, including `collections`. 404 for a waived piece unless owner |
 | `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives |
+| `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags. Only keys present are touched. Allowed on a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
 | `POST` | `/api/pieces/<id>/waive` `[owner]` | 409 if already waived |
 | `POST` | `/api/pieces/<id>/restore` `[owner]` | Optional `{"collectionIds": [...]}`, one transaction |
@@ -297,13 +303,13 @@ detour into auth without being asked.
 
 ## 8. Verification
 
-Four suites, 154 checks, no test framework — each is a script that prints
+Four suites, 170 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
 cd backend
 .venv/Scripts/python.exe tests/smoke_collections.py    # 54
-.venv/Scripts/python.exe tests/smoke_uploads.py        # 35
+.venv/Scripts/python.exe tests/smoke_uploads.py        # 51
 .venv/Scripts/python.exe tests/smoke_waived.py         # 37
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
@@ -334,6 +340,7 @@ built-in `WebSocket`. Useful, but the owner tests by hand and prefers to.
 | Collection creation — pick, then name | Done |
 | Collection view — page, index, real links, private gating | Done |
 | Collection edition — details, arrange, cover, delete | Done |
+| Piece editing — the wall label, after upload | Done |
 
 **Waived pieces** is specified in full in
 [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) — 12 sections, and
@@ -355,6 +362,17 @@ owner in the list, on the index, and on a piece's page, marked with a
 `Private` eyebrow. Nothing had ever exercised those rules, because no
 private collection had ever existed.
 
+**Piece editing** closed the oldest open gap, pinned on 2026-08-30 and
+carried in §11 ever since. `PATCH /api/pieces/<id>` takes title,
+description, medium, year, createdDate and tags; only keys actually present
+are touched, so a partial body cannot blank the rest, while null or an empty
+string does clear a field. The dialog on the piece page collects exactly
+what the upload form collects — the owner's own framing — so `TagInput` was
+extracted and both now share it. The image is deliberately not replaceable:
+swapping the bytes behind an id would mean re-deriving both renditions and
+invalidating every URL already handed out. A waived piece can be edited,
+since the reserve is where a label would be tidied up before going back.
+
 **Collection edition** followed, same document, §9. Details — name,
 description, visibility — go through a dialog and one `PATCH` that never
 sends `slug`, so a rename keeps the URL. Order, membership and cover are one
@@ -369,17 +387,17 @@ thing being edited is the sequence.
 | | |
 |---|---|
 | Pieces | 11 rows — 10 exhibited, 1 waived (*Untitled Study VII*) |
-| Tags | 2 |
-| Collections | 2 — **Testing** (public, 3) and **Yankito** (public, 4) |
+| Tags | 2 — *Charcoal* and *Portrait*, both attached to nothing |
+| Collections | 2 — **Testing** (public, 5) and **Yankito** (public, 4) |
 
-`Testing` holds *Savy Relax*, *Night Calls V*, *Untitled Study V* in that
-order. **The owner created both collections, and waived that piece.** This
-is real data. It confirms the flows work end to end, and it must not be
+**The owner created both collections, curated them, and waived that piece.**
+This is real data. It confirms the flows work end to end, and it must not be
 cleaned up.
 
 The 11 pieces were imported by `scripts/import_uploads.py` from the
-owner's local folder. Four have real titles; the rest are
-*Untitled Study {roman}*.
+owner's local folder. Four have real titles — *Savy Relax*, *Night Calls V*,
+*Night Calls IX*, *Yankito Night Calls* — and the rest are
+*Untitled Study {roman}*, I through VII.
 
 Anything named `__like_this__` is a test fixture and is not real data. Every
 suite and every by-hand check creates one, cleans up only that, and asserts
@@ -387,64 +405,57 @@ the rest of the gallery is untouched. Keep the discipline.
 
 ---
 
-## 10. Next: editing a piece
+## 10. Next: tags that do something
 
-**This is the feature to build.** Collections can now be created, opened,
-curated and deleted. A piece still cannot be corrected after upload.
+**This is the feature to build.** Tags can now be entered on upload and
+corrected afterwards, they are stored, and they render on the wall label.
+They still do nothing else. The "Tags" nav entry points at `#`, and there is
+no way to see the other work sharing a tag.
 
-The owner pinned this on 2026-08-30 and it has been carried in §11 ever
-since. It is the oldest open gap in the project, and the one that costs
-something every time work is imported: `import-manifest.json` left `medium`
-and `year` empty for all eleven pieces, which is why the wall labels are
-sparse and cannot be filled in.
-
-Re-uploading is not a workaround. A new upload mints a new id, so the piece
-changes address, loses its collection memberships, and any link to it dies.
+That gap got sharper with piece editing: there is now a control for curating
+tags and no consequence to curating them well.
 
 ### What to build
 
-**`PATCH /api/pieces/<id>` `[owner]`** — the endpoint does not exist. It
-should accept `title`, `description`, `medium`, `year`, `createdDate`, and
-follow the rule collections already set: **only re-slug when `slug` is sent
-explicitly**, so correcting a title does not move the piece.
+**A tag route** — `/tags` listing what exists with counts, and `/tags/:slug`
+showing the work carrying one. The pieces payload already includes `tags`,
+so the grid needs no new shape.
 
-**An "Edit details" dialog on the piece page**, in `PieceOwnerActions`
-beside Collections and Waive. The vocabulary is already built — collection
-edition uses exactly this shape, and `CollectionDetailsDialog` is the model
-to copy.
+**`GET /api/pieces?tag=<slug>`**, or a tags blueprint — does not exist yet.
+`tags` and `piece_tags` are populated and correct; nothing reads them.
+
+**The chip row on the gallery.** `AllWorkSection` carries a standing comment
+that tag filtering is deliberately not wired up and the chip row was removed
+pending this work. Restoring it is a UI-only change.
+
+**Point the nav entry somewhere.** `Header` has a `TODO` on exactly this.
 
 ### Decisions to make
 
-**Whether tags are editable here.** The piece already carries them, the join
-table exists, and the upload endpoint accepts them — so `PATCH` could too,
-cheaply. But tags are inert everywhere else (§11), and making them editable
-without making them do anything builds a control with no consequence.
-Editing metadata without tags is coherent; adding tags is a separate
-feature. Recommended to leave them out, but the owner's call.
+**Whether filtering is a route or a filter on the gallery.** A route gives
+a tag a URL worth sharing; an in-place filter keeps one page. The gallery
+already shows everything and the density control already lives there.
 
-**Whether the image itself can be replaced.** Almost certainly not, and
-worth writing down: swapping the file behind an id means re-running the
-derivative pipeline and invalidating whatever has cached the old renditions.
-A correction to a wall label is not the same act as replacing the artwork.
-
-**What happens to a waived piece.** Editing one is harmless, but the piece
-page for a waived piece already carries Restore and Delete. Decide whether
-Edit joins them or is only offered on exhibited work.
+**What a tag with no pieces should do.** Editing a piece's tags can orphan a
+tag row — the rows are shared, so they are deliberately left behind rather
+than deleted with the last piece using them. Two orphans exist right now,
+*Charcoal* and *Portrait*. Decide whether an unused tag is listed, hidden,
+or swept.
 
 ## 11. Known gaps
 
 Carried forward deliberately. None of these block §10.
 
-- **Tags do nothing.** The tables exist and two tags are stored, but there
-  is no filtering and the "Tags" nav entry is inert.
 - **"Owner sign in" is inert**, per §7.
 - **Waived derivatives stay anonymously fetchable by URL.** The public
   bucket policy matches `sketchyart/*` rather than a prefix, so anyone who
   saw a piece while it was exhibited keeps a working link. A storage-layout
   gap that outlives authentication — revisit when sessions land, since
   fixing it now is a lock on an open door.
-- **`import-manifest.json` has empty `medium` and `year`** for all 11
-  pieces, which is why the wall labels are sparse.
+- **`import-manifest.json` left `medium` and `year` empty** for all 11
+  imported pieces, which is why most wall labels are sparse. No longer a
+  blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
+  them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
 

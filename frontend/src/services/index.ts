@@ -15,5 +15,6 @@ export {
   setCollectionPieces,
   setPieceCollections,
   updateCollection,
+  updatePiece,
   ApiError,
 } from './pieces';

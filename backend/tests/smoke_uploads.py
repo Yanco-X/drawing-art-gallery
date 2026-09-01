@@ -8,6 +8,7 @@ MemoryStorage. Runs the real app, real Pillow processing, real routes.
 import io
 import os
 import sys
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,7 +20,8 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
-from app.models import Piece  # noqa: E402
+from app.models import Piece, Tag  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
 
 OWNER = {"X-Owner-Token": "test-token"}
@@ -171,6 +173,55 @@ derived = Image.open(io.BytesIO(storage.objects[f"{rotated['id']}/display.webp"]
 check("derivative carries no exif", not derived.getexif(), str(dict(derived.getexif())))
 check("original archived byte-for-byte", stored_original[:2] == b"\xff\xd8")
 
+print("\n== editing a piece ==")
+check("edit without a token is refused",
+      client.patch(f"/api/pieces/{pid}", json={"title": "X"}).status_code == 401)
+check("editing an unknown piece 404s",
+      client.patch(f"/api/pieces/{uuid.uuid4()}", headers=OWNER,
+                   json={"title": "X"}).status_code == 404)
+check("a blank title is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"title": "   "}).status_code == 400)
+check("a non-numeric year is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"year": "soon"}).status_code == 400)
+check("a malformed date is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"createdDate": "04-03-2026"}).status_code == 400)
+
+edited = client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                      json={"title": "Night Calls XI, corrected",
+                            "medium": "Graphite", "year": 2025}).get_json()
+check("title updated", edited["title"] == "Night Calls XI, corrected", edited["title"])
+check("medium updated", edited["medium"] == "Graphite", str(edited["medium"]))
+check("year updated", edited["year"] == 2025, str(edited["year"]))
+check("fields left out of the body are untouched",
+      edited["createdDate"] == "2026-03-04"
+      and sorted(t["slug"] for t in edited["tags"]) == ["charcoal", "portrait"],
+      f"{edited['createdDate']} {[t['slug'] for t in edited['tags']]}")
+
+cleared = client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                       json={"year": None, "description": ""}).get_json()
+check("null clears the year", cleared["year"] is None, str(cleared["year"]))
+check("an empty string clears the description",
+      cleared["description"] == "", repr(cleared["description"]))
+
+retagged = client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                        json={"tags": ["Ink", "Study"]}).get_json()
+check("tags replaced wholesale, not merged",
+      sorted(t["slug"] for t in retagged["tags"]) == ["ink", "study"],
+      str([t["slug"] for t in retagged["tags"]]))
+session = SessionLocal()
+check("dropped tags survive as rows, since other pieces may use them",
+      {"charcoal", "portrait"} <= {t.slug for t in session.scalars(select(Tag)).all()})
+session.close()
+check("an empty array removes every tag",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"tags": []}).get_json()["tags"] == [])
+check("editing leaves the renditions alone",
+      len([k for k in storage.objects if k.startswith(f"{pid}/")]) == 3,
+      str([k for k in storage.objects if k.startswith(f"{pid}/")]))
+
 print("\n== listing ==")
 listed = client.get("/api/pieces").get_json()
 check("all four pieces listed", len(listed) == 4, str(len(listed)))
@@ -182,6 +233,11 @@ check("delete is refused while exhibited",
       client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 409)
 check("waive accepted",
       client.post(f"/api/pieces/{pid}/waive", headers=OWNER).status_code == 200)
+# Correcting a label has nothing to do with whether the work is on the wall,
+# and the reserve is where it would be tidied up before going back.
+check("a waived piece can still be corrected",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"title": "Tidied in the reserve"}).status_code == 200)
 check("delete returns 204", client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 204)
 check("objects removed", not any(k.startswith(f"{pid}/") for k in storage.objects),
       str([k for k in storage.objects if k.startswith(f"{pid}/")]))
