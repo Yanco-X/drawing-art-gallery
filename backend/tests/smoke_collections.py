@@ -222,6 +222,90 @@ check(
 )
 session.close()
 
+print("\n== create a collection with its pieces in one request ==")
+made = client.post(
+    "/api/collections", headers=OWNER,
+    json={"name": "Picked From The Grid", "description": "Chosen in order.",
+          "pieceIds": [ids[3], ids[1]]},
+)
+check("create with pieceIds returns 201", made.status_code == 201, str(made.status_code))
+body = made.get_json()
+check("membership applied", body["pieceCount"] == 2, str(body["pieceCount"]))
+check("selection order is the display order",
+      [p["id"] for p in body["pieces"]] == [ids[3], ids[1]],
+      str([p["id"] for p in body["pieces"]]))
+check("slug derived from the name", body["slug"] == "picked-from-the-grid", body["slug"])
+
+print("\n== set a piece's collections from the piece side ==")
+target = client.post("/api/collections", headers=OWNER, json={"name": "Side A"}).get_json()
+other = client.post("/api/collections", headers=OWNER, json={"name": "Side B"}).get_json()
+
+res = client.put(f"/api/pieces/{ids[2]}/collections", headers=OWNER,
+                 json={"collectionIds": [target["id"], other["id"]]})
+check("put returns 200", res.status_code == 200, str(res.status_code))
+check("the piece reports both",
+      sorted(c["name"] for c in res.get_json()["collections"]) == ["Side A", "Side B"],
+      str([c["name"] for c in res.get_json()["collections"]]))
+check("and both collections count it",
+      client.get(f"/api/collections/{target['slug']}").get_json()["pieceCount"] == 1
+      and client.get(f"/api/collections/{other['slug']}").get_json()["pieceCount"] == 1)
+
+print("\n== unchecking removes ==")
+res = client.put(f"/api/pieces/{ids[2]}/collections", headers=OWNER,
+                 json={"collectionIds": [target["id"]]})
+check("dropped from the one left out",
+      [c["name"] for c in res.get_json()["collections"]] == ["Side A"],
+      str([c["name"] for c in res.get_json()["collections"]]))
+check("that collection is now empty",
+      client.get(f"/api/collections/{other['slug']}").get_json()["pieceCount"] == 0)
+
+res = client.put(f"/api/pieces/{ids[2]}/collections", headers=OWNER,
+                 json={"collectionIds": []})
+check("an empty list leaves every collection", res.get_json()["collections"] == [])
+
+print("\n== re-saving an unchanged list does not shuffle curation ==")
+client.put(f"/api/collections/{target['id']}/pieces", headers=OWNER,
+           json={"pieceIds": [ids[1], ids[2], ids[3]]})
+before = [p["id"] for p in client.get(f"/api/collections/{target['slug']}").get_json()["pieces"]]
+client.put(f"/api/pieces/{ids[2]}/collections", headers=OWNER,
+           json={"collectionIds": [target["id"]]})
+after = [p["id"] for p in client.get(f"/api/collections/{target['slug']}").get_json()["pieces"]]
+check("order preserved", before == after, f"{before} -> {after}")
+
+print("\n== a cover that leaves loses the cover ==")
+client.patch(f"/api/collections/{target['id']}", headers=OWNER, json={"coverPieceId": ids[2]})
+check("cover set",
+      client.get(f"/api/collections/{target['slug']}").get_json()["coverImageUrl"] is not None)
+client.put(f"/api/pieces/{ids[2]}/collections", headers=OWNER, json={"collectionIds": []})
+detail = client.get(f"/api/collections/{target['slug']}").get_json()
+check("cover fell back to a remaining member",
+      detail["coverImageUrl"] is not None and ids[2] not in detail["coverImageUrl"],
+      str(detail["coverImageUrl"]))
+
+print("\n== validation ==")
+check("without the field, refused",
+      client.put(f"/api/pieces/{ids[1]}/collections", headers=OWNER, json={}).status_code == 400)
+check("unknown collection 404s",
+      client.put(f"/api/pieces/{ids[1]}/collections", headers=OWNER,
+                 json={"collectionIds": ["00000000-0000-0000-0000-000000000000"]}
+                 ).status_code == 404)
+check("duplicates refused",
+      client.put(f"/api/pieces/{ids[1]}/collections", headers=OWNER,
+                 json={"collectionIds": [target["id"], target["id"]]}).status_code == 400)
+check("without the owner token, refused",
+      client.put(f"/api/pieces/{ids[1]}/collections",
+                 json={"collectionIds": []}).status_code == 401)
+
+print("\n== a waived piece cannot be curated ==")
+client.post(f"/api/pieces/{ids[1]}/waive", headers=OWNER)
+res = client.put(f"/api/pieces/{ids[1]}/collections", headers=OWNER,
+                 json={"collectionIds": [target["id"]]})
+check("refused with 409", res.status_code == 409, str(res.status_code))
+check("and says to restore first", "estore" in res.get_json()["error"],
+      res.get_json()["error"])
+client.post(f"/api/pieces/{ids[1]}/restore", headers=OWNER)
+
+
 failed = [c for c in checks if not c[1]]
 print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")
 if failed:

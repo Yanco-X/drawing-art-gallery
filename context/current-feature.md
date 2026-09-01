@@ -36,10 +36,18 @@ thumb and display, stores, then commits.
 - Owner upload modal with drag and drop, wired to `POST /api/pieces`.
 - `Collection` split into `CollectionRef`, `CollectionSummary`, and
   `Collection`, so the row no longer implies fetching every piece.
+- Collections can be created from the grid by picking pieces, or from a
+  piece's own page. `PUT /api/pieces/<id>/collections` sets membership
+  from the piece side.
 - Still open: collection detail route at `/collections/<slug>` replacing
-  `InertLink`, and the owner curation UI.
+  `InertLink`, and reordering an existing collection from the UI.
 
-### Phase 5: Editing -- not started
+### Phase 5: Waived pieces -- specified, not started
+Two-stage removal: a piece is waived out of the gallery before it can be
+deleted, and waiving is reversible. Full specification in
+`@context/WAIVED-PIECES.md`.
+
+### Phase 6: Editing -- not started
 No `PATCH /api/pieces/<id>`. A piece cannot be corrected after upload, and
 re-uploading mints a new id, so its URL changes. The import manifest is the
 only workaround for imported work. Pinned by the owner on 2026-08-30.
@@ -62,3 +70,5 @@ only workaround for imported work. Pinned by the owner on 2026-08-30.
 - **2026-08-30**: `pieces.original_filename` dropped. Upload modal built.
   The eleven existing images imported, and the gallery switched off mock
   data onto PostgreSQL and MinIO.
+- **2026-08-31**: Waived pieces implemented. Collection creation added,
+  from the grid and from a piece.

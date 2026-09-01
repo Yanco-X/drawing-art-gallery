@@ -52,6 +52,9 @@ before = session.scalar(select(func.count()).select_from(Piece))
 leftovers = session.scalars(select(Piece).where(Piece.title == FIXTURE_TITLE)).all()
 session.close()
 for stale in leftovers:
+    # Delete now refuses an exhibited piece, so clear the way first. A
+    # leftover that is already waived 409s here, harmlessly.
+    client.post(f"/api/pieces/{stale.id}/waive", headers=OWNER)
     client.delete(f"/api/pieces/{stale.id}", headers=OWNER)
 if leftovers:
     print(f"  cleared {len(leftovers)} leftover fixture piece(s)")
@@ -121,6 +124,18 @@ except urllib.error.HTTPError as exc:
 presigned = storage.presigned_url(f"{pid}/original.jpg")
 with urllib.request.urlopen(presigned) as response:
     check("presigned URL retrieves it", len(response.read()) == original_size)
+
+print("\n== delete requires waiving first ==")
+check("delete is refused while exhibited",
+      client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 409)
+check("waive accepted",
+      client.post(f"/api/pieces/{pid}/waive", headers=OWNER).status_code == 200)
+check("waived piece leaves the gallery",
+      pid not in [p["id"] for p in client.get("/api/pieces").get_json()])
+check("and appears in the reserve",
+      pid in [p["id"] for p in
+              client.get("/api/pieces?waived=true", headers=OWNER).get_json()])
+check("objects survive waiving", storage.exists(f"{pid}/thumb.webp"))
 
 print("\n== delete clears both stores ==")
 check("delete returns 204", client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 204)

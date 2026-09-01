@@ -20,12 +20,12 @@ const Block = ({ label, children }: { label: string; children: ReactNode }) => (
 export const PieceWallLabel = ({
   piece,
   collections,
-  onDelete,
+  actions,
 }: {
   piece: Piece;
   collections: CollectionRef[];
   /** Owner only. Omitted for visitors, so the block does not render at all. */
-  onDelete?: () => void;
+  actions?: ReactNode;
 }) => {
   // Nullable on an uploaded piece: only draw the separator between values
   // that are actually there.
@@ -34,6 +34,11 @@ export const PieceWallLabel = ({
   return (
   <aside className="flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
     <div className="flex flex-col gap-2">
+      {piece.waivedAt && (
+        <p className="text-[12px] uppercase tracking-eyebrow text-faint">
+          Waived
+        </p>
+      )}
       <h1 className="font-serif text-[clamp(22px,2.4vw,32px)] leading-tight font-normal text-text">
         {piece.title}
       </h1>
@@ -85,23 +90,15 @@ export const PieceWallLabel = ({
         </Block>
       </>
     )}
-    {onDelete && (
+    {actions && (
       <>
         <Rule />
         {/*
-          Last in the rail and after a rule, deliberately: a destructive
-          action does not belong beside the navigation at the top, where it
-          sits under a cursor already moving between pieces.
+          Last in the rail and after a rule, deliberately: actions that
+          remove work do not belong beside the navigation at the top, where
+          they sit under a cursor already moving between pieces.
         */}
-        <div>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="cursor-pointer border-none bg-transparent p-0 text-[13px] uppercase tracking-btn text-faint transition-colors duration-200 hover:text-danger"
-          >
-            Delete piece
-          </button>
-        </div>
+        <div>{actions}</div>
       </>
     )}
   </aside>

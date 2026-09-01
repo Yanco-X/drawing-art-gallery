@@ -80,6 +80,10 @@ class Piece(Base):
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)
 
+    # Null is exhibited, set is waived. A timestamp rather than a boolean so
+    # the reserve has a sort order and "waived three days ago" is free.
+    waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     created_date: Mapped[date | None] = mapped_column(Date)  # when the art was made
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), index=True
@@ -102,6 +106,10 @@ class Piece(Base):
         if not self.width or not self.height:
             return None
         return self.width / self.height
+
+    @property
+    def is_waived(self) -> bool:
+        return self.waived_at is not None
 
     @property
     def storage_prefix(self) -> str:

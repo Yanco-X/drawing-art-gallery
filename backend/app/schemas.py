@@ -36,6 +36,9 @@ def piece_to_dict(piece: Piece) -> dict:
         "year": piece.year,
         "aspectRatio": piece.aspect_ratio,
         "createdDate": piece.created_date.isoformat() if piece.created_date else None,
+        # Null for an exhibited piece. Drives which actions the owner is
+        # offered, and is harmless to a visitor, who never sees a waived one.
+        "waivedAt": piece.waived_at.isoformat() if piece.waived_at else None,
         "tags": [tag_to_dict(tag) for tag in piece.tags],
     }
 

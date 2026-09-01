@@ -3,6 +3,7 @@ import { ScrollToTop } from './components/ScrollToTop';
 import { ThemeProvider } from './contexts/ThemeProvider';
 import LandingPage from './pages/LandingPage';
 import PiecePage from './pages/PiecePage';
+import WaivedPage from './pages/WaivedPage';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<LandingPage />} />
           <Route path="/piece/:id" element={<PiecePage />} />
+          <Route path="/waived" element={<WaivedPage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </BrowserRouter>

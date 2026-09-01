@@ -1,20 +1,20 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
+import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
 import { useAsync } from '../hooks';
 import { CURRENT_ROLE } from '../lib/session';
-import { ApiError, deletePiece, fetchPieces } from '../services';
+import { fetchPiece, fetchPieces, fetchWaivedPieces } from '../services';
 import type { Piece } from '../types';
 
-const BackLink = () => (
+const BackLink = ({ waived = false }: { waived?: boolean }) => (
   <Link
-    to="/home"
+    to={waived ? '/waived' : '/home'}
     className="text-[13px] uppercase tracking-btn text-faint transition-colors duration-200 hover:text-accent"
   >
-    ← All work
+    {waived ? '← Waived' : '← All work'}
   </Link>
 );
 
@@ -71,22 +71,61 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
 };
 
 /** Neighbours in gallery order. Ends are open rather than wrapping. */
-const adjacent = (pieces: Piece[], index: number) => ({
-  previous: index > 0 ? pieces[index - 1] : undefined,
-  next: index < pieces.length - 1 ? pieces[index + 1] : undefined,
-});
+const adjacent = (pieces: Piece[], id: string) => {
+  const index = pieces.findIndex((candidate) => candidate.id === id);
+  if (index === -1) return {};
+  return {
+    previous: index > 0 ? pieces[index - 1] : undefined,
+    next: index < pieces.length - 1 ? pieces[index + 1] : undefined,
+  };
+};
+
+/** Stable placeholder loader while the piece itself is still resolving. */
+const NO_SIBLINGS = async (): Promise<Piece[]> => [];
 
 const PiecePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // One request rather than two: the list carries this piece and the
-  // neighbours either side of it, and it is metadata only.
-  const load = useAsync(fetchPieces);
 
-  // Declared before the early returns below — hooks cannot be conditional.
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  /*
+   * The detail route rather than the list. A waived piece is absent from
+   * the gallery listing by design, so deriving this page from that list
+   * would make the reserve unreachable. The detail payload also carries
+   * `collections`, which the waive dialog needs in order to name the
+   * membership it is about to drop.
+   *
+   * Waive and restore both return the updated piece, so `edited` holds it
+   * and no refetch is needed. It is only trusted while it matches the route,
+   * which keeps a stale one from surviving a move to another piece.
+   */
+  const loadPiece = useMemo(() => () => fetchPiece(id ?? ''), [id]);
+  const load = useAsync(loadPiece);
+  const [edited, setEdited] = useState<Piece | null>(null);
+
+  const fetched = load.status === 'ready' ? load.data : null;
+  const piece = edited && edited.id === id ? edited : fetched;
+
+  /*
+   * Neighbours come from whichever list this piece belongs to, so prev/next
+   * never steps out of the gallery into the reserve or back. Keyed on the
+   * state rather than the piece, so refetching one piece does not refetch
+   * its siblings.
+   */
+  const state = piece ? (piece.waivedAt ? 'waived' : 'exhibited') : null;
+  const loadSiblings = useMemo(() => {
+    if (state === 'waived') return fetchWaivedPieces;
+    if (state === 'exhibited') return fetchPieces;
+    return NO_SIBLINGS;
+  }, [state]);
+  const siblings = useAsync(loadSiblings);
+
+  const refresh = useCallback((updated: Piece) => setEdited(updated), []);
+  // replace: true so Back does not return to a page that no longer exists.
+  // Leaving the route remounts the reserve, which refetches.
+  const afterDelete = useCallback(
+    () => navigate('/waived', { replace: true }),
+    [navigate],
+  );
 
   if (load.status === 'loading') {
     return (
@@ -108,8 +147,9 @@ const PiecePage = () => {
     );
   }
 
-  const index = load.data.findIndex((candidate) => candidate.id === id);
-  if (index === -1) {
+  // Null rather than a rejection: a piece that does not exist, or is waived
+  // while we are not the owner, is an expected answer for this page.
+  if (piece === null) {
     return (
       <PageShell>
         <Message eyebrow="Not found" headline="That piece isn't here." />
@@ -117,26 +157,8 @@ const PiecePage = () => {
     );
   }
 
-  const piece = load.data[index];
-  const { previous, next } = adjacent(load.data, index);
-
-  const remove = async () => {
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await deletePiece(piece.id);
-      // replace: true so Back does not return to a page that no longer
-      // exists. Leaving the route remounts the gallery, which refetches.
-      navigate('/home', { replace: true });
-    } catch (caught) {
-      setDeleteError(
-        caught instanceof ApiError
-          ? caught.message
-          : 'Could not reach the API. Is the backend running?',
-      );
-      setDeleting(false);
-    }
-  };
+  const { previous, next } =
+    siblings.status === 'ready' ? adjacent(siblings.data, piece.id) : {};
 
   return (
     <PageShell>
@@ -144,7 +166,7 @@ const PiecePage = () => {
         {/* Back and neighbours share one row above the artwork, so moving
             between pieces never requires scrolling past it. */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <BackLink />
+          <BackLink waived={Boolean(piece.waivedAt)} />
           <PieceNav previous={previous} next={next} />
         </div>
 
@@ -157,45 +179,21 @@ const PiecePage = () => {
           <figure className="flex items-start justify-center">
             <PieceImage piece={piece} />
           </figure>
-          {/*
-            The list payload omits `collections` — only GET /api/pieces/<id>
-            carries them, since resolving them per row would be a query per
-            piece. Fetch the detail route here once collections exist and
-            the block has something to show.
-          */}
           <PieceWallLabel
             piece={piece}
             collections={piece.collections ?? []}
-            onDelete={
-              CURRENT_ROLE === 'owner' ? () => setConfirming(true) : undefined
+            actions={
+              CURRENT_ROLE === 'owner' ? (
+                <PieceOwnerActions
+                  piece={piece}
+                  onChanged={refresh}
+                  onDeleted={afterDelete}
+                />
+              ) : undefined
             }
           />
         </div>
       </article>
-
-      <ConfirmDialog
-        open={confirming}
-        title="Delete this piece?"
-        confirmLabel="Delete permanently"
-        busyLabel="Deleting…"
-        busy={deleting}
-        error={deleteError}
-        onCancel={() => {
-          setConfirming(false);
-          setDeleteError(null);
-        }}
-        onConfirm={remove}
-      >
-        <p>
-          <span className="text-text">{piece.title}</span> will be removed
-          from the database, and its original and both renditions deleted
-          from storage.
-        </p>
-        <p>
-          This cannot be undone. The only copy left will be whatever you
-          still have on your own disk.
-        </p>
-      </ConfirmDialog>
     </PageShell>
   );
 };

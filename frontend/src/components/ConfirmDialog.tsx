@@ -10,9 +10,9 @@ import type { ReactNode } from 'react';
  *
  *  - There is no close ×. The first focusable element is Cancel, so the
  *    dialog opens with focus on the safe choice and Enter does nothing
- *    harmful.
- *  - The confirming button is outlined rather than filled. A filled button
- *    is an invitation, and this is not one.
+ *    harmful. Kept for both tones: one dialog, one behaviour.
+ *  - At `tone="danger"` the confirming button is outlined rather than
+ *    filled. A filled button is an invitation, and deletion is not one.
  */
 
 const GHOST_BUTTON =
@@ -27,6 +27,11 @@ const DANGER_BUTTON =
   'duration-200 hover:bg-danger hover:text-bg disabled:cursor-not-allowed ' +
   'disabled:opacity-40';
 
+const CONFIRM_BUTTON =
+  'cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase ' +
+  'tracking-btn text-on-accent transition-opacity duration-200 ' +
+  'hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40';
+
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -34,6 +39,12 @@ interface ConfirmDialogProps {
   children: ReactNode;
   confirmLabel: string;
   busyLabel?: string;
+  /**
+   * 'danger' outlines the confirming button in the danger token, for actions
+   * with no undo. Everything else fills it with the accent — waiving and
+   * restoring are reversible and should not borrow the weight of deletion.
+   */
+  tone?: 'default' | 'danger';
   busy?: boolean;
   error?: string | null;
   onCancel: () => void;
@@ -46,6 +57,7 @@ export const ConfirmDialog = ({
   children,
   confirmLabel,
   busyLabel = 'Working…',
+  tone = 'default',
   busy = false,
   error = null,
   onCancel,
@@ -112,7 +124,7 @@ export const ConfirmDialog = ({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={DANGER_BUTTON}
+            className={tone === 'danger' ? DANGER_BUTTON : CONFIRM_BUTTON}
           >
             {busy ? busyLabel : confirmLabel}
           </button>

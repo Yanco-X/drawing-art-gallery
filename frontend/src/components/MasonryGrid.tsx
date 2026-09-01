@@ -17,9 +17,12 @@ import { PieceCard } from './PieceCard';
 export const MasonryGrid = ({
   pieces,
   density,
+  selection,
 }: {
   pieces: Piece[];
   density: GridDensity;
+  /** Present while picking pieces for a collection. */
+  selection?: { ids: string[]; onToggle: (id: string) => void };
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useFlipReflow(containerRef, density);
@@ -29,7 +32,9 @@ export const MasonryGrid = ({
       ref={containerRef}
       style={{ columns: GRID_DENSITY_COLUMNS[density], columnGap: '20px' }}
     >
-      {pieces.map((piece) => (
+      {pieces.map((piece) => {
+        const index = selection ? selection.ids.indexOf(piece.id) : -1;
+        return (
         // The column child owns spacing and break behaviour, and is the
         // element FLIP animates — the card inside stays layout-agnostic.
         <div
@@ -37,9 +42,16 @@ export const MasonryGrid = ({
           data-flip-id={piece.id}
           className="mb-5 break-inside-avoid"
         >
-          <PieceCard piece={piece} />
+          <PieceCard
+            piece={piece}
+            onSelect={
+              selection ? () => selection.onToggle(piece.id) : undefined
+            }
+            selectionIndex={index === -1 ? null : index + 1}
+          />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

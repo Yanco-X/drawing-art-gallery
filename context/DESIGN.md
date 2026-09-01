@@ -278,6 +278,16 @@ The first form in the system, so it defines the form vocabulary the rest will in
 * **Errors** in `accent`, bottom-left, `role="alert"`, and cleared by any edit -- a message that outlives the problem it describes reads as though the form is still refusing.
 * **Actions** -- bordered ghost "Cancel", solid `accent` "Add to gallery". Both disable during upload, and Escape is refused mid-request so a stray keypress cannot abandon work already in flight.
 
+### Picking pieces
+
+Creating a collection starts by choosing its members from the grid, so the gallery gets a second mode.
+
+* **Entered from the Collections header** -- "+ New collection" in 13px `faint`, owner only, and hidden while picking so the mode cannot be entered twice.
+* **A bordered `accent` bar** replaces ordinary browsing, stating what to do while nothing is picked and the count once something is. The density control hides for the duration: changing the column count mid-selection is noise.
+* **Cards become buttons, not links.** Clicking must not navigate away from a selection in progress, so the same card renders as a `<button>` while picking and a `<Link>` otherwise.
+* **Selection is numbered, not ticked.** A picked card takes an `accent` border and a small solid `accent` square in its top-left carrying its position. Pick order becomes the collection's display order, and a plain checkmark would hide that -- the number is the only thing telling you the order is being recorded.
+* **Naming comes second.** A collection is defined by what is in it, and asking for a name first invites naming something that does not exist yet. The dialog reports the count back before asking.
+
 ### Destructive confirmation
 
 Deleting a piece removes the row, the original, and both renditions, with no undo. The design carries that weight in three places rather than one.

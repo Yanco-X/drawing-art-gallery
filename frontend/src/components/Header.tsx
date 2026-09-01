@@ -13,17 +13,29 @@ interface NavItem {
   active?: boolean;
 }
 
-/** A piece lives under the gallery, so it keeps Gallery marked current. */
-const buildNavItems = (pathname: string): NavItem[] => [
-  {
-    label: 'Gallery',
-    to: '/home',
-    active: pathname === '/home' || pathname.startsWith('/piece'),
-  },
-  { label: 'Collections', href: '#collections' },
-  // TODO: point at /tags once that route exists.
-  { label: 'Tags', href: '#' },
-];
+/**
+ * A piece lives under the gallery, so it keeps Gallery marked current --
+ * unless we are in the reserve, which owns its own pieces.
+ */
+const buildNavItems = (pathname: string, role: Role): NavItem[] => {
+  const inReserve = pathname.startsWith('/waived');
+  const items: NavItem[] = [
+    {
+      label: 'Gallery',
+      to: '/home',
+      active: !inReserve && (pathname === '/home' || pathname.startsWith('/piece')),
+    },
+    { label: 'Collections', href: '#collections' },
+    // TODO: point at /tags once that route exists.
+    { label: 'Tags', href: '#' },
+  ];
+
+  // The reserve is the owner's own view; a visitor is not told it exists.
+  if (role === 'owner') {
+    items.push({ label: 'Waived', to: '/waived', active: inReserve });
+  }
+  return items;
+};
 
 const navItemClasses = (item: NavItem, extra = '') =>
   [
@@ -68,7 +80,7 @@ export const Header = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
-  const navItems = buildNavItems(pathname);
+  const navItems = buildNavItems(pathname, role);
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">

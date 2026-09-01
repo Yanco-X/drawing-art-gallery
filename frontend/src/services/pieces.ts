@@ -1,5 +1,11 @@
 import { OWNER_TOKEN } from '../lib/session';
-import type { CollectionSummary, NewPiece, Piece } from '../types';
+import type {
+  Collection,
+  CollectionSummary,
+  NewCollection,
+  NewPiece,
+  Piece,
+} from '../types';
 
 /** An error the API reported, carrying its per-field details when present. */
 export class ApiError extends Error {
@@ -55,9 +61,18 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
   return response.json();
 };
 
-/** One piece by id. Rejects with ApiError when the API has no such row. */
-export const fetchPiece = async (id: string): Promise<Piece> => {
-  const response = await fetch('/api/pieces/' + encodeURIComponent(id));
+/**
+ * One piece by id, with the collections it appears in.
+ *
+ * Returns null on 404 rather than rejecting: a piece that does not exist —
+ * or is waived while the caller is not the owner — is an expected answer
+ * here, not a failure. Sends the owner token so the reserve is reachable.
+ */
+export const fetchPiece = async (id: string): Promise<Piece | null> => {
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id), {
+    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
+  });
+  if (response.status === 404) return null;
   if (!response.ok) await raise(response);
   return response.json();
 };
@@ -76,6 +91,18 @@ export const fetchCollections = async (): Promise<CollectionSummary[]> => {
 };
 
 /**
+ * Every collection, published or not. Used by the restore picker: a piece
+ * coming back may well belong in a set that has not been published yet.
+ */
+export const fetchAllCollections = async (): Promise<CollectionSummary[]> => {
+  const response = await fetch('/api/collections?includePrivate=1', {
+    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
  * Removes the row and every stored object for a piece. Irreversible: the
  * original is deleted along with the derivatives, so the only copy left is
  * whatever the owner still has on disk.
@@ -87,4 +114,96 @@ export const deletePiece = async (id: string): Promise<void> => {
   });
   // 204, so there is no body to read.
   if (!response.ok) await raise(response);
+};
+
+/** The reserve: pieces withdrawn from the gallery. Owner only. */
+export const fetchWaivedPieces = async (): Promise<Piece[]> => {
+  const response = await fetch('/api/pieces?waived=true', {
+    headers: { 'X-Owner-Token': OWNER_TOKEN },
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * Withdraws a piece from the gallery. Reversible, but it also drops the
+ * piece out of every collection it belongs to, which restoring does not
+ * undo on its own.
+ */
+export const waivePiece = async (id: string): Promise<Piece> => {
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id) + '/waive', {
+    method: 'POST',
+    headers: { 'X-Owner-Token': OWNER_TOKEN },
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * Returns a piece to the gallery, optionally adding it to collections. One
+ * request: the restore and the membership land together or not at all.
+ */
+export const restorePiece = async (
+  id: string,
+  collectionIds: string[] = [],
+): Promise<Piece> => {
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id) + '/restore', {
+    method: 'POST',
+    headers: {
+      'X-Owner-Token': OWNER_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ collectionIds }),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * Creates a collection, with its members in one request.
+ *
+ * `pieceIds` order becomes the display order, so the order pieces were
+ * picked in is the order they hang in.
+ */
+export const createCollection = async (
+  input: NewCollection,
+): Promise<Collection> => {
+  const response = await fetch('/api/collections', {
+    method: 'POST',
+    headers: {
+      'X-Owner-Token': OWNER_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: input.name.trim(),
+      description: input.description.trim() || undefined,
+      isPublic: input.isPublic,
+      pieceIds: input.pieceIds,
+    }),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * Sets which collections a piece belongs to — the whole list, so leaving one
+ * out removes it. Returns the updated piece with its memberships.
+ */
+export const setPieceCollections = async (
+  id: string,
+  collectionIds: string[],
+): Promise<Piece> => {
+  const response = await fetch(
+    '/api/pieces/' + encodeURIComponent(id) + '/collections',
+    {
+      method: 'PUT',
+      headers: {
+        'X-Owner-Token': OWNER_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ collectionIds }),
+    },
+  );
+  if (!response.ok) await raise(response);
+  return response.json();
 };

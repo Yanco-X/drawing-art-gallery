@@ -1,4 +1,3 @@
-import uuid
 
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select
@@ -10,6 +9,7 @@ from ..errors import ApiError
 from ..models import Collection, CollectionPiece, Piece
 from ..schemas import collection_summary_to_dict, collection_to_dict
 from ..services.slugs import unique_slug
+from .helpers import parse_uuid
 
 bp = Blueprint("collections", __name__, url_prefix="/collections")
 
@@ -28,13 +28,6 @@ def _load(session, collection_id) -> Collection:
     return collection
 
 
-def _parse_uuid(value, field: str) -> uuid.UUID:
-    try:
-        return uuid.UUID(str(value))
-    except (ValueError, AttributeError, TypeError):
-        raise ApiError(f"{field} is not a valid id.", details={field: value})
-
-
 def _set_membership(session, collection: Collection, piece_ids: list) -> None:
     """
     Replace the whole membership list, in the given order.
@@ -47,7 +40,7 @@ def _set_membership(session, collection: Collection, piece_ids: list) -> None:
     if not isinstance(piece_ids, list):
         raise ApiError("pieceIds must be an array.")
 
-    parsed = [_parse_uuid(value, "pieceIds") for value in piece_ids]
+    parsed = [parse_uuid(value, "pieceIds") for value in piece_ids]
 
     duplicates = len(parsed) != len(set(parsed))
     if duplicates:
@@ -82,7 +75,7 @@ def _apply_cover(session, collection: Collection, raw_cover) -> None:
     if raw_cover is None:
         collection.cover_piece_id = None
         return
-    cover_id = _parse_uuid(raw_cover, "coverPieceId")
+    cover_id = parse_uuid(raw_cover, "coverPieceId")
     member_ids = {link.piece_id for link in collection.piece_links}
     if cover_id not in member_ids:
         raise ApiError(

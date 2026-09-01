@@ -176,6 +176,12 @@ listed = client.get("/api/pieces").get_json()
 check("all four pieces listed", len(listed) == 4, str(len(listed)))
 
 print("\n== delete removes row and objects ==")
+# Deletion is two-stage now: a piece has to be waived out of the gallery
+# before it can be destroyed. See tests/smoke_waived.py for the rest.
+check("delete is refused while exhibited",
+      client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 409)
+check("waive accepted",
+      client.post(f"/api/pieces/{pid}/waive", headers=OWNER).status_code == 200)
 check("delete returns 204", client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 204)
 check("objects removed", not any(k.startswith(f"{pid}/") for k in storage.objects),
       str([k for k in storage.objects if k.startswith(f"{pid}/")]))

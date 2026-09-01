@@ -36,6 +36,11 @@ export interface Piece {
   aspectRatio: number;
   createdDate: string | null;
   tags: Tag[];
+  /**
+   * ISO timestamp when the piece was withdrawn from the gallery, or null
+   * while it is exhibited. Drives which owner actions the piece page offers.
+   */
+  waivedAt: string | null;
   /** Present on GET /api/pieces/<id> only, not in the list payload. */
   collections?: CollectionRef[];
 }
@@ -76,4 +81,13 @@ export interface NewPiece {
   year: string;
   createdDate: string;
   tags: string[];
+}
+
+/** What the collection form collects. Mirrors POST /api/collections. */
+export interface NewCollection {
+  name: string;
+  description: string;
+  isPublic: boolean;
+  /** In pick order, which becomes the collection's display order. */
+  pieceIds: string[];
 }
