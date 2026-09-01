@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { CollectionSummary } from '../types';
-import { CollectionCard } from './CollectionCard';
-import { InertLink } from './InertLink';
+import { CollectionGrid } from './CollectionGrid';
 import { SectionHeader } from './SectionHeader';
 import { SectionState } from './SectionState';
 
@@ -26,9 +26,12 @@ export const CollectionsSection = ({
       <div className="flex items-center gap-5">
         {action}
         {collections.length > 0 && (
-          <InertLink className="text-[13px] text-faint transition-colors duration-200 hover:text-accent">
+          <Link
+            to="/collections"
+            className="text-[13px] text-faint transition-colors duration-200 hover:text-accent"
+          >
             View all
-          </InertLink>
+          </Link>
         )}
       </div>
     </SectionHeader>
@@ -40,15 +43,7 @@ export const CollectionsSection = ({
     ) : collections.length === 0 ? (
       <SectionState message="No collections yet." />
     ) : (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-        {collections.map((collection, index) => (
-          <CollectionCard
-            key={collection.id}
-            collection={collection}
-            index={index}
-          />
-        ))}
-      </div>
+      <CollectionGrid collections={collections} />
     )}
   </section>
 );

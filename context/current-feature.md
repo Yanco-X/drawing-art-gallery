@@ -1,74 +1,65 @@
 # Current Feature
 
-Real data end to end -- uploads, storage, and a gallery that reads the API.
+Collections that can be opened, and eventually edited.
+
+Full specification in [`COLLECTIONS.md`](COLLECTIONS.md).
 
 ## Status
 
-The gallery runs on PostgreSQL and MinIO. Mock data is gone.
-Collections have a backend but no data and no UI.
+Pass 1 -- viewing -- is done. A collection has a page, an index, and real
+links from everywhere it is named. Private collections are gated correctly
+in all four places they could appear.
+
+Pass 2 -- edition -- is specified in outline and not started.
 
 ## Goals
 
-### Phase 1: Schema -- done
-- `Collection` with name, slug, description, cover, visibility, timestamps.
-- `CollectionPiece` join table carrying curated `display_order`.
-- Backfilled `Piece` with `medium`, `year`, `width`, `height` -- fields the
-  UI already renders but the schema draft never had.
-- Initial Alembic revision; upgrade and downgrade both verified.
+### Pass 1: Viewing -- done 2026-08-31
 
-### Phase 2: API -- done
-- Read: `GET /api/collections`, `/api/collections/<slug>`, `/api/pieces`.
-- Owner: create, patch, delete, and `PUT .../pieces` to replace membership
-  and order in one idempotent write.
-- Cover rules: must be a member; resets to the first-piece fallback when the
-  chosen piece leaves the collection.
-- Owner guard on a shared secret that fails closed, pending real auth.
+- `/collections/:slug` -- `CollectionPage`, a wall label for the set then
+  its pieces in `display_order`, through the shared `AllWorkSection`.
+- `/collections` -- `CollectionsIndexPage`, every collection the caller may
+  see.
+- `CollectionCard`, "View all" and the wall label's "In collections" names
+  stopped being `InertLink`.
+- `Header`'s Collections item points at the route instead of an anchor.
+- Private collections: 404 on the detail route for a visitor, visible to
+  the owner in the list, on the index, and on a piece's page. Marked with a
+  `Private` eyebrow so the owner can tell a draft from a published set.
+- `CollectionGrid` extracted so the landing row and the index cannot drift.
+  `PageMessage` extracted for not-found and unavailable.
 
-### Phase 3: Storage and uploads -- done
-Specification and outcome in `@context/STORAGE.md`. Derived keys instead of
-`pieces.image_url`, storage behind a four-method adapter, MinIO for the S3
-path, and an upload pipeline that validates, strips EXIF, measures, derives
-thumb and display, stores, then commits.
+### Pass 2: Edition -- not started
 
-### Phase 4: Frontend integration -- done, except collections
-- `mock-data.ts` deleted. `services/pieces.ts` reads the API; `useAsync`
-  carries the loading and error states.
-- Owner upload modal with drag and drop, wired to `POST /api/pieces`.
-- `Collection` split into `CollectionRef`, `CollectionSummary`, and
-  `Collection`, so the row no longer implies fetching every piece.
-- Collections can be created from the grid by picking pieces, or from a
-  piece's own page. `PUT /api/pieces/<id>/collections` sets membership
-  from the piece side.
-- Still open: collection detail route at `/collections/<slug>` replacing
-  `InertLink`, and reordering an existing collection from the UI.
+Owner controls inline on the collection page, not behind an edit mode.
+Rename, description, publish/unpublish, cover, delete. Reordering by drag
+and drop, on native HTML5 drag events with a keyboard fallback -- no new
+dependency without the owner's approval.
 
-### Phase 5: Waived pieces -- specified, not started
-Two-stage removal: a piece is waived out of the gallery before it can be
-deleted, and waiving is reversible. Full specification in
-`@context/WAIVED-PIECES.md`.
-
-### Phase 6: Editing -- not started
-No `PATCH /api/pieces/<id>`. A piece cannot be corrected after upload, and
-re-uploading mints a new id, so its URL changes. The import manifest is the
-only workaround for imported work. Pinned by the owner on 2026-08-30.
+Two things it must settle: add and remove need affordances of their own
+since the page only shows pieces already in the collection, and
+`PieceOwnerActions` hardcodes `isPublic: true`, so creating a collection
+from a piece offers no visibility choice while the grid path does.
 
 ## Notes
 
-- **Run it**: see `backend/README.md`. Needs Docker Desktop running for
-  PostgreSQL, or use the SQLite smoke test to exercise the API without it.
-- **Decisions**: recorded in `context/project-overview.md` under Data Model.
-- **Blocked on**: real authentication, before any owner UI can ship.
+- **Run it**: see `STATUS.md` §2.
+- **Verified**: 151 checks across four suites, plus a live gating check with
+  a `__gating_fixture__` collection, deleted by exact id afterwards. The
+  gallery was confirmed untouched -- 11 pieces, *Testing* intact.
+- **Still open elsewhere**: no `PATCH /api/pieces/<id>`, tags inert, no auth.
 
 ## History
 
 - **2026-05-05**: Feature goals initialized based on the 3-phase landing spec.
 - **2026-08-25**: Landing page rebuilt against the `new_UI` design system.
 - **2026-08-26**: Piece detail view designed and built. Collections schema
-  and API implemented; PostgreSQL confirmed as the database, resolving the
-  MongoDB reference that had been sitting in `AGENTS.md`.
+  and API implemented; PostgreSQL confirmed as the database.
 - **2026-08-26**: Storage adapter, image pipeline, and upload endpoints.
 - **2026-08-30**: `pieces.original_filename` dropped. Upload modal built.
   The eleven existing images imported, and the gallery switched off mock
   data onto PostgreSQL and MinIO.
 - **2026-08-31**: Waived pieces implemented. Collection creation added,
   from the grid and from a piece.
+- **2026-08-31**: Collections view. Two routes, three links made real, and
+  the private-collection rules enforced for the first time.

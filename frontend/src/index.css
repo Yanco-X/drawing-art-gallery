@@ -136,12 +136,12 @@
   --tracking-eyebrow: 0.24em;
 
   --spacing-gutter: clamp(20px, 5vw, 64px);
-  --spacing-intro-top: clamp(48px, 9vw, 120px);
+  --spacing-intro-top: clamp(28px, 4vw, 64px);
   --spacing-intro-bottom: clamp(32px, 5vw, 72px);
   --spacing-section-sm: clamp(40px, 6vw, 80px);
   --spacing-section-lg: clamp(56px, 8vw, 96px);
 
-  --container-content: 1400px;
+  --container-content: 2400px;
 }
 
 /* Diagonal-stripe placeholder standing in for artwork that is

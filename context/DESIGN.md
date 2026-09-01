@@ -33,7 +33,7 @@ typography:
   display:
     fontFamily: Instrument Serif
     fontWeight: '400'
-    fontSize: clamp(36px, 6vw, 72px)
+    fontSize: clamp(32px, 5vw, 64px)
     lineHeight: '1.05'
   section-heading:
     fontFamily: Instrument Serif
@@ -77,11 +77,11 @@ spacing:
   base: 2px
   scale: [2, 4, 8, 10, 12, 16, 20, 24, 28]
   gutter: clamp(20px, 5vw, 64px)
-  intro-top: clamp(48px, 9vw, 120px)
+  intro-top: clamp(28px, 4vw, 64px)
   intro-bottom: clamp(32px, 5vw, 72px)
   section-sm: clamp(40px, 6vw, 80px)
   section-lg: clamp(56px, 8vw, 96px)
-  content-max: 1400px
+  content-max: 2400px
 motion:
   hover: 200ms
   theme-swap: 300ms
@@ -167,8 +167,9 @@ Line-height is `1.05` on the display headline and default everywhere else.
 
 Fluid, with no media queries in the content regions. Horizontal padding and headline size scale with `clamp()`; the collections grid and masonry reflow by column count on their own.
 
-* Content regions are capped at **1400px** and centred, with `clamp(20px, 5vw, 64px)` horizontal gutters.
-* The header and footer span the full viewport -- their background and border are edge to edge -- but their **inner content is capped to the same 1400px** so it lines up with the page below.
+* Content regions are capped at **2400px** and centred, with `clamp(20px, 5vw, 64px)` horizontal gutters.
+* The header and footer span the full viewport -- their background and border are edge to edge -- but their **inner content is capped to the same 2400px** so it lines up with the page below.
+* The cap is deliberately above a 1920px laptop, so a large monitor gains columns rather than margin. Long text is not at risk from it: every headline and paragraph carries its own em-based measure (`max-w-[14em]`, `max-w-[16em]`, `max-w-[42em]`), so prose stays readable at any container width.
 * Collections use `repeat(auto-fill, minmax(220px, 1fr))` at a 16px gap.
 * The masonry is CSS multi-column with a 20px column gap. See Components for density values.
 * Spacing steps: 2, 4, 8, 10, 12, 16, 20, 24, 28. Section rhythm uses the fluid values in the frontmatter.
@@ -238,13 +239,15 @@ Reading order runs top-to-bottom down each column rather than left-to-right acro
 
 Density is a persisted user preference:
 
-| Density | `columns` | At 1400px content |
-|---|---|---|
-| Airy | `3 380px` | 3 columns |
-| Comfortable | `4 290px` | 4 columns |
-| Dense | `5 230px` | 5 columns |
+| Density | `columns` | 1792px content | 2272px content |
+|---|---|---|---|
+| Airy | `380px` | 4 columns | 5 columns |
+| Comfortable | `290px` | 5 columns | 7 columns |
+| Dense | `230px` | 7 columns | 9 columns |
 
-The second value is a *threshold* for how many columns fit, not the rendered column width -- actual width is `(container - gaps) / count`. All three stay visually distinct down to roughly a 1200px viewport; below that the available width genuinelyñ cannot support three separate column counts and they begin to coincide.
+The value is a bare length, so it sets `column-width` and leaves `column-count` auto: the browser fits as many columns as the container allows. Density therefore means *how wide a piece should be*, not how many sit across -- which is what lets one setting hold on a laptop and a 32-inch monitor at once. Rendered width is still `(container - gaps) / count`, so it exceeds the threshold rather than matching it.
+
+All three stay visually distinct down to roughly a 1200px viewport; below that the available width genuinely cannot support three separate column counts and they begin to coincide.
 
 Changing density animates via FLIP: positions are captured, the reflow is applied, and each card is played from its old offset back to zero on `transform` only. `columns` is not an animatable property, so nothing else would work.
 
@@ -330,8 +333,8 @@ Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as stat
 
 Recorded so they are not mistaken for drift:
 
-1. **Header and footer inner content is capped at 1400px.** The prototype left them full-bleed, which put the wordmark outside the headline's left edge above 1400px.
-2. **Density values were retuned** from `4 320px` / `5 300px`. Inside the 1400px cap those both collapsed back to three columns, making all three densities render identically.
+1. **Header and footer inner content is capped to the content measure.** The prototype left them full-bleed, which put the wordmark outside the headline's left edge.
+2. **Density values are widths, not counts.** The prototype used `3 380px` / `4 320px` / `5 300px`. The leading count capped the grid: above the content cap a wider window only enlarged each card, so every screen rendered the same three columns. Dropping the count lets the column count follow the window.
 3. **The density control is new.** The prototype exposed density as a developer knob with no UI.
 4. **Tag filter chips are not currently shown.** Pieces still carry tags; the chip row was removed pending real filtering work.
 5. **A per-image failure fallback was added**, which the prototype did not design.

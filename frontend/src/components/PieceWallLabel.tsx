@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { CollectionRef, Piece } from '../types';
-import { InertLink } from './InertLink';
 
 const Rule = () => <div aria-hidden="true" className="border-t border-line" />;
 
@@ -81,9 +81,12 @@ export const PieceWallLabel = ({
           <ul className="flex flex-col gap-2">
             {collections.map((collection) => (
               <li key={collection.id}>
-                <InertLink className="text-[14px] text-text transition-colors duration-200 hover:text-accent">
+                <Link
+                  to={`/collections/${collection.slug}`}
+                  className="text-[14px] text-text transition-colors duration-200 hover:text-accent"
+                >
                   {collection.name}
-                </InertLink>
+                </Link>
               </li>
             ))}
           </ul>

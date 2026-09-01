@@ -25,7 +25,11 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
       to: '/home',
       active: !inReserve && (pathname === '/home' || pathname.startsWith('/piece')),
     },
-    { label: 'Collections', href: '#collections' },
+    {
+      label: 'Collections',
+      to: '/collections',
+      active: pathname.startsWith('/collections'),
+    },
     // TODO: point at /tags once that route exists.
     { label: 'Tags', href: '#' },
   ];
@@ -85,7 +89,7 @@ export const Header = ({
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
       {/* Bar spans the viewport; its contents line up with the page
-          content at the same 1400px measure. */}
+          content at the same content measure. */}
       <div className="mx-auto flex w-full max-w-content items-center justify-between gap-6 px-gutter py-5">
         <Link
           to="/home"

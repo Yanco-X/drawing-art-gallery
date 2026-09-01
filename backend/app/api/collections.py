@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from ..auth import require_owner
+from ..auth import is_owner, require_owner
 from ..db import SessionLocal
 from ..errors import ApiError
 from ..models import Collection, CollectionPiece, Piece
@@ -104,7 +104,9 @@ def get_collection(slug: str):
     collection = session.scalars(
         select(Collection).where(Collection.slug == slug)
     ).unique().first()
-    if collection is None:
+    # A private collection is a draft, and 404 rather than 403 because the
+    # response should not confirm that anything sits at this slug.
+    if collection is None or (not collection.is_public and not is_owner()):
         raise ApiError("Collection not found.", status=404)
     return jsonify(collection_to_dict(collection))
 

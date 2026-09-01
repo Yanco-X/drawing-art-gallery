@@ -1,5 +1,5 @@
+import { Link } from 'react-router-dom';
 import type { CollectionSummary } from '../types';
-import { InertLink } from './InertLink';
 
 interface CollectionCardProps {
   collection: CollectionSummary;
@@ -8,7 +8,10 @@ interface CollectionCardProps {
 }
 
 export const CollectionCard = ({ collection, index }: CollectionCardProps) => (
-  <InertLink className="flex flex-col gap-3 border border-line bg-surface p-5 transition-colors duration-200 hover:border-accent">
+  <Link
+    to={`/collections/${collection.slug}`}
+    className="flex flex-col gap-3 border border-line bg-surface p-5 transition-colors duration-200 hover:border-accent"
+  >
     {collection.coverImageUrl ? (
       <img
         src={collection.coverImageUrl}
@@ -26,12 +29,20 @@ export const CollectionCard = ({ collection, index }: CollectionCardProps) => (
       />
     )}
     <div className="flex flex-col gap-1">
+      {/* A draft the owner can see and a visitor cannot. Marked the way a
+          waived piece is, because it says the same kind of thing: this is
+          here, and it is not on the wall. */}
+      {!collection.isPublic && (
+        <span className="text-[11px] uppercase tracking-eyebrow text-faint">
+          Private
+        </span>
+      )}
       <span className="font-serif text-[18px] text-text">
         {collection.name}
       </span>
       <span className="text-[12px] uppercase tracking-nav text-faint">
-        {collection.pieceCount} pieces
+        {collection.pieceCount} {collection.pieceCount === 1 ? 'piece' : 'pieces'}
       </span>
     </div>
-  </InertLink>
+  </Link>
 );

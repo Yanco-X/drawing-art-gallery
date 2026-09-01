@@ -6,7 +6,7 @@ import { NewCollectionDialog } from '../components/NewCollectionDialog';
 import { PageShell } from '../components/PageShell';
 import { useAsync } from '../hooks';
 import { CURRENT_ROLE } from '../lib/session';
-import { fetchCollections, fetchPieces } from '../services';
+import { fetchPieces, fetchVisibleCollections } from '../services';
 import type { CollectionSummary, Piece } from '../types';
 
 // The intro belongs on the root gallery view; hide it on filtered or
@@ -51,7 +51,9 @@ const SelectionBar = ({
 
 const LandingPage = () => {
   const pieces = useAsync(fetchPieces);
-  const collections = useAsync(fetchCollections);
+  // Drafts included for the owner, so an unpublished collection does not
+  // vanish from its maker's own gallery on the next reload.
+  const collections = useAsync(fetchVisibleCollections);
 
   // Pieces uploaded since this page loaded, newest first. They are already
   // in the database — this only saves a refetch to put them on screen.

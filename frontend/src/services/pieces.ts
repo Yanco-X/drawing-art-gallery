@@ -1,4 +1,4 @@
-import { OWNER_TOKEN } from '../lib/session';
+import { CURRENT_ROLE, OWNER_TOKEN } from '../lib/session';
 import type {
   Collection,
   CollectionSummary,
@@ -84,8 +84,27 @@ export const fetchPieces = async (): Promise<Piece[]> => {
   return response.json();
 };
 
+/** What a visitor sees: published collections only. */
 export const fetchCollections = async (): Promise<CollectionSummary[]> => {
   const response = await fetch('/api/collections');
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * One collection by slug, with its pieces in curated order.
+ *
+ * Returns null on 404 for the same reason `fetchPiece` does: a collection
+ * that does not exist — or is a draft while the caller is not the owner —
+ * is an expected answer here, not a failure.
+ */
+export const fetchCollection = async (
+  slug: string,
+): Promise<Collection | null> => {
+  const response = await fetch('/api/collections/' + encodeURIComponent(slug), {
+    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
+  });
+  if (response.status === 404) return null;
   if (!response.ok) await raise(response);
   return response.json();
 };
@@ -101,6 +120,15 @@ export const fetchAllCollections = async (): Promise<CollectionSummary[]> => {
   if (!response.ok) await raise(response);
   return response.json();
 };
+
+/**
+ * Whatever this caller is entitled to see — drafts included for the owner.
+ *
+ * Module-level rather than an inline arrow in each page, so it can be handed
+ * straight to `useAsync` without refetching on every render.
+ */
+export const fetchVisibleCollections = (): Promise<CollectionSummary[]> =>
+  CURRENT_ROLE === 'owner' ? fetchAllCollections() : fetchCollections();
 
 /**
  * Removes the row and every stored object for a piece. Irreversible: the

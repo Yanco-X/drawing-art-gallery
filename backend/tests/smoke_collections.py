@@ -197,7 +197,36 @@ public = client.get("/api/collections").get_json()
 check("private hidden from the default list", cid not in [c["id"] for c in public])
 withprivate = client.get("/api/collections?includePrivate=1").get_json()
 check("private visible with includePrivate=1", cid in [c["id"] for c in withprivate])
+
+# 404 rather than 403 on the detail route: the response must not confirm
+# that a draft sits at this slug. Same reasoning as a waived piece.
+check(
+    "private 404s on the detail route for a visitor",
+    client.get("/api/collections/night-calls").status_code == 404,
+)
+check(
+    "private resolves on the detail route for the owner",
+    client.get("/api/collections/night-calls", headers=OWNER).status_code == 200,
+)
+
+visitor_view = client.get(f"/api/pieces/{ids[0]}").get_json()
+check(
+    "a visitor is not told the piece sits in a draft",
+    "night-calls" not in [c["slug"] for c in visitor_view["collections"]],
+    str([c["slug"] for c in visitor_view["collections"]]),
+)
+owner_view = client.get(f"/api/pieces/{ids[0]}", headers=OWNER).get_json()
+check(
+    "the owner sees the draft on the piece",
+    "night-calls" in [c["slug"] for c in owner_view["collections"]],
+    str([c["slug"] for c in owner_view["collections"]]),
+)
+
 client.patch(f"/api/collections/{cid}", json={"isPublic": True}, headers=OWNER)
+check(
+    "a public collection resolves without a token",
+    client.get("/api/collections/night-calls").status_code == 200,
+)
 
 print("\n== cascade safety ==")
 session = SessionLocal()

@@ -11,6 +11,7 @@ what lets local disk and object storage swap without touching the data.
 
 from flask import current_app
 
+from .auth import is_owner
 from .models import Collection, Piece, Tag
 
 
@@ -52,6 +53,9 @@ def piece_detail_to_dict(piece: Piece) -> dict:
     loaded, so composing this for every row would be a query per piece to
     render a block the grid does not show.
     """
+    # A private collection is a draft. The owner needs to see that a piece
+    # already sits in one; a visitor is not told the draft exists at all.
+    owner = is_owner()
     return {
         **piece_to_dict(piece),
         "collections": [
@@ -61,7 +65,7 @@ def piece_detail_to_dict(piece: Piece) -> dict:
                 "slug": link.collection.slug,
             }
             for link in piece.collection_links
-            if link.collection.is_public
+            if link.collection.is_public or owner
         ],
     }
 
