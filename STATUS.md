@@ -201,7 +201,7 @@ owner token in `X-Owner-Token`.
 | `GET` | `/api/collections` | Public only. `?includePrivate=1` for all |
 | `GET` | `/api/collections/<slug>` | Detail with pieces in `display_order`. 404 for a private collection unless owner |
 | `POST` | `/api/collections` `[owner]` | Optional `pieceIds` in pick order, `coverPieceId` |
-| `PATCH` | `/api/collections/<id>` `[owner]` | `name`, `slug`, `description`, `isPublic`, `coverPieceId` |
+| `PATCH` | `/api/collections/<id>` `[owner]` | `name`, `slug`, `description`, `isPublic`, `coverPieceId`. The UI never sends `slug`, so a rename keeps the URL |
 | `PUT` | `/api/collections/<id>/pieces` `[owner]` | Replaces membership and rewrites order |
 | `DELETE` | `/api/collections/<id>` `[owner]` | Removes the grouping. Pieces are untouched |
 
@@ -224,6 +224,12 @@ cover pointing at the departing piece.
 reasoning as a waived piece: 403 would confirm that something sits at the
 slug. `piece_detail_to_dict` likewise hides a draft from a visitor and shows
 it to the owner, so `is_owner()` is now read on two read paths, not one.
+
+**`coverPieceId` is the chosen cover, `coverImageUrl` the resolved one.**
+Null `coverPieceId` with a non-null `coverImageUrl` means no cover was
+picked and the first member is standing in. Collapsing the two would render
+a fallback as though it were a decision, which is precisely what the arrange
+grid must not do.
 
 ---
 
@@ -291,12 +297,12 @@ detour into auth without being asked.
 
 ## 8. Verification
 
-Four suites, 151 checks, no test framework — each is a script that prints
+Four suites, 154 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
 cd backend
-.venv/Scripts/python.exe tests/smoke_collections.py    # 51
+.venv/Scripts/python.exe tests/smoke_collections.py    # 54
 .venv/Scripts/python.exe tests/smoke_uploads.py        # 35
 .venv/Scripts/python.exe tests/smoke_waived.py         # 37
 .venv/Scripts/python.exe tests/integration_live.py     # 28
@@ -327,6 +333,7 @@ built-in `WebSocket`. Useful, but the owner tests by hand and prefers to.
 | Waived pieces — the two-stage removal | Done |
 | Collection creation — pick, then name | Done |
 | Collection view — page, index, real links, private gating | Done |
+| Collection edition — details, arrange, cover, delete | Done |
 
 **Waived pieces** is specified in full in
 [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) — 12 sections, and
@@ -348,77 +355,86 @@ owner in the list, on the index, and on a piece's page, marked with a
 `Private` eyebrow. Nothing had ever exercised those rules, because no
 private collection had ever existed.
 
+**Collection edition** followed, same document, §9. Details — name,
+description, visibility — go through a dialog and one `PATCH` that never
+sends `slug`, so a rename keeps the URL. Order, membership and cover are one
+array to the API, so they share one **arrange mode** with one Save: drag or
+arrow-key to reorder, `x` to remove, a thumbnail dialog to add, a pill to
+pick the cover. Nothing is written until Save. Arrange uses a plain ordered
+grid rather than the masonry, because the masonry reads down columns and the
+thing being edited is the sequence.
+
 ### Live data
 
 | | |
 |---|---|
-| Pieces | 11 exhibited, 0 waived |
+| Pieces | 11 rows — 10 exhibited, 1 waived (*Untitled Study VII*) |
 | Tags | 2 |
-| Collections | 1 — **Testing**, public, 3 pieces |
+| Collections | 2 — **Testing** (public, 3) and **Yankito** (public, 4) |
 
 `Testing` holds *Savy Relax*, *Night Calls V*, *Untitled Study V* in that
-order. **The owner created it.** It is real data, it confirms the creation
-flow works end to end, and it must not be cleaned up.
+order. **The owner created both collections, and waived that piece.** This
+is real data. It confirms the flows work end to end, and it must not be
+cleaned up.
 
 The 11 pieces were imported by `scripts/import_uploads.py` from the
 owner's local folder. Four have real titles; the rest are
 *Untitled Study {roman}*.
 
+Anything named `__like_this__` is a test fixture and is not real data. Every
+suite and every by-hand check creates one, cleans up only that, and asserts
+the rest of the gallery is untouched. Keep the discipline.
+
 ---
 
-## 10. Next: Collection edition
+## 10. Next: editing a piece
 
-**This is the feature to build.** Collections can now be opened, but not
-changed. Everything below is owner-only, sits on the collection page, and
-has a working endpoint already covered by the collections suite.
+**This is the feature to build.** Collections can now be created, opened,
+curated and deleted. A piece still cannot be corrected after upload.
 
-Specified in [`context/COLLECTIONS.md`](context/COLLECTIONS.md) §9.
+The owner pinned this on 2026-08-30 and it has been carried in §11 ever
+since. It is the oldest open gap in the project, and the one that costs
+something every time work is imported: `import-manifest.json` left `medium`
+and `year` empty for all eleven pieces, which is why the wall labels are
+sparse and cannot be filled in.
+
+Re-uploading is not a workaround. A new upload mints a new id, so the piece
+changes address, loses its collection memberships, and any link to it dies.
 
 ### What to build
 
-**Owner controls inline on the collection page**, not behind an edit mode.
-The owner's call, and consistent with `PieceWallLabel`, which shows owner
-actions in place.
+**`PATCH /api/pieces/<id>` `[owner]`** — the endpoint does not exist. It
+should accept `title`, `description`, `medium`, `year`, `createdDate`, and
+follow the rule collections already set: **only re-slug when `slug` is sent
+explicitly**, so correcting a title does not move the piece.
 
-| Action | Endpoint | Notes |
-|---|---|---|
-| Rename, edit description | `PATCH /api/collections/<id>` | Send `name` alone — omitting `slug` keeps the URL stable |
-| Publish / unpublish | `PATCH` with `isPublic` | The `Private` eyebrow already reflects this |
-| Choose a cover | `PATCH` with `coverPieceId` | Must be a member; the API enforces it |
-| Reorder, add, remove pieces | `PUT /api/collections/<id>/pieces` | Replaces the whole list, rewrites `display_order` |
-| Delete the collection | `DELETE /api/collections/<id>` | Pieces survive; only the grouping goes |
+**An "Edit details" dialog on the piece page**, in `PieceOwnerActions`
+beside Collections and Waive. The vocabulary is already built — collection
+edition uses exactly this shape, and `CollectionDetailsDialog` is the model
+to copy.
 
-**Reordering is drag and drop.** The owner's call, chosen over reusing the
-picking-mode vocabulary from creation. Build it on native HTML5 drag events
-with a keyboard-accessible fallback — `AGENTS.md` §2 rules out a new
-dependency without approval, and `dnd-kit` has not been approved.
+### Decisions to make
 
-### Two things it must settle
+**Whether tags are editable here.** The piece already carries them, the join
+table exists, and the upload endpoint accepts them — so `PATCH` could too,
+cheaply. But tags are inert everywhere else (§11), and making them editable
+without making them do anything builds a control with no consequence.
+Editing metadata without tags is coherent; adding tags is a separate
+feature. Recommended to leave them out, but the owner's call.
 
-**Add and remove need their own affordances.** Drag and drop covers reorder,
-but the collection page only shows pieces already in the collection, so
-there is nothing to drag *in*. `PUT .../pieces` takes the whole list, so all
-three gestures have to end up writing one array.
+**Whether the image itself can be replaced.** Almost certainly not, and
+worth writing down: swapping the file behind an id means re-running the
+derivative pipeline and invalidating whatever has cached the old renditions.
+A correction to a wall label is not the same act as replacing the artwork.
 
-**`PieceOwnerActions` hardcodes `isPublic: true`.** Creating a collection
-from a piece page offers no visibility choice, while creating from the grid
-does — see [`PieceOwnerActions.tsx:140`](frontend/src/components/PieceOwnerActions.tsx#L140).
-Inconsistent now that private collections actually work. Resolve it with the
-rest of the edit surface.
-
-### Already handled, do not redo
-
-The two backend gaps this section used to list are closed. The detail route
-404s a private collection for a visitor, and an empty collection renders its
-header normally with "Nothing hangs here yet." under it.
+**What happens to a waived piece.** Editing one is harmless, but the piece
+page for a waived piece already carries Restore and Delete. Decide whether
+Edit joins them or is only offered on exhibited work.
 
 ## 11. Known gaps
 
 Carried forward deliberately. None of these block §10.
 
-- **A piece's metadata cannot be edited after upload.** There is no
-  `PATCH /api/pieces/<id>`. The owner pinned this as a real gap to be
-  handled later.
 - **Tags do nothing.** The tables exist and two tags are stored, but there
   is no filtering and the "Tags" nav entry is inert.
 - **"Owner sign in" is inert**, per §7.

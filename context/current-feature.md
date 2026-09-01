@@ -1,16 +1,15 @@
 # Current Feature
 
-Collections that can be opened, and eventually edited.
+Collections that can be opened and edited. Both passes are done.
 
 Full specification in [`COLLECTIONS.md`](COLLECTIONS.md).
 
 ## Status
 
-Pass 1 -- viewing -- is done. A collection has a page, an index, and real
-links from everywhere it is named. Private collections are gated correctly
-in all four places they could appear.
+Done. A collection has a page and an index, real links from everywhere it is
+named, correct private-draft gating, and a full owner edit surface.
 
-Pass 2 -- edition -- is specified in outline and not started.
+Next feature is editing a piece -- see `STATUS.md` §10.
 
 ## Goals
 
@@ -29,24 +28,35 @@ Pass 2 -- edition -- is specified in outline and not started.
 - `CollectionGrid` extracted so the landing row and the index cannot drift.
   `PageMessage` extracted for not-found and unavailable.
 
-### Pass 2: Edition -- not started
+### Pass 2: Edition -- done 2026-08-31
 
-Owner controls inline on the collection page, not behind an edit mode.
-Rename, description, publish/unpublish, cover, delete. Reordering by drag
-and drop, on native HTML5 drag events with a keyboard fallback -- no new
-dependency without the owner's approval.
-
-Two things it must settle: add and remove need affordances of their own
-since the page only shows pieces already in the collection, and
-`PieceOwnerActions` hardcodes `isPublic: true`, so creating a collection
-from a piece offers no visibility choice while the grid path does.
+- **Edit details** -- name, description, visibility in one dialog, one
+  `PATCH`. `slug` is never sent, so a rename keeps the URL.
+- **Arrange mode** -- order, membership and cover in one mode and one
+  `PUT`. Drag or arrow keys to reorder, `x` to remove, a thumbnail dialog to
+  add, a pill to pick the cover. Nothing is written until Save.
+- **Delete** -- `ConfirmDialog` at danger tone, stating that the pieces
+  survive and only the grouping goes.
+- `coverPieceId` added to the collection payload. `coverImageUrl` alone
+  could not tell the arrange grid which piece was the cover without parsing
+  an id back out of a URL, and a null id with a non-null URL is the honest
+  way to say "no cover chosen, showing the first member".
+- `PieceOwnerActions` no longer hardcodes `isPublic: true`, closing the last
+  inconsistency between creating a collection from the grid and from a piece.
+- `PieceTile` added for handling pieces rather than looking at them, and
+  `form-styles.ts` so new dialogs share one form vocabulary.
 
 ## Notes
 
 - **Run it**: see `STATUS.md` §2.
-- **Verified**: 151 checks across four suites, plus a live gating check with
-  a `__gating_fixture__` collection, deleted by exact id afterwards. The
-  gallery was confirmed untouched -- 11 pieces, *Testing* intact.
+- **Verified**: 154 checks across four suites, plus by-hand runs against the
+  live stack with `__gating_fixture__` and `__pass2_fixture__` collections,
+  each deleted by exact id. The gallery was confirmed untouched afterwards.
+- **Arrange uses a plain grid, not the masonry.** The masonry fills
+  top-to-bottom down each column, which is unreadable when the sequence is
+  what you are editing. The display grid still reads down columns -- the one
+  loose thread, and the reason to revisit the masonry if curated order ever
+  needs to read across rows.
 - **Still open elsewhere**: no `PATCH /api/pieces/<id>`, tags inert, no auth.
 
 ## History
@@ -63,3 +73,8 @@ from a piece offers no visibility choice while the grid path does.
   from the grid and from a piece.
 - **2026-08-31**: Collections view. Two routes, three links made real, and
   the private-collection rules enforced for the first time.
+- **2026-08-31**: UI pass -- intro padding and display type reduced, and the
+  content cap raised to 2400px with density switched from column counts to
+  card widths, so a large monitor gains columns instead of margin.
+- **2026-08-31**: Collections edition. Details dialog, arrange mode with
+  native drag and drop, cover selection, and delete.

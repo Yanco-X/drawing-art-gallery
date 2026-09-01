@@ -115,6 +115,11 @@ check(
     created["coverImageUrl"] == f"/media/{ids[0]}/thumb.webp",
     str(created["coverImageUrl"]),
 )
+check(
+    "but no cover was chosen, so coverPieceId stays null",
+    created["coverPieceId"] is None,
+    str(created["coverPieceId"]),
+)
 check("aspectRatio computed from stored dims", created["pieces"][0]["aspectRatio"] == 1000 / 1100)
 check("tags serialized", created["pieces"][0]["tags"][0]["slug"] == "charcoal")
 
@@ -182,6 +187,11 @@ check(
     ok["coverImageUrl"] == f"/media/{ids[3]}/thumb.webp",
     str(ok["coverImageUrl"]),
 )
+check(
+    "and coverPieceId names the chosen piece",
+    ok["coverPieceId"] == ids[3],
+    str(ok["coverPieceId"]),
+)
 after = client.put(
     f"/api/collections/{cid}/pieces", json={"pieceIds": [ids[0], ids[2]]}, headers=OWNER
 ).get_json()
@@ -189,6 +199,11 @@ check(
     "cover reset when it leaves the collection",
     after["coverImageUrl"] == f"/media/{ids[0]}/thumb.webp",
     str(after["coverImageUrl"]),
+)
+check(
+    "and coverPieceId is null again, not the fallback's id",
+    after["coverPieceId"] is None,
+    str(after["coverPieceId"]),
 )
 
 print("\n== visibility ==")

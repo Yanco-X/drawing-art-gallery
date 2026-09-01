@@ -1,6 +1,7 @@
 export {
   createPiece,
   createCollection,
+  deleteCollection,
   deletePiece,
   fetchPiece,
   fetchPieces,
@@ -11,6 +12,8 @@ export {
   fetchVisibleCollections,
   waivePiece,
   restorePiece,
+  setCollectionPieces,
   setPieceCollections,
+  updateCollection,
   ApiError,
 } from './pieces';

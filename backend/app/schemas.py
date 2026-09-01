@@ -82,6 +82,13 @@ def collection_summary_to_dict(collection: Collection) -> dict:
         "coverImageUrl": (
             _storage().url_for(cover.key("thumb")) if cover else None
         ),
+        # The chosen cover, not the resolved one. Null means nothing was
+        # chosen and coverImageUrl is showing the first member instead --
+        # a distinction the arrange UI has to render, and which
+        # resolved_cover.id would flatten into a choice that was never made.
+        "coverPieceId": (
+            str(collection.cover_piece_id) if collection.cover_piece_id else None
+        ),
         "isPublic": collection.is_public,
     }
 

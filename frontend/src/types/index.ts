@@ -59,6 +59,12 @@ export interface CollectionSummary extends CollectionRef {
   pieceCount: number;
   /** Falls back to a gradient swatch when absent. */
   coverImageUrl: string | null;
+  /**
+   * The cover the owner chose, or null when none was — in which case
+   * `coverImageUrl` is showing the first member instead. The two differ,
+   * and the arrange grid has to tell a choice from a fallback.
+   */
+  coverPieceId: string | null;
   isPublic: boolean;
 }
 
@@ -81,6 +87,20 @@ export interface NewPiece {
   year: string;
   createdDate: string;
   tags: string[];
+}
+
+/**
+ * A partial update. Omitted keys are left alone by the API.
+ *
+ * `slug` is deliberately absent: the API only re-slugs when it is sent, so
+ * leaving it out is what keeps a collection's URL stable across a rename.
+ */
+export interface CollectionPatch {
+  name?: string;
+  description?: string;
+  isPublic?: boolean;
+  /** null clears the cover, falling back to the first member. */
+  coverPieceId?: string | null;
 }
 
 /** What the collection form collects. Mirrors POST /api/collections. */

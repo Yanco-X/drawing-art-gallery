@@ -106,6 +106,7 @@ export const PieceOwnerActions = ({
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [newName, setNewName] = useState('');
+  const [newIsPublic, setNewIsPublic] = useState(true);
 
   // Fetched only once a dialog that needs them is opened, so simply
   // viewing a piece costs no extra request.
@@ -124,6 +125,7 @@ export const PieceOwnerActions = ({
     setError(null);
     setSelected([]);
     setNewName('');
+    setNewIsPublic(true);
   };
 
   /**
@@ -137,7 +139,7 @@ export const PieceOwnerActions = ({
       const created = await createCollection({
         name: newName,
         description: '',
-        isPublic: true,
+        isPublic: newIsPublic,
         pieceIds: [],
       });
       ids = [...ids, created.id];
@@ -168,6 +170,7 @@ export const PieceOwnerActions = ({
   const openCollections = () => {
     setSelected(memberships.map((collection) => collection.id));
     setNewName('');
+    setNewIsPublic(true);
     setDialog('collections');
   };
 
@@ -318,6 +321,20 @@ export const PieceOwnerActions = ({
             placeholder="Name it, and this piece goes in"
             className="w-full border border-line bg-bg px-3 py-2.5 text-[14px] text-text placeholder:text-faint transition-colors duration-200 focus:border-accent focus:outline-1 focus:outline-accent"
           />
+          {/* Only once there is something to publish. Creating from a piece
+              used to force a public collection, while creating from the grid
+              offered the choice — the same act with two different rules. */}
+          {newName.trim() && (
+            <label className="flex cursor-pointer items-center gap-3 text-[14px] text-dim transition-colors duration-200 hover:text-text">
+              <input
+                type="checkbox"
+                checked={newIsPublic}
+                onChange={(event) => setNewIsPublic(event.target.checked)}
+                className="size-4 accent-accent"
+              />
+              Show this collection in the gallery
+            </label>
+          )}
         </div>
       </ConfirmDialog>
 

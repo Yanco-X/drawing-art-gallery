@@ -8,11 +8,10 @@ This document specifies the two passes that finish the feature.
 
 **Pass 1 — viewing. Implemented 2026-08-31.** The routes, the links, and the
 visibility rules.
-**Pass 2 — edition. Not started.** Rename, describe, publish, cover,
-rearrange, delete.
+**Pass 2 — edition. Implemented 2026-08-31.** Rename, describe, publish,
+cover, rearrange, delete.
 
-Pass 1 is specified in full below. Pass 2 is sketched in §9 and gets its own
-specification once pass 1 has been lived with.
+Both are specified in full below: pass 1 in §2–§8, pass 2 in §9.
 
 ---
 
@@ -214,32 +213,111 @@ Marker discipline per `STATUS.md` §8.
 
 ---
 
-## 9. Pass 2, sketched
+## 9. Pass 2: edition
 
-Owner controls sit **inline on the collection page**, not behind an edit
-mode — the owner's call, consistent with `PieceWallLabel`, which shows
-owner actions in place.
+Owner controls sit **inline on the collection page**, not behind a global
+edit mode. Consistent with `PieceWallLabel`, which shows owner actions in
+place.
 
-| Action | Endpoint |
+Three affordances in the page header, owner only:
+
+```
+COLLECTION                    [Edit details]  [Arrange]  [Delete]
+Testing
+What holds these together.
+3 pieces
+```
+
+### 9.1 Edit details -- the scalars
+
+A dialog holding name, description and visibility, in the same form
+vocabulary as `NewCollectionDialog`, so creating and editing a collection
+look like one another. One `PATCH /api/collections/<id>`.
+
+**`slug` is never sent.** The API only re-slugs when `slug` is present, so a
+rename keeps the URL. That is load-bearing: a collection's address should
+survive the owner changing their mind about its name.
+
+### 9.2 Arrange -- the array
+
+Order, membership and cover are one array and one cover pointer, and
+`PUT /api/collections/<id>/pieces` writes both in a single idempotent
+request. So they share one mode with one Save.
+
+| Gesture | Effect |
 |---|---|
-| Rename, edit description | `PATCH /api/collections/<id>` — send `name` alone; omitting `slug` keeps the URL stable |
-| Publish / unpublish | `PATCH` with `isPublic` |
-| Choose a cover | `PATCH` with `coverPieceId` — must be a member, the API enforces it |
-| Reorder, add, remove | `PUT /api/collections/<id>/pieces` — replaces the list, rewrites `display_order` |
-| Delete | `DELETE /api/collections/<id>` — pieces survive, only the grouping goes |
+| Drag a tile onto another | Reorders, live, locally |
+| Arrow keys on a focused tile | Same, for keyboard |
+| `x` on a tile | Removes it from the collection |
+| `Add work` | Dialog of gallery thumbnails; ticked pieces append |
+| `Cover` on a tile | Makes it the cover |
+| Save | One `PUT` with `pieceIds` and `coverPieceId` |
+| Cancel | Throws the whole session away, nothing written |
 
-**Reordering is drag and drop** — the owner's call, chosen over reusing the
-picking-mode vocabulary from creation. Built on native HTML5 drag events
-with a keyboard-accessible fallback, not a library: `AGENTS.md` §2 rules out
-new dependencies without approval, and that approval has not been given.
+Nothing is written until Save. A drop that immediately hit the API would
+turn one curation session into a dozen writes, and an accidental drag would
+be permanent.
 
-Two things pass 2 must settle that pass 1 does not:
+**Arrange uses a plain ordered grid, not the masonry.** The masonry fills
+top-to-bottom down each column (§4), which is unreadable when the thing
+being edited *is* the sequence. In arrange mode tiles run left to right, in
+order, numbered. The display grid is unchanged -- see the caveat in §4, now
+more visible than before, and the reason to revisit the masonry if curated
+order ever needs to read across rows.
 
-- Drag and drop covers reorder. Add and remove need their own affordances,
-  since the collection page only shows pieces already in the collection.
-- `PieceOwnerActions` hardcodes `isPublic: true` when creating a collection
-  from a piece page, so that path offers no visibility choice while the grid
-  path does. Inconsistent; resolve it with the rest of the edit surface.
+**Drag and drop is native.** HTML5 `draggable` plus `dragstart`/`dragover`/
+`drop`, no library: `AGENTS.md` §2 rules out a new dependency without
+approval. Native DnD is mouse-only, so a focused tile also moves on
+Left/Right arrow, and the bar says so.
+
+### 9.3 Delete
+
+`ConfirmDialog` at `tone="danger"`, stating that the pieces survive and
+only the grouping goes -- which is what the endpoint does. Returns to
+`/collections` afterwards, replacing history so Back does not land on a
+page that no longer exists.
+
+### 9.4 One backend addition
+
+`collection_summary_to_dict` returns `coverImageUrl` but not the id behind
+it, so the arrange grid has no way to mark which tile is the cover short of
+parsing a piece id back out of a URL.
+
+Add **`coverPieceId`** beside it: the raw `cover_piece_id`, which is null
+when no cover has been chosen. Deliberately not `resolved_cover.id` -- the
+distinction between *no cover chosen, showing the first piece* and *this
+piece was chosen* is exactly what the arrange UI has to render, and
+collapsing them would make the fallback impossible to tell from a choice.
+
+Nothing else changes on the backend. Every endpoint this pass needs already
+exists and is covered.
+
+### 9.5 The inconsistency this pass closes
+
+`PieceOwnerActions` hardcodes `isPublic: true` when creating a collection
+from a piece page, so that path offers no visibility choice while the grid
+path does. It gains the same checkbox.
+
+### 9.6 Verification
+
+Three checks added to `tests/smoke_collections.py` for `coverPieceId`, all
+passing: null when no cover was chosen even though `coverImageUrl` is
+serving the first member, the chosen id once one is set, and null again --
+not the fallback's id -- when the cover leaves the collection. Suite totals:
+collections 54, uploads 35, waived 37, integration 28, **154 checks**.
+
+`npm run build` and `eslint` clean. One lint finding was worth keeping:
+`CollectionDetailsDialog` originally synced its fields from props in an
+effect, which `react-hooks/set-state-in-effect` rightly flagged. It is now
+mounted only while open, so the fields initialise from the collection as it
+stands and the effect is gone rather than suppressed.
+
+Exercised against the live stack with a `__pass2_fixture__` collection,
+deleted by exact id afterwards: a rename left the slug untouched, a reorder
+with an explicit cover came back in the new order with `coverPieceId` set,
+and dropping that piece returned `coverPieceId` to null while
+`coverImageUrl` fell back to the first member. Marker discipline per
+`STATUS.md` §8.
 
 ---
 

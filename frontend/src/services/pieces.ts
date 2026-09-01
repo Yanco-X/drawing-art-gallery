@@ -1,6 +1,7 @@
 import { CURRENT_ROLE, OWNER_TOKEN } from '../lib/session';
 import type {
   Collection,
+  CollectionPatch,
   CollectionSummary,
   NewCollection,
   NewPiece,
@@ -211,6 +212,71 @@ export const createCollection = async (
   });
   if (!response.ok) await raise(response);
   return response.json();
+};
+
+/**
+ * Renames, re-describes, publishes or covers a collection.
+ *
+ * Never sends `slug`. The API only re-slugs when it is present, so a
+ * collection keeps its URL when the owner changes their mind about a name.
+ */
+export const updateCollection = async (
+  id: string,
+  patch: CollectionPatch,
+): Promise<Collection> => {
+  const response = await fetch('/api/collections/' + encodeURIComponent(id), {
+    method: 'PATCH',
+    headers: {
+      'X-Owner-Token': OWNER_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * Replaces a collection's membership, order and cover in one write.
+ *
+ * The array is the curation: position in it becomes `display_order`. Sent
+ * whole rather than as a sequence of add/remove calls, so a curation
+ * session cannot half-apply. Omit `coverPieceId` to leave the cover to the
+ * API's own rules; pass null to clear it back to the first member.
+ */
+export const setCollectionPieces = async (
+  id: string,
+  pieceIds: string[],
+  coverPieceId?: string | null,
+): Promise<Collection> => {
+  const body: { pieceIds: string[]; coverPieceId?: string | null } = {
+    pieceIds,
+  };
+  if (coverPieceId !== undefined) body.coverPieceId = coverPieceId;
+
+  const response = await fetch(
+    '/api/collections/' + encodeURIComponent(id) + '/pieces',
+    {
+      method: 'PUT',
+      headers: {
+        'X-Owner-Token': OWNER_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/** Removes the grouping. Every piece in it survives, untouched. */
+export const deleteCollection = async (id: string): Promise<void> => {
+  const response = await fetch('/api/collections/' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: { 'X-Owner-Token': OWNER_TOKEN },
+  });
+  // 204, so there is no body to read.
+  if (!response.ok) await raise(response);
 };
 
 /**
