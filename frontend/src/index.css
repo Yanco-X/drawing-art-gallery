@@ -234,3 +234,54 @@
     }
   }
 }
+
+@layer components {
+  /*
+   * OpenSeadragon's navigator, dressed for this gallery.
+   *
+   * Mounted into our own element via `navigatorId`, which is what makes this
+   * possible: given an element, OpenSeadragon sets the control anchor to
+   * NONE and skips the inline border and background it would otherwise
+   * write onto the container. So the frame below is ours, not an override.
+   *
+   * The display region is the exception -- OpenSeadragon styles that
+   * inline and unconditionally, at a hardcoded 2px. This design has no 2px
+   * borders, so it is overridden here. `!important` is doing real work: a
+   * stylesheet rule only beats an inline style when it carries one.
+   */
+  .sa-minimap {
+    border: 1px solid var(--color-line);
+    background: var(--color-bg-translucent);
+    /* OpenSeadragon writes its own pixel sizes onto the element it is given.
+       The frame is the wrapper, so anything it decides stays inside it. */
+    overflow: hidden;
+  }
+
+  /*
+   * The viewer's chrome hides itself when nothing is happening.
+   *
+   * Getting out of the way is not motion, so it still happens for someone
+   * who has asked for less of it -- but the fade does not. Per the design:
+   * motion is skipped rather than shortened.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .sa-fade {
+      transition: none;
+    }
+  }
+
+  .sa-minimap .displayregion {
+    /* One hairline, per the system. OpenSeadragon's own geometry still
+       reckons on 2px, so the rectangle sits a pixel out -- invisible at this
+       size, and worth less than a border weight the rest of the UI lacks. */
+    border-width: 1px !important;
+    border-color: var(--color-accent) !important;
+    /* A hairline alone is too quiet to find on a dark drawing. The wash is
+       what makes the region read at a glance; the border keeps it precise. */
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    /* Preflight sets border-box on everything. OpenSeadragon sizes this
+       element assuming the border sits outside the width it sets, so without
+       this the region is short by its own border on each axis. */
+    box-sizing: content-box !important;
+  }
+}

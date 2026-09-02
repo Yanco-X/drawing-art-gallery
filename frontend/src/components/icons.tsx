@@ -116,3 +116,58 @@ export const DeleteIcon = () => (
     <path d="M10 10v7M14 10v7" />
   </Glyph>
 );
+
+/*
+ * The detail view's glyphs.
+ *
+ * Arrows to the corners rather than a magnifier: the button opens a window,
+ * and the zooming only starts once you are inside it. A magnifier would
+ * promise the wrong verb.
+ */
+export const ExpandIcon = () => (
+  <Glyph>
+    <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />
+  </Glyph>
+);
+
+export const ZoomInIcon = () => (
+  <Glyph>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M15.8 15.8 21 21M11 8.5v5M8.5 11h5" />
+  </Glyph>
+);
+
+export const ZoomOutIcon = () => (
+  <Glyph>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M15.8 15.8 21 21M8.5 11h5" />
+  </Glyph>
+);
+
+/** A frame with the work sized to fit it: back to the whole piece. */
+export const FitIcon = () => (
+  <Glyph>
+    <path d="M3 3h18v18H3z" />
+    <path d="M8 8h8v8H8z" />
+  </Glyph>
+);
+
+/** Corners only — the browser chrome goes away, the frame stays. */
+export const FullscreenIcon = () => (
+  <Glyph>
+    <path d="M3 8V3h5M21 16v5h-5M16 3h5v5M8 21H3v-5" />
+  </Glyph>
+);
+
+export const ExitFullscreenIcon = () => (
+  <Glyph>
+    <path d="M8 3v5H3M16 21v-5h5M21 8h-5V3M3 16h5v5" />
+  </Glyph>
+);
+
+/** Dismiss. A drawn glyph rather than a &times;, so it lines up with the rest. */
+export const CloseIcon = () => (
+  <Glyph>
+    <path d="M5 5l14 14M19 5L5 19" />
+  </Glyph>
+);

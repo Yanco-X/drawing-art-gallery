@@ -128,7 +128,17 @@ In the light theme `surface` and `bg` are nearly identical. The 1px `line` borde
 
 `#c9a86a`, a muted gold, shared by both themes. On-accent text is `#0e0e10`.
 
-It is the only accent in the system and appears in exactly six places: hover borders, the active nav underline, the Upload button, active control states, the italic "Art" in the wordmark, and form focus with its required marks and errors. Adding a second accent colour, or spending this one on decoration, breaks the system.
+It is the only accent in the system. Adding a second accent colour, or spending this one on decoration, breaks it.
+
+**The rule is that the accent marks the one action a surface exists for, plus the places the interface has to point at itself.** It is not a list of six locations. An earlier version of this section enumerated six and declared the list closed; it was out of date within a fortnight, because a closed list cannot survive a new page, and each addition then looked like a violation rather than the rule working.
+
+Two kinds of use, and they behave differently:
+
+**Filled** -- solid `accent` with `on-accent` text -- is the principal action of a surface, and there is at most one per screen. The header's "+ Upload" for the owner, "Add to gallery" confirming the upload dialog, "Save arrangement" ending arrange mode, and "Detailed view" on a piece page, which for a visitor is the only thing that page offers. Two filled buttons in view at once means one of them is not the principal action; make it outlined.
+
+**Outlined or hairline** -- `accent` on a border, a rule, or text -- is the interface pointing at something: hover borders, the active nav underline, active control states, form focus with its required marks and errors, the picked-tile number in a picker, the minimap's viewport rectangle, and the italic "Art" in the wordmark. These may repeat, and often do.
+
+`ICON_BUTTON_ACCENT` is the outlined box and `PAGE_ACTION` is the filled one; both live in `components/form-styles.ts`. Reach for an existing one before writing a third.
 
 ### Danger
 
@@ -228,6 +238,8 @@ The theme toggle's treatment, generalised: 1px `line` border, transparent fill, 
 
 Deliberately not an icon font or a package -- several hundred kilobytes for five glyphs, and `AGENTS.md` §2 rules out new dependencies without asking. Deliberately not Unicode dingbats either: ✎ and its neighbours render as colour emoji on Windows, and there are no emoji in this project.
 
+**Three weights, in `components/form-styles.ts`.** `ICON_BUTTON` is the default, `line` border going accent on hover. `ICON_BUTTON_ACCENT` is bordered in accent and fills on hover -- a useful action inside a section, like "+ New collection". `PAGE_ACTION` is filled from the start and full width: the one action a page exists for, at most one per screen. See Accent for which is which. `ICON_BUTTON_DANGER` and `ICON_BUTTON_INERT` cover the destructive and the unavailable.
+
 ### Intro
 
 Optional. Eyebrow in `faint` at 12px / `0.24em`, then the display headline capped at `14em` with `text-wrap: pretty`. Shown on the root gallery view; hidden on filtered and collection routes.
@@ -292,7 +304,7 @@ The first form in the system, so it defines the form vocabulary the rest will in
 * **Field labels use `muted`, not `faint`.** Meta text is allowed to recede; an instruction is not. This is the one place the eyebrow letterform (12px, uppercase, `0.24em`) is paired with a louder colour, and the reason is legibility.
 * **Inputs** -- `bg` inside a `surface` panel, so the recess reads as a change of background rather than an inset shadow. 1px `line` border, radius 0, 14px `text`, placeholders in `faint`. Focus takes an `accent` border *and* a 1px `accent` outline: a border change alone is too quiet at this line weight, and an outline is a focus ring, not elevation.
 * **Tag chips** -- typed into the field and committed with Enter or comma; Backspace on an empty field removes the last. Same bordered chip as the wall label, but interactive here, so they take the `accent` hover the static ones do not. Duplicates collapse case-insensitively because the backend slugifies.
-* **Required marks** -- an `accent` asterisk. The sixth and last place the accent is spent.
+* **Required marks** -- an `accent` asterisk. Pointing at something the form needs, so hairline rather than filled.
 * **Errors** in `accent`, bottom-left, `role="alert"`, and cleared by any edit -- a message that outlives the problem it describes reads as though the form is still refusing.
 * **Actions** -- bordered ghost "Cancel", solid `accent` "Add to gallery". Both disable during upload, and Escape is refused mid-request so a stray keypress cannot abandon work already in flight.
 

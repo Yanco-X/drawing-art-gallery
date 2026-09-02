@@ -84,3 +84,22 @@ export const ICON_BUTTON_ACCENT =
  */
 export const ICON_BUTTON_INERT =
   ICON_BUTTON_SHELL + ' border-line text-faint opacity-40';
+
+/**
+ * The one action a page exists for, filled with the accent.
+ *
+ * Distinct from ICON_BUTTON_ACCENT, which is outlined: that one marks a
+ * useful action inside a section, this one marks the reason the page is
+ * open. On a piece page, for a visitor, Detailed View is the only thing
+ * there is to do -- seeing the work at full resolution is the closest this
+ * gets to seeing it in person.
+ *
+ * Full width by default. In a system built from hairlines there is no
+ * heavier weight to reach for, so prominence comes from spanning the column
+ * rather than from adding ornament.
+ */
+export const PAGE_ACTION =
+  'flex w-full cursor-pointer items-center justify-center gap-2.5 border-none ' +
+  'bg-accent px-5 py-3.5 text-[13px] uppercase tracking-btn text-on-accent ' +
+  'transition-opacity duration-200 hover:opacity-90 ' +
+  'disabled:cursor-not-allowed disabled:opacity-40';

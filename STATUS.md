@@ -489,16 +489,19 @@ the rest of the gallery is untouched. Keep the discipline.
 **This is the feature being built.** Full spec and decisions in
 [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md).
 
-Pass 1 — the Deep Zoom pyramid, the backfill, and `tileSource` on the piece
-payload — is done and verified. Pass 2 is the full-window shell and
-OpenSeadragon; pass 3 is the minimap. Both are frontend work against a
-backend that is finished, so the shape is settled:
+Passes 1 and 2 are done. The pyramid, the backfill and `tileSource` on the
+payload; then the full-window viewer itself — a `<dialog>` overlay carrying
+OpenSeadragon in a lazy chunk, opened from a filled-accent button beneath the
+artwork, addressed by `?view=1` so Back closes it and the view is linkable.
 
-- The button is **solid accent, full width, directly beneath the artwork**,
-  with `Full resolution · 4999 × 5001` in `faint` under it. Visible to
-  everyone, so it cannot live in `PieceOwnerActions`.
-- **OpenSeadragon is approved** under §2 and loads as a lazy chunk.
-- The viewer is a `<dialog>` overlay; the piece page stays mounted beneath.
+**Pass 3, the minimap, is done too** — OpenSeadragon's navigator mounted
+into our own element, a hairline frame with an accent wash on the viewport
+rectangle, and visibility driven by zoom rather than by the idle timer that
+hides the rail. All three sub-features are built.
+
+The visual has never been checked by automation — there is no browser driver
+on this machine. Every pass was verified by geometry, network and build,
+then looked at by hand.
 
 ### Next: tags that do something
 
