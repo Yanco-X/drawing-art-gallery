@@ -1,5 +1,18 @@
+import type { ReactNode } from 'react';
 import { GRID_DENSITIES, GRID_DENSITY_LABELS } from '../hooks/useGridDensity';
 import type { GridDensity } from '../types';
+import {
+  DensityAiryIcon,
+  DensityComfortableIcon,
+  DensityDenseIcon,
+} from './icons';
+
+/** Each density drawn as the columns it produces. */
+const GRID_DENSITY_ICONS: Record<GridDensity, ReactNode> = {
+  airy: <DensityAiryIcon />,
+  comfortable: <DensityComfortableIcon />,
+  dense: <DensityDenseIcon />,
+};
 
 interface DensityControlProps {
   value: GridDensity;
@@ -25,7 +38,11 @@ export const DensityControl = ({ value, onChange }: DensityControlProps) => (
         type="button"
         onClick={() => onChange(density)}
         aria-pressed={density === value}
-        className={`cursor-pointer px-3 py-1.5 text-[12px] tracking-nav transition-colors duration-200 ${
+        // Named explicitly: the label is display:none below 640px, which
+        // takes it away from a screen reader as well as from the screen.
+        aria-label={GRID_DENSITY_LABELS[density]}
+        title={GRID_DENSITY_LABELS[density]}
+        className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[12px] tracking-nav transition-colors duration-200 ${
           index > 0 ? 'border-l border-line' : ''
         } ${
           density === value
@@ -33,7 +50,12 @@ export const DensityControl = ({ value, onChange }: DensityControlProps) => (
             : 'text-muted hover:text-accent'
         }`}
       >
-        {GRID_DENSITY_LABELS[density]}
+        {GRID_DENSITY_ICONS[density]}
+        {/* Label hidden on the narrowest screens, where this control shares
+            a row with the section heading and the icons carry it alone. */}
+        <span className="hidden sm:inline">
+          {GRID_DENSITY_LABELS[density]}
+        </span>
       </button>
     ))}
   </div>

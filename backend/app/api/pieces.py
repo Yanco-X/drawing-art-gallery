@@ -113,7 +113,7 @@ def create_piece():
     Upload a piece.
 
     multipart/form-data: `image` plus title, description, medium, year,
-    createdDate, and repeated `tags` fields.
+    createdDate, and repeated `tags` and `collectionIds` fields.
 
     Ordering matters here. Files are written before the row is committed:
     files-then-database can leave orphaned bytes, which are invisible and
@@ -167,13 +167,23 @@ def create_piece():
     try:
         piece.tags = _resolve_tags(session, request.form.getlist("tags"))
         session.add(piece)
+        # Curation rides in the same transaction as the row, the way it does
+        # on restore. A piece that reached the gallery but missed the
+        # collections it was uploaded into would be a half-applied upload,
+        # and nothing in the response would say so. An unknown id fails the
+        # whole thing, and the rollback below takes the stored objects with
+        # it. (_join_collections is defined further down, next to the other
+        # membership helpers; it is resolved at call time.)
+        _join_collections(session, piece, request.form.getlist("collectionIds"))
         session.commit()
     except Exception:
         session.rollback()
         storage.delete_prefix(piece.storage_prefix)
         raise
 
-    return jsonify(piece_to_dict(piece)), 201
+    # The detail shape, so the caller sees the memberships it just asked for
+    # rather than having to trust that they landed.
+    return jsonify(piece_detail_to_dict(piece)), 201
 
 
 @bp.patch("/<uuid:piece_id>")

@@ -249,7 +249,7 @@ request. So they share one mode with one Save.
 | Drag a tile onto another | Reorders, live, locally |
 | Arrow keys on a focused tile | Same, for keyboard |
 | `x` on a tile | Removes it from the collection |
-| `Add work` | Dialog of gallery thumbnails; ticked pieces append |
+| `Add work` | The shared picker — filtered grid of gallery thumbnails; ticked pieces append in pick order |
 | `Cover` on a tile | Makes it the cover |
 | Save | One `PUT` with `pieceIds` and `coverPieceId` |
 | Cancel | Throws the whole session away, nothing written |

@@ -33,7 +33,7 @@ typography:
   display:
     fontFamily: Instrument Serif
     fontWeight: '400'
-    fontSize: clamp(32px, 5vw, 64px)
+    fontSize: clamp(28px, 4vw, 48px)
     lineHeight: '1.05'
   section-heading:
     fontFamily: Instrument Serif
@@ -78,7 +78,7 @@ spacing:
   scale: [2, 4, 8, 10, 12, 16, 20, 24, 28]
   gutter: clamp(20px, 5vw, 64px)
   intro-top: clamp(28px, 4vw, 64px)
-  intro-bottom: clamp(32px, 5vw, 72px)
+  intro-bottom: clamp(24px, 3.5vw, 48px)
   section-sm: clamp(40px, 6vw, 80px)
   section-lg: clamp(56px, 8vw, 96px)
   content-max: 2400px
@@ -198,8 +198,13 @@ The motion budget is deliberately small.
 | 200ms | Hover transitions -- border colour and text colour |
 | 300ms | Theme swap (background and colour) |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
+| 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
 
-No stagger, no scale, no entrance animations. Motion acknowledges an action and gets out of the way.
+No stagger and no scale. Motion acknowledges an action and gets out of the way.
+
+**Dialogs are the one sanctioned entrance**, added 2026-09-01. A modal takes the whole screen away from whatever was under it, and appearing in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
+
+The exit is the part that needs modern CSS: `close()` removes the element in the same frame, so `display` and `overlay` transition with `allow-discrete` to hold it in the top layer long enough to fade, and `@starting-style` supplies the pre-open values. Browsers without either show and hide the dialog outright, which is what happened before.
 
 All motion must be skipped under `prefers-reduced-motion: reduce`.
 
@@ -214,6 +219,14 @@ Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` backgrou
 * **Theme toggle** -- 1px `line` border, transparent fill, glyph plus label. **The label names the theme currently active, not the one it switches to.** The accessible name states the action.
 * **Owner state** -- a solid accent "+ Upload" button. **Visitor state** -- an "Owner sign in" text link in `faint`.
 * **Below 640px** -- the nav collapses behind a menu button drawn as three 1px bars, the toggle drops to its glyph, and "Owner sign in" moves into the menu panel.
+
+### Icon buttons
+
+The theme toggle's treatment, generalised: 1px `line` border, transparent fill, icon plus label, 12px uppercase at `0.08em`, going accent on hover. Destructive actions go `danger` on hover instead and are never filled. Used where an action changes something and must not read as a link -- the owner's actions on a piece are the first place.
+
+**Icons are drawn in `components/icons.tsx`, not imported.** A 24-unit `viewBox` rendered at 16px puts a 1.5-unit stroke at exactly one device pixel, so an icon is the same hairline as every border in the system. `fill: none`, `stroke: currentColor`, square caps, so an icon inherits every hover and disabled state already on the button and never needs styling twice.
+
+Deliberately not an icon font or a package -- several hundred kilobytes for five glyphs, and `AGENTS.md` §2 rules out new dependencies without asking. Deliberately not Unicode dingbats either: ✎ and its neighbours render as colour emoji on Windows, and there are no emoji in this project.
 
 ### Intro
 
@@ -255,6 +268,8 @@ Changing density animates via FLIP: positions are captured, the reflow is applie
 
 A single group with one 1px `line` border and hairline dividers between options -- deliberately *not* three separate chips, so it reads as one control. Options are 12px with `0.06em` tracking and chip padding, sentence case. The active option is filled accent with `on-accent` text.
 
+Each option carries an icon drawn as the columns it produces -- two wide, three, then four narrow -- so the control shows its own effect. These are the one *filled* icon in the set: a 3-unit column drawn as an outline is two hairlines almost touching, which at 16px is mud. Below 640px the labels drop and the icons carry it alone, so the buttons take an explicit `aria-label` -- `display: none` takes a label away from a screen reader as well as from the screen.
+
 ### Piece page
 
 Not present in the original handoff -- designed against this system as a **gallery wall label**. The artwork keeps the room; the metadata sits beside it, small and quiet, separated by a hairline rather than boxed in a panel. No new visual vocabulary was introduced.
@@ -263,7 +278,7 @@ Not present in the original handoff -- designed against this system as a **galle
 * **Artwork** -- capped at `78vh` so a tall portrait still sits beside its label instead of pushing it below the fold, and centred in its column, since the cap often leaves it narrower than the column and hugging one edge would strand the rule. 1px `line` border and the `hatch` behind it, exactly as in the grid.
 * **Wall label** -- title at `clamp(22px, 2.4vw, 32px)` serif, then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
 * **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
-* **Tags render as static bordered chips, not links** -- there is no tag route to point at, and a chip that looks clickable but is not is worse than a plain one.
+* **Tags render as static bordered chips, not links** -- `/tags` is still a placeholder with nothing to point a chip at, and a chip that looks clickable but is not is worse than a plain one.
 * **Prev/next** -- neighbours in gallery order, sharing the back-link row above the artwork and right-aligned against it. Same treatment as the back link (13px uppercase, `0.08em`, `faint`, accent on hover), so the row reads as one set of quiet actions. Piece titles move to the tooltip and the accessible name; at this size the labels alone carry the action, and keeping them short is what lets the control stay above the fold. Ends are open rather than wrapping, and the unavailable side renders disabled at 40% opacity rather than being omitted, so the row does not reflow between pieces.
 * **Not found** -- an unknown id gets the eyebrow-plus-headline treatment from the intro, at a reduced size, with a link back.
 
@@ -283,19 +298,22 @@ The first form in the system, so it defines the form vocabulary the rest will in
 
 ### Picking pieces
 
-Creating a collection starts by choosing its members from the grid, so the gallery gets a second mode.
+Choosing members for a collection happens in a near-full-screen dialog, at `94vw` by `92vh`.
 
-* **Entered from the Collections header** -- "+ New collection" in 13px `faint`, owner only, and hidden while picking so the mode cannot be entered twice.
-* **A bordered `accent` bar** replaces ordinary browsing, stating what to do while nothing is picked and the count once something is. The density control hides for the duration: changing the column count mid-selection is noise.
-* **Cards become buttons, not links.** Clicking must not navigate away from a selection in progress, so the same card renders as a `<button>` while picking and a `<Link>` otherwise.
-* **Selection is numbered, not ticked.** A picked card takes an `accent` border and a small solid `accent` square in its top-left carrying its position. Pick order becomes the collection's display order, and a plain checkmark would hide that -- the number is the only thing telling you the order is being recorded.
-* **Naming comes second.** A collection is defined by what is in it, and asking for a name first invites naming something that does not exist yet. The dialog reports the count back before asking.
+This began as a second mode on the gallery: the page went into a picking state and a bordered `accent` bar replaced ordinary browsing. It was wrong in use rather than in look -- choosing meant scrolling the length of the gallery, and naming or cancelling meant scrolling back to the top. **Replaced 2026-09-01.** `PieceCard`, `MasonryGrid` and `AllWorkSection` no longer know what a selection is.
+
+* **Split 80/20** -- a dense uniform grid on the left, and a control column on the right holding the name, the filters, the count and the actions. The grid scrolls inside itself, so the controls never leave the screen however far the picking goes.
+* **Filters live in the control column** -- title search and a year, applied as typed with no apply step. Years are derived from the pieces present, so the control never offers one with nothing behind it. Filtering runs in the browser over the already-fetched list; at this size a round trip per keystroke would be slower than scanning what is there.
+* **Tiles are uniform, not the masonry.** This is a picker: ragged heights make a target harder to aim at and a sequence harder to read. `PieceTile` crops to a 4:3 box.
+* **Selection is numbered, not ticked.** A picked tile takes an `accent` border and a small solid `accent` square in its top-left carrying its position. Pick order becomes the collection's display order, and a plain checkmark would hide that -- the number is the only thing telling you the order is being recorded.
+* **Actions sit at the bottom of the column** at `mt-auto`, so they hold their place whether or not the year control is showing. "Unpick all" sits with the count rather than with the filters: clearing a filter changes what you can see, unpicking changes what you have chosen.
+* **The same picker serves "Add work"** in arrange mode, which had the same unfiltered scroll.
 
 ### Destructive confirmation
 
 Deleting a piece removes the row, the original, and both renditions, with no undo. The design carries that weight in three places rather than one.
 
-* **The affordance is quiet and out of the way.** "Delete piece" is the last item in the wall label rail, below a hairline, at 13px uppercase `faint` -- the same treatment as the back link. It never appears in the top row beside prev/next, where a cursor is already moving between pieces. Hover is the only place it takes `danger`; at rest it is as quiet as the metadata around it.
+* **The affordance is quiet and out of the way.** "Delete permanently" is the last item in the wall label rail, below a hairline, and reachable only on work already waived. It never appears in the top row beside prev/next, where a cursor is already moving between pieces. It is an icon button like its neighbours, and `danger` appears on hover alone; at rest it is as quiet as the metadata around it.
 * **Owner only.** The prop is omitted for visitors, so the block does not render at all rather than rendering disabled.
 * **The dialog does the persuading.** Native `<dialog>`, 480px, no close ×. Omitting the × means the first focusable element is Cancel, so the dialog opens with focus on the safe choice and a stray Enter does nothing. Escape and backdrop clicks cancel, and both are refused mid-request.
 * **It names the piece and states the consequence** in two short paragraphs: what is removed from where, then that it cannot be undone and what the owner is left with. Generic "Are you sure?" copy is not enough when the thing being destroyed is the only copy.
@@ -327,7 +345,7 @@ Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as stat
 * The `faint` token does not meet WCAG AA for normal text in either theme -- roughly 2.6:1 dark and 2.7:1 light, against a 4.5:1 bar. It carries meta, counts, the eyebrow and the footer, all at 12px. This is a deliberate aesthetic choice and is documented here so it is a decision rather than an accident. Raising it to `#807d75` (dark) and `#6e6a60` (light) would clear 4.5:1 and is a two-line change.
 * Accent gold on the light background is roughly 1.9:1, which matters where it is used as light-theme nav hover text.
 * Controls that toggle carry `aria-pressed`; the density group carries `role="group"` and a label; the menu button carries `aria-expanded` and `aria-controls`.
-* All motion is skipped under `prefers-reduced-motion: reduce`.
+* All motion is skipped under `prefers-reduced-motion: reduce`, including the dialog transition -- skipped, not shortened.
 
 ## Deviations From The Prototype
 

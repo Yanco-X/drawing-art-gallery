@@ -248,6 +248,70 @@ check("other pieces untouched", len(client.get("/api/pieces").get_json()) == 3)
 check("deleting an unknown piece 404s",
       client.delete(f"/api/pieces/{pid}", headers=OWNER).status_code == 404)
 
+print("\n== uploading into collections ==")
+# Curation chosen at upload time is joined in the same transaction as the
+# row, so the interesting cases are the failing ones: a refused id must
+# leave behind neither a piece nor the objects already written for it.
+target = client.post("/api/collections", headers=OWNER,
+                     json={"name": "Upload Target"}).get_json()
+draft = client.post("/api/collections", headers=OWNER,
+                    json={"name": "Upload Draft", "isPublic": False}).get_json()
+
+
+def upload(title, collection_ids=None):
+    data = {"image": (io.BytesIO(make_image(40, 30)), "x.jpg"), "title": title}
+    if collection_ids is not None:
+        # A list value is sent as repeated fields, which is what getlist reads.
+        data["collectionIds"] = collection_ids
+    return client.post("/api/pieces", headers=OWNER, data=data,
+                       content_type="multipart/form-data")
+
+
+plain = upload("Uncollected")
+check("upload without collectionIds still works", plain.status_code == 201,
+      str(plain.status_code))
+check("an uncollected upload reports no collections",
+      plain.get_json()["collections"] == [], str(plain.get_json()["collections"]))
+
+joined = upload("Collected", [target["id"], draft["id"]])
+check("upload into collections returns 201", joined.status_code == 201,
+      str(joined.status_code))
+check("the response names both collections",
+      sorted(c["id"] for c in joined.get_json()["collections"])
+      == sorted([target["id"], draft["id"]]),
+      str(joined.get_json()["collections"]))
+# The draft is only in there because the uploader holds the owner token.
+check("a private collection can be uploaded into",
+      draft["id"] in [c["id"] for c in joined.get_json()["collections"]])
+check("the collection counts the new piece",
+      client.get(f"/api/collections/{target['slug']}",
+                 headers=OWNER).get_json()["pieceCount"] == 1)
+
+second = upload("Collected Later", [target["id"]])
+members = client.get(f"/api/collections/{target['slug']}",
+                     headers=OWNER).get_json()["pieces"]
+check("a second upload lands at the end, not the front",
+      [m["id"] for m in members]
+      == [joined.get_json()["id"], second.get_json()["id"]],
+      str([m["title"] for m in members]))
+
+before_objects = len(storage.objects)
+before_pieces = len(client.get("/api/pieces").get_json())
+unknown = upload("Doomed", [str(uuid.uuid4())])
+check("an unknown collection id is refused", unknown.status_code == 404,
+      str(unknown.status_code))
+check("the refused upload stored nothing", len(storage.objects) == before_objects,
+      f"{before_objects} -> {len(storage.objects)}")
+check("the refused upload created no piece",
+      len(client.get("/api/pieces").get_json()) == before_pieces)
+check("a malformed collection id is refused",
+      upload("Doomed", ["not-a-uuid"]).status_code == 400)
+check("the same collection twice is refused",
+      upload("Doomed", [target["id"], target["id"]]).status_code == 400)
+check("nothing was stored by any refused upload",
+      len(storage.objects) == before_objects,
+      f"{before_objects} -> {len(storage.objects)}")
+
 failed = [c for c in checks if not c[1]]
 print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")
 if failed:

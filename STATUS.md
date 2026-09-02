@@ -23,20 +23,20 @@ what has been built, and what comes next.
 drawing-art-gallery/
 ├── AGENTS.md              working agreement — read this first
 ├── STATUS.md              this file
-├── docker-compose.yml     postgres + minio
 ├── backend/               20 .py files
+│   ├── docker-compose.yml postgres + minio — note: not at the root
 │   ├── app/               config, models, schemas, auth, errors, db
 │   │   ├── api/           pieces.py, collections.py, helpers.py
 │   │   └── services/      storage adapters, images, slugs
 │   ├── migrations/        alembic, 3 revisions
 │   ├── scripts/           import_uploads.py
-│   └── tests/             4 suites, 170 checks
-├── frontend/              52 .ts/.tsx files
+│   └── tests/             4 suites, 183 checks
+├── frontend/              57 .ts/.tsx files
 │   └── src/
-│       ├── components/    31
+│       ├── components/    35
 │       ├── contexts/      3  (theme, role, ...)
-│       ├── hooks/         6  (incl. useAsync)
-│       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
+│       ├── hooks/         7  (incl. useAsync)
+│       ├── pages/         6  (Landing, Piece, Waived, Collection, Collections, Tags)
 │       ├── services/      pieces.ts — the whole API client
 │       └── types/         the shared shapes
 └── context/               design and specification documents
@@ -48,13 +48,19 @@ drawing-art-gallery/
 
 Four things, in this order.
 
-**1. Infrastructure**
+**1. Infrastructure** — from `backend/`, where the compose file lives
 
 ```bash
 docker compose up -d          # postgres:5432, minio:9000, console:9001
 ```
 
-**2. Backend** — from `backend/`
+> Run this from `backend/`, not the repository root. From the root it fails
+> with "no configuration file provided: not found". The volumes are named
+> after that directory — `backend_sketchyart-pgdata` and
+> `backend_sketchyart-minio` — so bringing the stack up from elsewhere would
+> create a second, empty pair rather than reusing the data already there.
+
+**2. Backend** — also from `backend/`
 
 ```bash
 .venv/Scripts/activate        # Windows
@@ -178,6 +184,24 @@ against Memory; the app runs against S3.
 Measured: 32 MB of originals reduce to 3.4 MB of derivatives, and the
 landing page pulls 0.60 MB.
 
+### Limits, or the lack of them
+
+**Nothing is capped.** Neither container sets a memory, CPU or PID limit;
+the volumes are plain `local` Docker volumes with no size option; and both
+buckets report a MinIO quota of `0 B`, meaning none. The only ceiling
+anywhere is `MAX_UPLOAD_MB`, default 40, which is per upload rather than
+cumulative.
+
+Storage is therefore bounded by the Docker VM's disk — roughly 950 GB free
+against 43 MB of objects and 49 MB of database as of 2026-09-01. Disk will
+not be the constraint for a long time.
+
+**MinIO runs single-drive**, one `/data` mount, so there is no erasure
+coding and no redundancy. That matters more than the size: the private
+bucket holds the only archival originals, and the derivatives could be
+regenerated from them while they could not be regenerated from anything.
+Losing that volume loses the originals. There is no backup of it.
+
 Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ---
@@ -193,7 +217,7 @@ owner token in `X-Owner-Token`.
 |---|---|---|
 | `GET` | `/api/pieces` | Exhibited only. `?waived=true` `[owner]` returns the reserve, newest waived first |
 | `GET` | `/api/pieces/<id>` | Detail, including `collections`. 404 for a waived piece unless owner |
-| `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives |
+| `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives. Repeated `collectionIds` fields join the piece to collections in the same transaction |
 | `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags. Only keys present are touched. Allowed on a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
 | `POST` | `/api/pieces/<id>/waive` `[owner]` | 409 if already waived |
@@ -241,7 +265,7 @@ grid must not do.
 
 ## 6. Frontend
 
-Five routes:
+Six routes:
 
 | Route | Page |
 |---|---|
@@ -249,6 +273,7 @@ Five routes:
 | `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions |
 | `/collections` | `CollectionsIndexPage` — every collection the caller may see |
 | `/collections/:slug` | `CollectionPage` — the set's label, then its pieces |
+| `/tags` | `TagsPage` — a placeholder, per §10 |
 | `/waived` | `WaivedPage` — the reserve, owner only |
 
 Anything unmatched redirects to `/home`.
@@ -303,13 +328,13 @@ detour into auth without being asked.
 
 ## 8. Verification
 
-Four suites, 170 checks, no test framework — each is a script that prints
+Four suites, 183 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
 cd backend
 .venv/Scripts/python.exe tests/smoke_collections.py    # 54
-.venv/Scripts/python.exe tests/smoke_uploads.py        # 51
+.venv/Scripts/python.exe tests/smoke_uploads.py        # 64
 .venv/Scripts/python.exe tests/smoke_waived.py         # 37
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
@@ -348,10 +373,21 @@ the best single document to read for how decisions get made on this project.
 The state machine is `exhibited → waived → gone`, reversible at the first
 arrow, and the delete guard lives in the API rather than the UI.
 
-**Collection creation** starts from the grid: `+ New collection` puts the
-gallery into picking mode, cards become buttons with numbered badges, and
-the pick order becomes the display order. Naming comes second, deliberately
-— a collection is defined by what is in it.
+**Collection creation** happens in one near-full-screen dialog: a dense grid
+of the gallery on the left at 80%, the name, filters and actions on the
+right at 20%. Cards carry numbered badges and the pick order becomes the
+display order.
+
+It began as a mode on the landing page — the gallery went into a picking
+state and the controls lived in a bar above the grid. That meant scrolling
+the length of the gallery to choose and scrolling back to the top to name it
+or cancel. The dialog puts the work and the controls on screen together, and
+the title and year filters usually remove the scroll entirely. The mode is
+gone: `PieceCard`, `MasonryGrid` and `AllWorkSection` no longer know what a
+selection is.
+
+`PiecePickerGrid`, `PieceFilters` and `usePieceFilter` are shared with the
+Add work dialog in arrange mode, which had the same unfiltered scroll.
 
 **Collection view** is specified in
 [`context/COLLECTIONS.md`](context/COLLECTIONS.md). A collection has a page
@@ -382,22 +418,41 @@ pick the cover. Nothing is written until Save. Arrange uses a plain ordered
 grid rather than the masonry, because the masonry reads down columns and the
 thing being edited is the sequence.
 
+**Curating on the way in**, 2026-09-01. The upload form now offers the
+collections a new piece should join, under the drop zone. Membership had
+only ever been settable after the fact, so every upload meant a second trip
+through the piece page to put the work where it belonged. `POST /api/pieces`
+takes repeated `collectionIds` fields and joins them inside the same
+transaction that writes the row, reusing the helpers restore already had; a
+refused id rolls the whole upload back and takes the stored objects with it,
+so there is no half-applied upload. The response moved to the detail shape,
+so the caller sees the memberships rather than assuming them. Drafts are
+offered too — gathering new work is most of what a private collection is
+for. The checkbox list came out of `PieceOwnerActions` into
+`CollectionPicker`, since restore, edit and upload are now three callers of
+one control.
+
 ### Live data
 
 | | |
 |---|---|
-| Pieces | 11 rows — 10 exhibited, 1 waived (*Untitled Study VII*) |
+| Pieces | 14 rows — 13 exhibited, 1 waived (*Untitled Study VII*) |
 | Tags | 2 — *Charcoal* and *Portrait*, both attached to nothing |
-| Collections | 2 — **Testing** (public, 5) and **Yankito** (public, 4) |
+| Collections | 2 — **Testing** (public, 6) and **Yankito** (public, 4) |
+
+Counted against the live database on 2026-09-01. It moves whenever the owner
+uploads, so treat it as a sketch of the shape rather than a number to trust.
 
 **The owner created both collections, curated them, and waived that piece.**
 This is real data. It confirms the flows work end to end, and it must not be
 cleaned up.
 
-The 11 pieces were imported by `scripts/import_uploads.py` from the
-owner's local folder. Four have real titles — *Savy Relax*, *Night Calls V*,
-*Night Calls IX*, *Yankito Night Calls* — and the rest are
-*Untitled Study {roman}*, I through VII.
+Eleven of them were imported by `scripts/import_uploads.py` from the owner's
+local folder, and arrived as *Savy Relax*, *Night Calls V*, *Night Calls IX*,
+*Yankito Night Calls* and *Untitled Study {roman}*, I through VII. Several of
+the placeholder titles have since been corrected by hand — *Determined Eyes*,
+*Eyes on the Price*, *Night Calls I&II* — and *Pawly* and *khyunee* were
+uploaded through the form. The gallery is being used, not just tested.
 
 Anything named `__like_this__` is a test fixture and is not real data. Every
 suite and every by-hand check creates one, cleans up only that, and asserts
@@ -409,17 +464,23 @@ the rest of the gallery is untouched. Keep the discipline.
 
 **This is the feature to build.** Tags can now be entered on upload and
 corrected afterwards, they are stored, and they render on the wall label.
-They still do nothing else. The "Tags" nav entry points at `#`, and there is
-no way to see the other work sharing a tag.
+They still do nothing else: there is no way to see the other work sharing a
+tag.
 
 That gap got sharper with piece editing: there is now a control for curating
 tags and no consequence to curating them well.
 
+`/tags` exists as a **placeholder**, added 2026-09-01 — an intro that says
+plainly what tags do and do not do, over the same hatch that stands in for
+unloaded artwork. It replaced a nav item pointing at `#`, which swallowed
+the click and read as a bug rather than as unfinished work. What belongs on
+the page has not been decided; the owner has it open.
+
 ### What to build
 
-**A tag route** — `/tags` listing what exists with counts, and `/tags/:slug`
-showing the work carrying one. The pieces payload already includes `tags`,
-so the grid needs no new shape.
+**Fill the placeholder** — `/tags` listing what exists with counts, and
+`/tags/:slug` showing the work carrying one. The pieces payload already
+includes `tags`, so the grid needs no new shape.
 
 **`GET /api/pieces?tag=<slug>`**, or a tags blueprint — does not exist yet.
 `tags` and `piece_tags` are populated and correct; nothing reads them.
@@ -428,7 +489,8 @@ so the grid needs no new shape.
 that tag filtering is deliberately not wired up and the chip row was removed
 pending this work. Restoring it is a UI-only change.
 
-**Point the nav entry somewhere.** `Header` has a `TODO` on exactly this.
+**Nothing left inert in the nav.** Every item is a route, so `NavItem` no
+longer carries an in-page-anchor fallback.
 
 ### Decisions to make
 

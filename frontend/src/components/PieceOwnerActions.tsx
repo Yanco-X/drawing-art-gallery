@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
+import { CollectionPicker } from './CollectionPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PieceDetailsDialog } from './PieceDetailsDialog';
+import { ICON_BUTTON, ICON_BUTTON_DANGER } from './form-styles';
+import {
+  CollectionsIcon,
+  DeleteIcon,
+  EditIcon,
+  RestoreIcon,
+  WaiveIcon,
+} from './icons';
 import { useAsync } from '../hooks';
 import {
   ApiError,
@@ -22,9 +31,6 @@ import type { CollectionSummary, Piece } from '../types';
  * rather than the rule itself.
  */
 
-const ACTION =
-  'cursor-pointer border-none bg-transparent p-0 text-[13px] uppercase ' +
-  'tracking-btn text-faint transition-colors duration-200';
 
 /** Stable no-op loader, so an exhibited piece issues no request. */
 const NO_COLLECTIONS = async (): Promise<CollectionSummary[]> => [];
@@ -33,59 +39,6 @@ const describe = (caught: unknown): string =>
   caught instanceof ApiError
     ? caught.message
     : 'Could not reach the API. Is the backend running?';
-
-/** Which collections a restored piece should join. */
-const CollectionPicker = ({
-  collections,
-  selected,
-  onToggle,
-  loading,
-  legend = 'Add to collections',
-  /** Shown instead of the list when there is nothing to pick. */
-  emptyMessage,
-}: {
-  collections: CollectionSummary[];
-  selected: string[];
-  onToggle: (id: string) => void;
-  loading: boolean;
-  legend?: string;
-  emptyMessage?: string;
-}) => {
-  if (loading) {
-    return <p className="text-[13px] text-faint">Loading collections…</p>;
-  }
-  if (collections.length === 0 && emptyMessage) {
-    return <p className="text-[13px] text-faint">{emptyMessage}</p>;
-  }
-
-  return (
-    <fieldset className="flex flex-col gap-2 border-none p-0">
-      <legend className="mb-2 text-[12px] uppercase tracking-eyebrow text-muted">
-        {legend}
-      </legend>
-      {collections.length === 0 && (
-        <p className="text-[13px] text-faint">No collections yet.</p>
-      )}
-      {collections.map((collection) => (
-        <label
-          key={collection.id}
-          className="flex cursor-pointer items-center gap-3 text-[14px] text-dim transition-colors duration-200 hover:text-text"
-        >
-          <input
-            type="checkbox"
-            checked={selected.includes(collection.id)}
-            onChange={() => onToggle(collection.id)}
-            className="size-4 accent-accent"
-          />
-          {collection.name}
-          <span className="text-[12px] text-faint">
-            {collection.pieceCount} pieces
-          </span>
-        </label>
-      ))}
-    </fieldset>
-  );
-};
 
 interface PieceOwnerActionsProps {
   piece: Piece;
@@ -184,15 +137,27 @@ export const PieceOwnerActions = ({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-5">
+      {/*
+        Bordered rather than bare text, so an action that changes the
+        gallery looks like a button instead of a link. Each carries the
+        glyph-plus-label treatment the theme toggle established.
+
+        Stacked and stretched to one width rather than wrapped: the wall
+        label rail is 320px, so these always fell onto their own rows
+        anyway, and three ragged widths read as three unrelated things.
+        Capped, because below `lg` the rail becomes the full content width
+        and a 2000px button is not a button.
+      */}
+      <div className="flex max-w-xs flex-col items-stretch gap-2">
         {/* Offered on waived work too: correcting a label has nothing to do
             with whether the piece is on the wall, and the reserve is where
             it would be tidied up before going back. */}
         <button
           type="button"
           onClick={() => setDialog('edit')}
-          className={`${ACTION} hover:text-accent`}
+          className={ICON_BUTTON}
         >
+          <EditIcon />
           Edit details
         </button>
         {piece.waivedAt ? (
@@ -200,15 +165,17 @@ export const PieceOwnerActions = ({
             <button
               type="button"
               onClick={() => setDialog('restore')}
-              className={`${ACTION} hover:text-accent`}
+              className={ICON_BUTTON}
             >
+              <RestoreIcon />
               Restore
             </button>
             <button
               type="button"
               onClick={() => setDialog('delete')}
-              className={`${ACTION} hover:text-danger`}
+              className={ICON_BUTTON_DANGER}
             >
+              <DeleteIcon />
               Delete permanently
             </button>
           </>
@@ -217,15 +184,17 @@ export const PieceOwnerActions = ({
             <button
               type="button"
               onClick={openCollections}
-              className={`${ACTION} hover:text-accent`}
+              className={ICON_BUTTON}
             >
+              <CollectionsIcon />
               Collections
             </button>
             <button
               type="button"
               onClick={() => setDialog('waive')}
-              className={`${ACTION} hover:text-accent`}
+              className={ICON_BUTTON}
             >
+              <WaiveIcon />
               Waive piece
             </button>
           </>

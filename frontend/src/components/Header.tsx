@@ -6,10 +6,7 @@ import { ThemeToggle } from './ThemeToggle';
 
 interface NavItem {
   label: string;
-  /** Internal route. */
-  to?: string;
-  /** In-page anchor, for sections that exist but have no route yet. */
-  href?: string;
+  to: string;
   active?: boolean;
 }
 
@@ -30,8 +27,7 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
       to: '/collections',
       active: pathname.startsWith('/collections'),
     },
-    // TODO: point at /tags once that route exists.
-    { label: 'Tags', href: '#' },
+    { label: 'Tags', to: '/tags', active: pathname.startsWith('/tags') },
   ];
 
   // The reserve is the owner's own view; a visitor is not told it exists.
@@ -52,20 +48,17 @@ const navItemClasses = (item: NavItem, extra = '') =>
     .filter(Boolean)
     .join(' ');
 
-const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) =>
-  item.to ? (
-    <Link
-      to={item.to}
-      aria-current={item.active ? 'page' : undefined}
-      className={navItemClasses(item, extra)}
-    >
-      {item.label}
-    </Link>
-  ) : (
-    <a href={item.href} className={navItemClasses(item, extra)}>
-      {item.label}
-    </a>
-  );
+// Every nav item is a route now that /tags exists, so there is no longer an
+// in-page-anchor case to fall back to.
+const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
+  <Link
+    to={item.to}
+    aria-current={item.active ? 'page' : undefined}
+    className={navItemClasses(item, extra)}
+  >
+    {item.label}
+  </Link>
+);
 
 const OwnerSignIn = ({ className = '' }: { className?: string }) => (
   <InertLink

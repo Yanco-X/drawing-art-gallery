@@ -66,7 +66,7 @@ against SQLite).
 ├── migrations/         # Alembic; versions/ holds the revisions
 ├── tests/              # runnable smoke scripts
 ├── uploads/            # artwork on disk (phase 1 storage)
-├── docker-compose.yml  # local PostgreSQL
+├── docker-compose.yml  # local PostgreSQL and MinIO
 ├── requirements.txt
 └── run.py              # entrypoint
 ```

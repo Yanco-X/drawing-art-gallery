@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Piece } from '../types';
-
-const STEP_CLASSES =
-  'text-[13px] uppercase tracking-btn transition-colors duration-200';
+import { ICON_BUTTON, ICON_BUTTON_INERT } from './form-styles';
 
 const Step = ({
   piece,
@@ -17,7 +15,7 @@ const Step = ({
   // the first and last piece.
   if (!piece) {
     return (
-      <span aria-hidden="true" className={`${STEP_CLASSES} text-faint opacity-40`}>
+      <span aria-hidden="true" className={ICON_BUTTON_INERT}>
         {display}
       </span>
     );
@@ -28,7 +26,7 @@ const Step = ({
       to={`/piece/${piece.id}`}
       title={piece.title}
       aria-label={`${name}: ${piece.title}`}
-      className={`${STEP_CLASSES} text-faint hover:text-accent`}
+      className={ICON_BUTTON}
     >
       {display}
     </Link>
@@ -48,7 +46,7 @@ export const PieceNav = ({
   previous?: Piece;
   next?: Piece;
 }) => (
-  <nav aria-label="Piece navigation" className="flex items-center gap-6">
+  <nav aria-label="Piece navigation" className="flex items-center gap-2">
     <Step piece={previous} display="← Previous" name="Previous piece" />
     <Step piece={next} display="Next →" name="Next piece" />
   </nav>

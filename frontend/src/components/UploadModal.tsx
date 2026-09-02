@@ -1,7 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DragEvent, FormEvent } from 'react';
-import { ApiError, createPiece } from '../services';
-import type { NewPiece, Piece } from '../types';
+import { useAsync } from '../hooks';
+import { ApiError, createPiece, fetchAllCollections } from '../services';
+import type { CollectionSummary, NewPiece, Piece } from '../types';
+import { CollectionPicker } from './CollectionPicker';
 import { TagInput } from './TagInput';
 
 /*
@@ -20,6 +22,9 @@ import { TagInput } from './TagInput';
 
 /** Mirrors MAX_UPLOAD_MB in backend/app/config.py. */
 const MAX_UPLOAD_MB = 40;
+
+/** Stable no-op loader, so a closed dialog issues no request. */
+const NO_COLLECTIONS = async (): Promise<CollectionSummary[]> => [];
 
 const EMPTY_FIELDS = {
   title: '',
@@ -72,6 +77,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
 
   const [fields, setFields] = useState(EMPTY_FIELDS);
   const [tags, setTags] = useState<string[]>([]);
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -85,6 +91,15 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     if (open && !dialog.open) dialog.showModal();
     else if (!open && dialog.open) dialog.close();
   }, [open]);
+
+  // Drafts included: uploading is an owner act, and a draft is exactly the
+  // kind of collection new work gets gathered into. Fetched only while the
+  // dialog is open, so the page costs nothing until Add work is clicked.
+  const loadCollections = useMemo(
+    () => (open ? fetchAllCollections : NO_COLLECTIONS),
+    [open],
+  );
+  const collections = useAsync(loadCollections);
 
   // Derived from the file rather than stored: the preview is not
   // independent state, and computing it in an effect would render once with
@@ -104,6 +119,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
   const reset = () => {
     setFields(EMPTY_FIELDS);
     setTags([]);
+    setCollectionIds([]);
     setFile(null);
     setError(null);
     dragDepth.current = 0;
@@ -171,7 +187,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     setBusy(true);
     setError(null);
     try {
-      const payload: NewPiece = { ...fields, file, tags };
+      const payload: NewPiece = { ...fields, file, tags, collectionIds };
       const piece = await createPiece(payload);
       onUploaded?.(piece);
       reset();
@@ -186,6 +202,16 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
       setBusy(false);
     }
   };
+
+  // Spelled out the way Restore does, so the picked collections are
+  // confirmed by the button that acts on them rather than only by ticks
+  // sitting further up a scrolled form.
+  const submitLabel =
+    collectionIds.length === 0
+      ? 'Add to gallery'
+      : `Add to gallery and ${collectionIds.length} collection${
+          collectionIds.length === 1 ? '' : 's'
+        }`;
 
   return (
     <dialog
@@ -267,6 +293,34 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
               hidden
               onChange={(event) => acceptFile(event.target.files?.[0])}
             />
+
+            {/* Under the artwork rather than beside the wall label: this is
+                about where the piece hangs, not what the label says, and
+                this column has the room the other one does not. */}
+            <div className="mt-4 border-t border-line pt-4">
+              <CollectionPicker
+                collections={
+                  collections.status === 'ready' ? collections.data : []
+                }
+                selected={collectionIds}
+                loading={collections.status === 'loading'}
+                emptyMessage={
+                  // An unreachable API and an empty gallery are not the same
+                  // answer, and "no collections yet" would be a lie about
+                  // the first one.
+                  collections.status === 'error'
+                    ? 'Could not load collections — you can add this piece to one afterwards.'
+                    : 'No collections yet — this goes straight to the gallery.'
+                }
+                onToggle={(id) =>
+                  setCollectionIds((now) =>
+                    now.includes(id)
+                      ? now.filter((x) => x !== id)
+                      : [...now, id],
+                  )
+                }
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -360,7 +414,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
               Cancel
             </button>
             <button type="submit" disabled={busy} className={PRIMARY_BUTTON}>
-              {busy ? 'Uploading…' : 'Add to gallery'}
+              {busy ? 'Uploading…' : submitLabel}
             </button>
           </div>
         </div>

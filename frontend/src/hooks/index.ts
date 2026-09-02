@@ -1,5 +1,6 @@
 export { useAsync } from './useAsync';
 export type { Async } from './useAsync';
+export { usePieceFilter } from './usePieceFilter';
 export { useFlipReflow } from './useFlipReflow';
 export { usePersistentState } from './usePersistentState';
 export { useTheme } from './useTheme';

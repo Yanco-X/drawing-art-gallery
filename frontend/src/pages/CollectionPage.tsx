@@ -6,15 +6,13 @@ import { CollectionOwnerActions } from '../components/CollectionOwnerActions';
 import { PageMessage } from '../components/PageMessage';
 import { PageShell } from '../components/PageShell';
 import { useAsync } from '../hooks';
+import { ICON_BUTTON } from '../components/form-styles';
 import { CURRENT_ROLE } from '../lib/session';
 import { fetchCollection } from '../services';
 import type { Collection } from '../types';
 
 const BackLink = () => (
-  <Link
-    to="/collections"
-    className="text-[13px] uppercase tracking-btn text-faint transition-colors duration-200 hover:text-accent"
-  >
+  <Link to="/collections" className={`${ICON_BUTTON} w-fit`}>
     ← Collections
   </Link>
 );

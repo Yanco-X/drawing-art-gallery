@@ -137,7 +137,7 @@
 
   --spacing-gutter: clamp(20px, 5vw, 64px);
   --spacing-intro-top: clamp(28px, 4vw, 64px);
-  --spacing-intro-bottom: clamp(32px, 5vw, 72px);
+  --spacing-intro-bottom: clamp(24px, 3.5vw, 48px);
   --spacing-section-sm: clamp(40px, 6vw, 80px);
   --spacing-section-lg: clamp(56px, 8vw, 96px);
 
@@ -165,5 +165,72 @@
      or shadow-* utilities in this UI. */
   button {
     border-radius: 0;
+  }
+
+  /*
+   * Dialogs fade and rise in, and reverse on the way out.
+   *
+   * A dialog takes the whole screen away from whatever was under it, and
+   * appearing instantly reads as a jump cut. This is the one entrance the
+   * design sanctions: 8px and an opacity, on the same 200ms as every hover.
+   * No scale -- the rest of the rule stands.
+   *
+   * The exit is the part that needs the modern CSS. `close()` would
+   * normally remove the element in the same frame, so `display` and
+   * `overlay` are transitioned with `allow-discrete` to hold it in the top
+   * layer long enough to fade, and `@starting-style` supplies the "before
+   * open" values the entrance animates from. Browsers without either simply
+   * show and hide the dialog, which is what happened before this existed.
+   */
+  dialog {
+    opacity: 0;
+    translate: 0 8px;
+    transition:
+      opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+      translate 200ms cubic-bezier(0.2, 0, 0, 1),
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+
+  dialog[open] {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  dialog::backdrop {
+    opacity: 0;
+    transition:
+      opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+
+  dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* Per the design: all motion is skipped rather than shortened. */
+  @media (prefers-reduced-motion: reduce) {
+    dialog,
+    dialog::backdrop {
+      transition: none;
+    }
+
+    dialog {
+      translate: none;
+    }
   }
 }

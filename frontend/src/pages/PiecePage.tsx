@@ -5,6 +5,7 @@ import { PieceNav } from '../components/PieceNav';
 import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
 import { useAsync } from '../hooks';
+import { ICON_BUTTON } from '../components/form-styles';
 import { CURRENT_ROLE } from '../lib/session';
 import { fetchPiece, fetchPieces, fetchWaivedPieces } from '../services';
 import type { Piece } from '../types';
@@ -12,7 +13,7 @@ import type { Piece } from '../types';
 const BackLink = ({ waived = false }: { waived?: boolean }) => (
   <Link
     to={waived ? '/waived' : '/home'}
-    className="text-[13px] uppercase tracking-btn text-faint transition-colors duration-200 hover:text-accent"
+    className={`${ICON_BUTTON} w-fit`}
   >
     {waived ? '← Waived' : '← All work'}
   </Link>

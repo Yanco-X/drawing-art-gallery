@@ -52,6 +52,10 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
   appendIf(form, 'createdDate', input.createdDate);
   // Repeated fields, which is how Flask's request.form.getlist reads a list.
   input.tags.forEach((tag) => form.append('tags', tag));
+  // Sent with the upload rather than as a follow-up PUT: the API joins them
+  // in the same transaction, so a piece never lands in the gallery having
+  // silently missed the collections it was uploaded into.
+  input.collectionIds.forEach((id) => form.append('collectionIds', id));
 
   const response = await fetch('/api/pieces', {
     method: 'POST',

@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { CollectionGrid } from '../components/CollectionGrid';
+import { NewCollectionDialog } from '../components/NewCollectionDialog';
 import { PageShell } from '../components/PageShell';
 import { SectionState } from '../components/SectionState';
+import { ICON_BUTTON_ACCENT } from '../components/form-styles';
 import { useAsync } from '../hooks';
+import { CURRENT_ROLE } from '../lib/session';
 import { fetchVisibleCollections } from '../services';
+import type { CollectionSummary } from '../types';
 
 /*
  * Every collection this caller may see — the landing row without the
@@ -11,7 +16,17 @@ import { fetchVisibleCollections } from '../services';
  */
 const CollectionsIndexPage = () => {
   const collections = useAsync(fetchVisibleCollections);
-  const ready = collections.status === 'ready' ? collections.data : [];
+
+  // Collections created since this page loaded. The response is the
+  // collection the API just built, cover and count included, so this only
+  // saves a refetch to put it on screen.
+  const [made, setMade] = useState<CollectionSummary[]>([]);
+  const [making, setMaking] = useState(false);
+
+  const ready = [
+    ...made,
+    ...(collections.status === 'ready' ? collections.data : []),
+  ];
 
   return (
     <PageShell>
@@ -25,6 +40,19 @@ const CollectionsIndexPage = () => {
         <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed text-muted">
           Work grouped into sets. Each one hangs in the order it was curated.
         </p>
+
+        {/* Under the description rather than in a section header: this page
+            has no section heading to hang it from, and title-then-reason-
+            then-action is the order it reads in anyway. */}
+        {CURRENT_ROLE === 'owner' && (
+          <button
+            type="button"
+            onClick={() => setMaking(true)}
+            className={`${ICON_BUTTON_ACCENT} mt-6`}
+          >
+            + New collection
+          </button>
+        )}
       </section>
 
       <section className="mx-auto w-full max-w-content px-gutter pb-section-lg">
@@ -38,6 +66,17 @@ const CollectionsIndexPage = () => {
           <CollectionGrid collections={ready} />
         )}
       </section>
+
+      {CURRENT_ROLE === 'owner' && (
+        <NewCollectionDialog
+          open={making}
+          onClose={() => setMaking(false)}
+          onCreated={(collection) => {
+            setMade((now) => [collection, ...now]);
+            setMaking(false);
+          }}
+        />
+      )}
     </PageShell>
   );
 };

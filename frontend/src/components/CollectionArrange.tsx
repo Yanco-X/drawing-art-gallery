@@ -4,7 +4,7 @@ import { ApiError, setCollectionPieces } from '../services';
 import type { Collection, Piece } from '../types';
 import { AddWorkDialog } from './AddWorkDialog';
 import { PieceTile } from './PieceTile';
-import { ACTION, GHOST_BUTTON, PRIMARY_BUTTON } from './form-styles';
+import { GHOST_BUTTON, ICON_BUTTON, PRIMARY_BUTTON } from './form-styles';
 
 /*
  * Arranging a collection: order, membership and cover, in one mode.
@@ -145,12 +145,12 @@ export const CollectionArrange = ({
             arrow keys.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setAdding(true)}
             disabled={busy}
-            className={`${ACTION} text-faint hover:text-accent`}
+            className={ICON_BUTTON}
           >
             + Add work
           </button>

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import type { CollectionSummary } from '../types';
 import { CollectionGrid } from './CollectionGrid';
 import { SectionHeader } from './SectionHeader';
@@ -22,19 +21,10 @@ export const CollectionsSection = ({
     id="collections"
     className="mx-auto w-full max-w-content px-gutter pb-section-sm"
   >
-    <SectionHeader title="Collections">
-      <div className="flex items-center gap-5">
-        {action}
-        {collections.length > 0 && (
-          <Link
-            to="/collections"
-            className="text-[13px] text-faint transition-colors duration-200 hover:text-accent"
-          >
-            View all
-          </Link>
-        )}
-      </div>
-    </SectionHeader>
+    {/* No "View all" beside the action: the header's Collections nav item
+        already goes to /collections, and two ways to the same page put a
+        quiet link next to the one thing this section is actually offering. */}
+    <SectionHeader title="Collections">{action}</SectionHeader>
 
     {error ? (
       <SectionState message={error} />

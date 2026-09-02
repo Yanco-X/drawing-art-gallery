@@ -3,7 +3,8 @@ import { ApiError, deleteCollection } from '../services';
 import type { Collection } from '../types';
 import { CollectionDetailsDialog } from './CollectionDetailsDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { ACTION } from './form-styles';
+import { ICON_BUTTON, ICON_BUTTON_DANGER } from './form-styles';
+import { ArrangeIcon, DeleteIcon, EditIcon } from './icons';
 
 /*
  * The owner's actions on a collection, in the page header rather than
@@ -56,26 +57,27 @@ export const CollectionOwnerActions = ({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-5">
+      {/* Left in a row rather than stacked like the piece actions: this sits
+          across the top of a full-width page, not in a 320px rail. */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setDialog('details')}
-          className={`${ACTION} text-faint hover:text-accent`}
+          className={ICON_BUTTON}
         >
+          <EditIcon />
           Edit details
         </button>
-        <button
-          type="button"
-          onClick={onArrange}
-          className={`${ACTION} text-faint hover:text-accent`}
-        >
+        <button type="button" onClick={onArrange} className={ICON_BUTTON}>
+          <ArrangeIcon />
           Arrange
         </button>
         <button
           type="button"
           onClick={() => setDialog('delete')}
-          className={`${ACTION} text-faint hover:text-danger`}
+          className={ICON_BUTTON_DANGER}
         >
+          <DeleteIcon />
           Delete collection
         </button>
       </div>

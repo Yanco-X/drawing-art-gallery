@@ -5,6 +5,7 @@ import CollectionPage from './pages/CollectionPage';
 import CollectionsIndexPage from './pages/CollectionsIndexPage';
 import LandingPage from './pages/LandingPage';
 import PiecePage from './pages/PiecePage';
+import TagsPage from './pages/TagsPage';
 import WaivedPage from './pages/WaivedPage';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/piece/:id" element={<PiecePage />} />
           <Route path="/collections" element={<CollectionsIndexPage />} />
           <Route path="/collections/:slug" element={<CollectionPage />} />
+          <Route path="/tags" element={<TagsPage />} />
           <Route path="/waived" element={<WaivedPage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>

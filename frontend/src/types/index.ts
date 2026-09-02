@@ -87,6 +87,8 @@ export interface NewPiece {
   year: string;
   createdDate: string;
   tags: string[];
+  /** Collections the piece joins on the way in. Appended, in this order. */
+  collectionIds: string[];
 }
 
 /**
