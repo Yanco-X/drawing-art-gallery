@@ -4,7 +4,7 @@ A personal art gallery. The owner uploads drawings, the gallery exhibits
 them, and collections group them into sets. Built to be lived in rather
 than shipped to a market.
 
-**Last updated:** 2026-08-31
+**Last updated:** 2026-09-02
 **Purpose of this file:** a handoff. It is the current state of the project,
 what has been built, and what comes next.
 
@@ -23,17 +23,17 @@ what has been built, and what comes next.
 drawing-art-gallery/
 ├── AGENTS.md              working agreement — read this first
 ├── STATUS.md              this file
-├── backend/               20 .py files
+├── backend/               28 .py files
 │   ├── docker-compose.yml postgres + minio — note: not at the root
 │   ├── app/               config, models, schemas, auth, errors, db
 │   │   ├── api/           pieces.py, collections.py, helpers.py
 │   │   └── services/      storage adapters, images, slugs
-│   ├── migrations/        alembic, 3 revisions
+│   ├── migrations/        alembic, 4 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
 │   └── tests/             4 suites, 210 checks
-├── frontend/              57 .ts/.tsx files
+├── frontend/              60 .ts/.tsx files
 │   └── src/
-│       ├── components/    35
+│       ├── components/    37
 │       ├── contexts/      3  (theme, role, ...)
 │       ├── hooks/         7  (incl. useAsync)
 │       ├── pages/         6  (Landing, Piece, Waived, Collection, Collections, Tags)
@@ -277,7 +277,7 @@ Six routes:
 | Route | Page |
 |---|---|
 | `/home` | `LandingPage` — intro, collections, all work. `/` redirects here |
-| `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions |
+| `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions. `?view=1` opens the detail viewer |
 | `/collections` | `CollectionsIndexPage` — every collection the caller may see |
 | `/collections/:slug` | `CollectionPage` — the set's label, then its pieces |
 | `/tags` | `TagsPage` — a placeholder, per §10 |
@@ -310,7 +310,16 @@ survive a reload. Module-level, so it can be handed to `useAsync` directly.
 raw hex in a component.
 
 **One accent, one exception.** `danger` is the single sanctioned second
-colour, and it is spent. Contrast verified AA in every theme.
+colour, and it is spent. Contrast verified AA in every theme. Filled accent
+marks the one action a surface exists for, at most one per screen; outlined
+accent is the interface pointing at something and may repeat.
+
+**Two runtime dependencies, and one is lazy.** React and React Router are
+the bundle. OpenSeadragon is imported dynamically inside `DetailedView`, so
+it builds as a 348 KB chunk that only downloads when the viewer opens —
+`@types/openseadragon` is a devDependency and never ships. `AGENTS.md` §2
+means nothing else gets added without asking: the icons, the masonry, the
+drag-and-drop and the modals are all hand-rolled, deliberately.
 
 Full vocabulary in [`context/DESIGN.md`](context/DESIGN.md).
 
@@ -328,8 +337,10 @@ that when real sessions land, the rules already exist and only the identity
 check is replaced. `is_owner()` and `require_owner` in `app/auth.py` are
 that single replacement point.
 
-Do not build features that depend on the gate actually holding, and do not
-detour into auth without being asked.
+Do not build features that depend on the gate actually holding.
+
+**This is now the feature being built** — see §10. Until it lands, the
+sentence above still governs everything else.
 
 ---
 
@@ -454,6 +465,34 @@ and cannot fail an upload; a piece without a pyramid falls back to the
 display rendition, which is what the fallback for the backfill window needed
 to be anyway.
 
+**Detailed View, passes 2 and 3**, 2026-09-01 and 2026-09-02. The viewer
+itself: a `<dialog>` overlay carrying OpenSeadragon, opened from a filled
+accent button beneath the artwork that quotes the piece's own dimensions,
+and addressed by `?view=1` so Back closes it and the view can be linked.
+OpenSeadragon loads as a lazy chunk — 348 KB that only downloads when
+someone opens the viewer, against 8 KB added to the bundle everyone pays
+for. The chrome and the minimap hide themselves on separate idle clocks,
+3s and 2s, the minimap sooner because it sits on the drawing rather than at
+the edges.
+
+Two things in it were wrong first and are worth knowing about. The minimap
+shipped blank: `Navigator` sets `_resizeWithViewer = false` when its control
+anchor is `NONE`, which is exactly what mounting it through `navigatorId`
+does, and that flag gates the only call it makes to `updateSize()` — the
+method that actually draws its world. And the minimap originally never
+faded, on the argument that it is feedback needed while panning; that
+confused "zoomed in" with "panning", and the owner corrected it in use.
+Both are recorded in `context/DETAILED-VIEW.md` with the reasoning, because
+the second one was a design mistake rather than a bug.
+
+**`DESIGN.md` §accent was rewritten** in the same pass. It had enumerated
+six places the accent may appear and declared the list closed, which went
+out of date within a fortnight — a closed list cannot survive a new page,
+and each addition then reads as a violation rather than as the rule working.
+It now states the rule instead, split by shape: filled accent marks the one
+action a surface exists for, at most one per screen; outlined or hairline
+accent is the interface pointing at something, and may repeat.
+
 ### Live data
 
 | | |
@@ -482,87 +521,109 @@ the rest of the gallery is untouched. Keep the discipline.
 
 ---
 
-## 10. In flight, and next
+## 10. Next: authentication, and what a visitor may do
 
-### In flight: Detailed View
+**This is the feature to build.** Nothing in §9 is outstanding — collections,
+piece editing, the tag placeholder and all three passes of Detailed View are
+done and in use.
 
-**This is the feature being built.** Full spec and decisions in
-[`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md).
+### The state of it today
 
-Passes 1 and 2 are done. The pyramid, the backfill and `tileSource` on the
-payload; then the full-window viewer itself — a `<dialog>` overlay carrying
-OpenSeadragon in a lazy chunk, opened from a filled-accent button beneath the
-artwork, addressed by `?view=1` so Back closes it and the view is linkable.
+**There is no authentication.** `CURRENT_ROLE` in `frontend/src/lib/session.ts`
+is derived from `VITE_OWNER_TOKEN`, which means the owner's shared secret
+ships inside the JavaScript bundle. Anyone who opens the deployed gallery and
+reads the source is the owner. §7 says this plainly and it has been the
+accepted state since the beginning; it stops being acceptable the moment this
+is on the public internet.
 
-**Pass 3, the minimap, is done too** — OpenSeadragon's navigator mounted
-into our own element, a hairline frame with an accent wash on the viewport
-rectangle, and visibility driven by zoom rather than by the idle timer that
-hides the rail. All three sub-features are built.
+What already exists is the *shape* of the rules, which is the expensive part:
 
-The visual has never been checked by automation — there is no browser driver
-on this machine. Every pass was verified by geometry, network and build,
-then looked at by hand.
-
-### Next: tags that do something
-
-Tags can now be entered on upload and
-corrected afterwards, they are stored, and they render on the wall label.
-They still do nothing else: there is no way to see the other work sharing a
-tag.
-
-That gap got sharper with piece editing: there is now a control for curating
-tags and no consequence to curating them well.
-
-`/tags` exists as a **placeholder**, added 2026-09-01 — an intro that says
-plainly what tags do and do not do, over the same hatch that stands in for
-unloaded artwork. It replaced a nav item pointing at `#`, which swallowed
-the click and read as a bug rather than as unfinished work. What belongs on
-the page has not been decided; the owner has it open.
+- **One replacement point.** `is_owner()` and `require_owner` in
+  `backend/app/auth.py` are the only things that decide identity. Twelve
+  endpoints carry `@require_owner`; six read paths branch on `is_owner()`.
+  Replacing those two functions replaces the whole scheme — nothing else in
+  the backend knows how identity is established.
+- **The rules are already enforced server-side.** A visitor cannot mutate
+  anything today even with the token absent; they get 401. The gate is real,
+  it is only the *credential* that is worthless.
+- **The read-path branches already exist too.** A waived piece 404s for a
+  visitor, a private collection 404s for a visitor, and a piece's collection
+  list is filtered to the public ones. Those are the visitor limitations, and
+  they are written and tested.
+- **A `users` table exists and is unused** — `id`, `email` (unique),
+  `password_hash`, `role`, `created_at`, plus a `pieces.user_id` foreign key
+  that is always null. Scaffolding, put there for exactly this feature. It
+  has never been written to, so its shape is still free to change.
 
 ### What to build
 
-**Fill the placeholder** — `/tags` listing what exists with counts, and
-`/tags/:slug` showing the work carrying one. The pieces payload already
-includes `tags`, so the grid needs no new shape.
+The decisions have not been made. Worth putting to the owner before writing
+anything:
 
-**`GET /api/pieces?tag=<slug>`**, or a tags blueprint — does not exist yet.
-`tags` and `piece_tags` are populated and correct; nothing reads them.
+- **Sessions or tokens.** Flask-Login with a server-side session cookie is
+  the smaller, safer thing for a single-owner gallery, and it keeps the
+  credential out of JavaScript entirely. JWT buys statelessness that a
+  one-user site does not need.
+- **One owner, or real accounts.** The `users` table implies accounts; the
+  gallery implies one artist. If it is only ever one owner, the table may be
+  overbuilt and a single hashed credential in config would do.
+- **What a visitor may do, positively stated.** Right now "visitor" is
+  defined by subtraction — everything not owner-gated. Worth writing down as
+  its own list, because that list is the public contract of the site.
+- **The `Owner sign in` link in the header is inert.** It is where a real
+  login would hang.
 
-**The chip row on the gallery.** `AllWorkSection` carries a standing comment
-that tag filtering is deliberately not wired up and the chip row was removed
-pending this work. Restoring it is a UI-only change.
+### The gap that is genuinely a hole
 
-**Nothing left inert in the nav.** Every item is a route, so `NavItem` no
-longer carries an in-page-anchor fallback.
+**Waived derivatives stay anonymously fetchable by URL.** The public bucket
+policy matches `sketchyart/*` rather than a prefix, so anyone who saw a piece
+while it was exhibited keeps a working link to its display and thumb
+renditions after it is waived — and now to its tiles as well. This was filed
+under §11 as "revisit when sessions land", and sessions are landing. It is a
+storage-layout problem rather than an auth one, so it does not get fixed for
+free by adding a login; it needs its own decision.
 
-### Decisions to make
+The archival originals are *not* affected — they live in the private bucket
+and return 403 anonymously, verified.
 
-**Whether filtering is a route or a filter on the gallery.** A route gives
-a tag a URL worth sharing; an in-place filter keeps one page. The gallery
-already shows everything and the density control already lives there.
+### After this: tags that do something
 
-**What a tag with no pieces should do.** Editing a piece's tags can orphan a
-tag row — the rows are shared, so they are deliberately left behind rather
-than deleted with the last piece using them. Two orphans exist right now,
-*Charcoal* and *Portrait*. Decide whether an unused tag is listed, hidden,
-or swept.
+Deferred, not dropped. Tags can be entered on upload and corrected
+afterwards, they are stored, and they render on the wall label. Nothing reads
+them: no filtering, and no view of the work sharing a tag. `/tags` exists as
+a placeholder that says so.
+
+That gap sharpened with piece editing — there is now a control for curating
+tags and no consequence to curating them well. What belongs on the page has
+not been decided.
+
+**To build it:** `/tags` listing what exists with counts, `/tags/:slug`
+showing the work carrying one, and `GET /api/pieces?tag=<slug>` or a tags
+blueprint — neither exists. The pieces payload already includes `tags`, so
+the grid needs no new shape. `AllWorkSection` carries a standing comment that
+tag filtering is deliberately not wired up.
+
+---
 
 ## 11. Known gaps
 
 Carried forward deliberately. None of these block §10.
 
-- **"Owner sign in" is inert**, per §7.
-- **Waived derivatives stay anonymously fetchable by URL.** The public
-  bucket policy matches `sketchyart/*` rather than a prefix, so anyone who
-  saw a piece while it was exhibited keeps a working link. A storage-layout
-  gap that outlives authentication — revisit when sessions land, since
-  fixing it now is a lock on an open door.
+- **"Owner sign in" is inert** and **waived derivatives stay anonymously
+  fetchable**. Both have moved into §10 — they are part of the feature being
+  built rather than gaps carried past it.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
+- **No suite looks at the UI.** The 210 checks cover the API, storage and
+  the image pipeline; nothing asserts that a page renders. Detailed View was
+  verified by geometry, network and build, and its blank minimap was then
+  found by the owner in use. **§8's Chrome-over-CDP route was available the
+  whole time and went unused** — the bug would have shown in a screenshot.
+  Use it before saying a visual change works.
 
 ---
 
@@ -578,7 +639,7 @@ Read in this order:
 | [`context/STORAGE.md`](context/STORAGE.md) | Keys, buckets, adapters, derivatives |
 | [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) | The most complete feature spec in the repository |
 | [`context/COLLECTIONS.md`](context/COLLECTIONS.md) | Viewing and editing collections; the private-draft rules |
-| [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md) | The full-window viewer: tiles, zoom, minimap. **In flight** |
+| [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md) | The full-window viewer: tiles, zoom, minimap |
 | [`context/coding-preferences.md`](context/coding-preferences.md) | How code should read |
 | [`context/current-feature.md`](context/current-feature.md) | Scratch space for the feature in flight |
 
@@ -591,3 +652,7 @@ verified, then marked implemented in the document that specified them.
 
 The owner tests by hand and likes doing it. Build the thing, prove it with
 the suites, and hand it over for the owner to try.
+
+**The owner makes every commit.** Do not run `git commit`. Finish the work
+and hand over a message they can paste — a subject line and a few lines on
+what changed and why.

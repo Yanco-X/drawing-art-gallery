@@ -220,10 +220,11 @@ URL template in `DetailedView.tsx` is the same string the test built.
 The lazy chunk works: OpenSeadragon is a separate 348 KB file (87 KB
 gzipped) and the main bundle grew only 8 KB, from 298.8 KB to 306.7 KB.
 
-**Not verified: the visual.** There is no browser automation on this
-machine and installing Playwright was not worth a 150 MB download without
-asking. The geometry, the URLs and the build are proven; how it *looks* is
-not.
+**Not verified at the time: the visual.** The geometry, the URLs and the
+build were proven; how it *looked* was not. This was recorded as "no browser
+automation on this machine", which was wrong — `STATUS.md` §8 documents
+driving Chrome over CDP with Node's built-in `WebSocket`, and Chrome is
+installed. The route was available and went unused.
 
 ## Pass 3 — done 2026-09-02
 
@@ -312,10 +313,10 @@ no changing props, so React renders it once and never touches it again.
 
 ## Open
 
-- **The visual has never been checked by automation.** There is no browser
-  driver on this machine, so every pass has been verified by geometry,
-  network and build, then looked at by hand. That has been enough, but it is
-  worth knowing what the suites do and do not cover.
+- **The visual has never been checked by automation**, though it could have
+  been — see `STATUS.md` §8. The blank minimap shipped because of it: a
+  single screenshot would have shown an empty box. Pass 3's fix has been
+  confirmed by the owner in use, not by a check.
 - **No `Storage.read` test against S3.** The backfill exercised it against
   real MinIO 14 times, but no suite covers it.
 - Tiles are not regenerated if an original is ever replaced. Nothing can
