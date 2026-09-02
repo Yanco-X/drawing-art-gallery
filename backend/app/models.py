@@ -13,6 +13,7 @@ from sqlalchemy import (
     Table,
     Text,
     Uuid,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -80,6 +81,16 @@ class Piece(Base):
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)
 
+    # Whether the Deep Zoom pyramid under <id>/tiles/ has been written.
+    # A flag rather than a storage probe: the detail view needs to know on
+    # every read, and a HEAD request per piece to answer it would be absurd.
+    # False is always safe -- it means the viewer falls back to the display
+    # rendition, which is what a piece uploaded before tiling existed does
+    # until the backfill reaches it.
+    tiles_ready: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
     # Null is exhibited, set is waived. A timestamp rather than a boolean so
     # the reserve has a sort order and "waived three days ago" is free.
     waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -126,6 +137,20 @@ class Piece(Base):
         if variant == "original":
             return f"{self.id}/original.{self.original_ext}"
         return f"{self.id}/{variant}.webp"
+
+    @property
+    def tile_prefix(self) -> str:
+        """
+        Where this piece's Deep Zoom tiles live.
+
+        Under the piece's own prefix, so deleting the piece already removes
+        them -- `delete_prefix` lists and batches, which is what makes a
+        five-hundred-tile pyramid no different from a single file.
+        """
+        return f"{self.id}/tiles"
+
+    def tile_key(self, level: int, column: int, row: int) -> str:
+        return f"{self.tile_prefix}/{level}/{column}_{row}.webp"
 
 
 class Collection(Base):

@@ -21,6 +21,7 @@ from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
 from app.models import Piece, Tag  # noqa: E402
+from app.services.images import tile_level_count, tile_pyramid  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
 
@@ -31,6 +32,20 @@ checks = []
 def check(label, condition, detail=""):
     checks.append((label, bool(condition), detail))
     print(f"  [{'PASS' if condition else 'FAIL'}] {label}" + (f" -- {detail}" if detail else ""))
+
+
+def renditions_of(piece_id):
+    """
+    A piece's stored renditions, without its Deep Zoom pyramid.
+
+    The tiles live under the same prefix and there are hundreds of them, so
+    every assertion about "the three files" has to say which three it means.
+    """
+    return sorted(
+        k
+        for k in storage.objects
+        if k.startswith(f"{piece_id}/") and "/tiles/" not in k
+    )
 
 
 def make_image(width, height, fmt="JPEG", exif=None):
@@ -122,8 +137,8 @@ check("original is not exposed in the payload",
       not any("original" in str(v) for v in piece.values()))
 
 print("\n== renditions ==")
-keys = sorted(storage.objects)
-check("three objects stored", len(keys) == 3, str(keys))
+keys = renditions_of(pid)
+check("three renditions stored", len(keys) == 3, str(keys))
 check("original kept in its uploaded format", f"{pid}/original.jpg" in storage.objects)
 check("display is webp", storage.objects[f"{pid}/display.webp"][:4] == b"RIFF")
 check("thumb is webp", storage.objects[f"{pid}/thumb.webp"][:4] == b"RIFF")
@@ -219,8 +234,15 @@ check("an empty array removes every tag",
       client.patch(f"/api/pieces/{pid}", headers=OWNER,
                    json={"tags": []}).get_json()["tags"] == [])
 check("editing leaves the renditions alone",
-      len([k for k in storage.objects if k.startswith(f"{pid}/")]) == 3,
-      str([k for k in storage.objects if k.startswith(f"{pid}/")]))
+      len(renditions_of(pid)) == 3, str(renditions_of(pid)))
+# Stronger than it looks: correcting a title must not invalidate a pyramid
+# that took seconds to build, so the tile count has to be stable across an
+# edit as well.
+tiles_before_edit = len([k for k in storage.objects if f"{pid}/tiles/" in k])
+client.patch(f"/api/pieces/{pid}", headers=OWNER, json={"medium": "Ink wash"})
+check("and leaves the pyramid alone",
+      len([k for k in storage.objects if f"{pid}/tiles/" in k]) == tiles_before_edit,
+      str(tiles_before_edit))
 
 print("\n== listing ==")
 listed = client.get("/api/pieces").get_json()
@@ -311,6 +333,94 @@ check("the same collection twice is refused",
 check("nothing was stored by any refused upload",
       len(storage.objects) == before_objects,
       f"{before_objects} -> {len(storage.objects)}")
+
+print("\n== deep zoom tiles ==")
+# Level maths first, with no image involved: the top level is the first
+# power of two that covers the long edge, and everything below it halves.
+check("a 1px image has one level", tile_level_count(1, 1) == 1,
+      str(tile_level_count(1, 1)))
+check("256 tops out at level 8", tile_level_count(256, 256) == 9,
+      str(tile_level_count(256, 256)))
+check("2609 tops out at level 12", tile_level_count(2609, 2609) == 13,
+      str(tile_level_count(2609, 2609)))
+check("the long edge decides", tile_level_count(100, 4999) == 14,
+      str(tile_level_count(100, 4999)))
+
+# 600x400: top level 10 (1024 covers 600), so 11 levels. At the top the
+# image is 600x400, which is 3 columns and 2 rows of 254px tiles.
+pyramid = list(tile_pyramid(make_image(600, 400)))
+top_level = tile_level_count(600, 400) - 1
+check("every level is present",
+      sorted({level for level, _, _, _ in pyramid}) == list(range(top_level + 1)),
+      str(sorted({level for level, _, _, _ in pyramid})))
+top_tiles = [(c, r) for level, c, r, _ in pyramid if level == top_level]
+check("the top level is a 3x2 grid", sorted(top_tiles)
+      == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)], str(sorted(top_tiles)))
+check("the bottom level is a single tile",
+      len([1 for level, _, _, _ in pyramid if level == 0]) == 1)
+check("every tile is webp",
+      all(data[:4] == b"RIFF" for _, _, _, data in pyramid))
+# 254 plus one pixel of overlap on each interior edge.
+corner = next(d for lv, c, r, d in pyramid if (lv, c, r) == (top_level, 0, 0))
+middle = next(d for lv, c, r, d in pyramid if (lv, c, r) == (top_level, 1, 0))
+check("an edge tile carries overlap on its inner sides only",
+      Image.open(io.BytesIO(corner)).size == (255, 255),
+      str(Image.open(io.BytesIO(corner)).size))
+check("an interior tile carries overlap on both sides",
+      Image.open(io.BytesIO(middle)).size == (256, 255),
+      str(Image.open(io.BytesIO(middle)).size))
+
+print("\n== tiles through the upload route ==")
+tiled = client.post("/api/pieces", headers=OWNER, data={
+    "image": (io.BytesIO(make_image(700, 500)), "tiled.jpg"),
+    "title": "Tiled",
+}, content_type="multipart/form-data").get_json()
+tid = tiled["id"]
+check("the piece reports a tile source", tiled["tileSource"] is not None)
+check("dimensions are exposed for the detail view",
+      tiled["width"] == 700 and tiled["height"] == 500,
+      f"{tiled['width']}x{tiled['height']}")
+source = tiled["tileSource"]
+check("the tile source carries the original dimensions",
+      source["width"] == 700 and source["height"] == 500)
+check("tile size and overlap are declared",
+      source["tileSize"] == 254 and source["overlap"] == 1, str(source))
+check("maxLevel matches the level count",
+      source["maxLevel"] == tile_level_count(700, 500) - 1, str(source["maxLevel"]))
+check("the base points at the piece's tile prefix",
+      source["base"] == f"/media/{tid}/tiles", source["base"])
+
+stored_tiles = [k for k in storage.objects if k.startswith(f"{tid}/tiles/")]
+check("tiles were written to storage", len(stored_tiles) > 0, str(len(stored_tiles)))
+check("the pyramid is complete",
+      len(stored_tiles) == len(list(tile_pyramid(make_image(700, 500)))),
+      str(len(stored_tiles)))
+# The key the frontend will build from `base`, spelled out here so a change
+# to either side breaks a test rather than the viewer.
+check("a tile sits at base/<level>/<column>_<row>.webp",
+      f"{tid}/tiles/{source['maxLevel']}/0_0.webp" in storage.objects)
+check("the renditions are still there beside the pyramid",
+      all(f"{tid}/{name}" in storage.objects
+          for name in ("display.webp", "thumb.webp", "original.jpg")))
+
+print("\n== a piece without tiles still works ==")
+session = SessionLocal()
+untiled = session.get(Piece, uuid.UUID(tid))
+untiled.tiles_ready = False
+session.commit()
+session.close()
+fallback = client.get(f"/api/pieces/{tid}").get_json()
+check("tileSource is null when the pyramid is not ready",
+      fallback["tileSource"] is None, str(fallback["tileSource"]))
+check("and the display rendition is still offered",
+      fallback["imageUrl"] == f"/media/{tid}/display.webp")
+
+print("\n== deleting a piece takes its pyramid ==")
+check("waived", client.post(f"/api/pieces/{tid}/waive", headers=OWNER).status_code == 200)
+check("deleted", client.delete(f"/api/pieces/{tid}", headers=OWNER).status_code == 204)
+check("no tiles left behind",
+      not any(k.startswith(f"{tid}/") for k in storage.objects),
+      str([k for k in storage.objects if k.startswith(f"{tid}/")][:3]))
 
 failed = [c for c in checks if not c[1]]
 print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")

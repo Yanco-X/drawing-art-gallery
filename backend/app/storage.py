@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 class Storage(Protocol):
     def save(self, key: str, data: bytes, content_type: str) -> None: ...
 
+    # Reading back is for re-deriving: the archived original is the only
+    # copy that can rebuild a rendition or a tile pyramid, and nothing else
+    # in the app has a reason to pull bytes out of storage.
+    def read(self, key: str) -> bytes: ...
+
     def delete_prefix(self, prefix: str) -> None: ...
 
     def url_for(self, key: str) -> str: ...
@@ -56,6 +61,10 @@ class LocalStorage:
             if os.path.exists(tmp):
                 os.unlink(tmp)
             raise
+
+    def read(self, key: str) -> bytes:
+        with open(self._path(key), "rb") as handle:
+            return handle.read()
 
     def delete_prefix(self, prefix: str) -> None:
         path = self._path(prefix.rstrip("/"))
@@ -159,6 +168,10 @@ class S3Storage:
             ContentType=content_type,
         )
 
+    def read(self, key: str) -> bytes:
+        response = self.client.get_object(Bucket=self._bucket_for(key), Key=key)
+        return response["Body"].read()
+
     def delete_prefix(self, prefix: str) -> None:
         # There are no directories in S3 -- only keys sharing a prefix, which
         # have to be listed and deleted in batches, in both buckets.
@@ -205,6 +218,9 @@ class MemoryStorage:
 
     def save(self, key: str, data: bytes, content_type: str) -> None:
         self.objects[key] = data
+
+    def read(self, key: str) -> bytes:
+        return self.objects[key]
 
     def delete_prefix(self, prefix: str) -> None:
         for key in [k for k in self.objects if k.startswith(prefix)]:

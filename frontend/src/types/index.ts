@@ -27,6 +27,16 @@ export interface Piece {
   medium: string | null;
   year: number | null;
   /**
+   * The original's pixel dimensions. Quoted to the visitor beneath the
+   * Detailed View button -- "4999 x 5001" is a more honest invitation to
+   * open it than any amount of button styling.
+   *
+   * Nullable because a piece imported before dimensions were recorded has
+   * none; `aspectRatio` is null in the same case.
+   */
+  width: number | null;
+  height: number | null;
+  /**
    * width / height, taken from the stored image dimensions.
    *
    * Must be persisted at upload time rather than measured in the browser:
@@ -43,6 +53,33 @@ export interface Piece {
   waivedAt: string | null;
   /** Present on GET /api/pieces/<id> only, not in the list payload. */
   collections?: CollectionRef[];
+  /**
+   * The Deep Zoom pyramid the detail view zooms into. Detail payload only.
+   *
+   * Null when the piece has no pyramid -- uploaded before tiling existed and
+   * not yet backfilled, or a build that failed. The viewer falls back to
+   * `imageUrl` in that case rather than refusing to open.
+   */
+  tileSource?: TileSource | null;
+}
+
+/**
+ * Everything OpenSeadragon needs to address a piece's tiles.
+ *
+ * No `.dzi` descriptor is fetched: the numbers a descriptor would carry are
+ * already on the piece row, so the API composes this instead of storing a
+ * second copy of them.
+ */
+export interface TileSource {
+  /** Tiles live at `${base}/${level}/${column}_${row}.webp`. */
+  base: string;
+  /** The original's dimensions, which the pyramid's top level matches. */
+  width: number;
+  height: number;
+  tileSize: number;
+  overlap: number;
+  /** The top level: the first power of two covering the long edge. */
+  maxLevel: number;
 }
 
 /** Just enough to name a collection: what the wall label links to. */

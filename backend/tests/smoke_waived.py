@@ -109,9 +109,15 @@ check("the reserve list needs the owner token",
       client.get("/api/pieces?waived=true").status_code == 401)
 
 print("\n== objects are untouched by waiving ==")
-check("all three renditions still stored",
-      len([k for k in storage.objects if k.startswith(f"{a}/")]) == 3,
-      str([k for k in storage.objects if k.startswith(f"{a}/")]))
+renditions = [
+    k for k in storage.objects if k.startswith(f"{a}/") and "/tiles/" not in k
+]
+check("all three renditions still stored", len(renditions) == 3, str(renditions))
+# The pyramid survives too. Waiving is reversible, the owner can still open
+# the piece from the reserve, and rebuilding one on restore would mean a
+# multi-second wait on an action that is otherwise instant.
+check("and the deep zoom pyramid survives",
+      any(f"{a}/tiles/" in k for k in storage.objects))
 
 print("\n== collections ==")
 collection = client.post(

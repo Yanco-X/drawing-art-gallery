@@ -13,6 +13,7 @@ from flask import current_app
 
 from .auth import is_owner
 from .models import Collection, Piece, Tag
+from .services.images import TILE_OVERLAP, TILE_SIZE, tile_level_count
 
 
 def _storage():
@@ -35,6 +36,10 @@ def piece_to_dict(piece: Piece) -> dict:
         "thumbnailUrl": storage.url_for(piece.key("thumb")),
         "medium": piece.medium,
         "year": piece.year,
+        # The detail view quotes these to the visitor -- "2609 x 2609" is a
+        # more honest invitation to open it than any button styling.
+        "width": piece.width,
+        "height": piece.height,
         "aspectRatio": piece.aspect_ratio,
         "createdDate": piece.created_date.isoformat() if piece.created_date else None,
         # Null for an exhibited piece. Drives which actions the owner is
@@ -44,10 +49,37 @@ def piece_to_dict(piece: Piece) -> dict:
     }
 
 
+def _tile_source(piece: Piece) -> dict | None:
+    """
+    What OpenSeadragon needs to address the pyramid, or null if there is none.
+
+    No `.dzi` descriptor is written. The format's descriptor carries exactly
+    the numbers already on the row -- dimensions, tile size, overlap -- so
+    storing one would be a second copy of the truth, plus a fetch before the
+    first tile could be requested.
+
+    Null means the viewer falls back to the display rendition: a piece
+    uploaded before tiling existed, or one whose pyramid failed to build.
+    """
+    if not piece.tiles_ready or not piece.width or not piece.height:
+        return None
+    return {
+        # A base rather than a URL template: every backend composes public
+        # URLs by joining a prefix, so this stays one string join and the
+        # caller appends "/<level>/<column>_<row>.webp".
+        "base": _storage().url_for(piece.tile_prefix),
+        "width": piece.width,
+        "height": piece.height,
+        "tileSize": TILE_SIZE,
+        "overlap": TILE_OVERLAP,
+        "maxLevel": tile_level_count(piece.width, piece.height) - 1,
+    }
+
+
 def piece_detail_to_dict(piece: Piece) -> dict:
     """
-    The single-piece shape: everything in the list plus the collections it
-    appears in.
+    The single-piece shape: everything in the list, plus the collections it
+    appears in and the tile source the detail view zooms into.
 
     Kept out of the list shape deliberately -- `collection_links` is lazily
     loaded, so composing this for every row would be a query per piece to
@@ -58,6 +90,7 @@ def piece_detail_to_dict(piece: Piece) -> dict:
     owner = is_owner()
     return {
         **piece_to_dict(piece),
+        "tileSource": _tile_source(piece),
         "collections": [
             {
                 "id": str(link.collection.id),

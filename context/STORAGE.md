@@ -73,7 +73,20 @@ convenient is one nobody can trust to replay.
 <piece-id>/original.<ext>     archival, never served to the grid
 <piece-id>/display.webp       long edge ~1600px, piece page
 <piece-id>/thumb.webp         long edge ~600px, masonry grid
+<piece-id>/tiles/<l>/<c>_<r>.webp   Deep Zoom pyramid, the detail view
 ```
+
+**The pyramid** was added 2026-09-01 for the detail view. Levels are
+successive halvings from a single pixel up to the original's own resolution,
+cut into 254px tiles with 1px of overlap. It is many objects -- 547 for the
+largest piece, 2,605 across the gallery -- but it costs 16.6 MB in total,
+less than half what the originals occupy, and a viewer only ever fetches the
+handful of tiles it is looking at.
+
+It needed no changes to this layout. Tiles sit under the piece's own prefix,
+so `delete_prefix` already removes them with everything else, and the bucket
+routing below already sends them to the public bucket because it diverts on
+`/original.` alone. See [`DETAILED-VIEW.md`](./DETAILED-VIEW.md).
 
 Derivatives are WebP; the original is kept untouched in its uploaded
 format. Filenames are generated, never taken from the upload -- the current
@@ -148,8 +161,13 @@ running a one-off re-upload. The application code is already proven.
 
 | Bucket | Contents | Access |
 |---|---|---|
-| public | `thumb.webp`, `display.webp` | Public read -- this is a public gallery |
+| public | `thumb.webp`, `display.webp`, `tiles/**` | Public read -- this is a public gallery |
 | private | `original.<ext>` | Presigned URL on demand, owner only |
+
+The pyramid being public is what lets the detail view reach the original's
+full resolution **without the original ever leaving the private bucket** --
+the tiles carry every pixel, the archival file stays where it is. Verified
+live: a tile returns 200 to an anonymous request, the original returns 403.
 
 Building it this way from the start avoids retrofitting presigned URLs
 later, and keeps full-resolution originals from being served by accident.

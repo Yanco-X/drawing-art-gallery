@@ -11,6 +11,7 @@ from ..models import Collection, CollectionPiece, Piece, Tag
 from ..schemas import piece_detail_to_dict, piece_to_dict
 from ..services.images import InvalidImage, process_upload
 from ..services.slugs import slugify
+from ..services.tiles import clear_tiles, write_tiles
 from .helpers import parse_uuid
 
 bp = Blueprint("pieces", __name__, url_prefix="/pieces")
@@ -115,6 +116,9 @@ def create_piece():
     multipart/form-data: `image` plus title, description, medium, year,
     createdDate, and repeated `tags` and `collectionIds` fields.
 
+    Also builds the Deep Zoom pyramid the detail view zooms into, after the
+    commit and without being able to fail the upload -- see below.
+
     Ordering matters here. Files are written before the row is committed:
     files-then-database can leave orphaned bytes, which are invisible and
     sweepable, while database-then-files can leave a row pointing at
@@ -180,6 +184,29 @@ def create_piece():
         session.rollback()
         storage.delete_prefix(piece.storage_prefix)
         raise
+
+    # Deliberately after the commit, and deliberately not fatal.
+    #
+    # The pyramid is an enhancement: without it the detail view falls back to
+    # the display rendition, which is exactly what every piece uploaded before
+    # tiling existed does until the backfill reaches it. Tearing down a
+    # successful upload because a few hundred derived tiles failed would
+    # trade a working piece for no piece at all.
+    #
+    # It is synchronous because there is no job queue in this project, and
+    # introducing one to serve a personal gallery would be a great deal of
+    # machinery for a wait that runs about 1.7s on a typical piece and 6.5s
+    # on the largest in the collection.
+    try:
+        write_tiles(storage, piece, raw)
+        piece.tiles_ready = True
+        session.commit()
+    except Exception:
+        session.rollback()
+        current_app.logger.exception("tiling failed for piece %s", piece.id)
+        # Half a pyramid is worse than none: the viewer would open on tiles
+        # that stop partway through a zoom. The backfill can rebuild it.
+        clear_tiles(storage, piece)
 
     # The detail shape, so the caller sees the memberships it just asked for
     # rather than having to trust that they landed.
