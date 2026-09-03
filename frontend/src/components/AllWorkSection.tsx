@@ -7,8 +7,9 @@ import { SectionState } from './SectionState';
 
 /*
  * Tag filtering is deliberately not wired up yet — every piece is shown.
- * Pieces still carry their `tags`, so restoring the chip row is a UI-only
- * change when we come back to it.
+ * Pieces still carry their `tags`, so filtering this grid by one is where
+ * tags will earn their keep: a criterion applied here, not a page of their
+ * own.
  */
 export const AllWorkSection = ({
   pieces,

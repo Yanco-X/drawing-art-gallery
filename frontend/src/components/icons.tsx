@@ -194,3 +194,12 @@ export const EyeHiddenIcon = () => (
     <path d="M4 20L20 4" />
   </Glyph>
 );
+
+/** A frame with the arrow leaving it: ending the session. */
+export const SignOutIcon = () => (
+  <Glyph>
+    <path d="M13 4H4v16h9" />
+    <path d="M10 12h10" />
+    <path d="M17 9l3 3-3 3" />
+  </Glyph>
+);

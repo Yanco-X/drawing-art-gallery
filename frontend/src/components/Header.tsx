@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Role } from '../types';
-import { ACTION } from './form-styles';
+import { SignOutIcon } from './icons';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NavItem {
@@ -27,7 +27,6 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
       to: '/collections',
       active: pathname.startsWith('/collections'),
     },
-    { label: 'Tags', to: '/tags', active: pathname.startsWith('/tags') },
   ];
 
   // The reserve is the owner's own view; a visitor is not told it exists.
@@ -48,8 +47,8 @@ const navItemClasses = (item: NavItem, extra = '') =>
     .filter(Boolean)
     .join(' ');
 
-// Every nav item is a route now that /tags exists, so there is no longer an
-// in-page-anchor case to fall back to.
+// Every nav item is a real route; there is no in-page-anchor case to fall
+// back to.
 const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   <Link
     to={item.to}
@@ -60,8 +59,17 @@ const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   </Link>
 );
 
-// Nothing stands in for this when signed out. A visitor is not shown a
-// door, per context/AUTH.md section 5.
+/*
+ * Square, glyph only, and last in the row.
+ *
+ * It sits apart from the theme toggle and Upload because it is not part of
+ * the same errand: those two are things the owner does while working, this
+ * one ends the working. Same border and hover as the toggle, with equal
+ * padding so the box is square rather than the toggle's wider pill.
+ *
+ * Nothing stands in for it when signed out. A visitor is not shown a door,
+ * per context/AUTH.md section 5.
+ */
 const SignOut = ({
   onSignOut,
   className = '',
@@ -72,9 +80,11 @@ const SignOut = ({
   <button
     type="button"
     onClick={onSignOut}
-    className={`${ACTION} text-faint hover:text-accent ${className}`}
+    aria-label="Sign out"
+    title="Sign out"
+    className={`flex h-9 w-9 cursor-pointer items-center justify-center border border-line bg-transparent text-muted transition-colors duration-200 hover:border-accent hover:text-accent ${className}`}
   >
-    Sign out
+    <SignOutIcon />
   </button>
 );
 
@@ -114,7 +124,6 @@ export const Header = ({
 
           {role === 'owner' && (
             <>
-              <SignOut onSignOut={onSignOut} className="hidden sm:inline" />
               <button
                 type="button"
                 onClick={onUploadClick}
@@ -122,6 +131,11 @@ export const Header = ({
               >
                 + Upload
               </button>
+              {/* Set apart from Upload rather than sitting in the row's
+                  16px rhythm: the two are next to each other but they are
+                  not the same kind of act, and a mis-click here ends the
+                  session someone was about to upload into. */}
+              <SignOut onSignOut={onSignOut} className="hidden sm:ml-6 sm:flex" />
             </>
           )}
 
@@ -148,7 +162,20 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
-          {role === 'owner' && <SignOut onSignOut={onSignOut} />}
+          {/* The square does not fit the bar on a phone -- the row already
+              carries the wordmark, the toggle, Upload and the menu button,
+              and adding a fifth wrapped Upload onto two lines. Here it can
+              take a label, which suits a list of words better anyway. */}
+          {role === 'owner' && (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="flex cursor-pointer items-center gap-2 self-start border-none bg-transparent p-0 text-[14px] uppercase tracking-nav text-muted transition-colors duration-200 hover:text-accent"
+            >
+              <SignOutIcon />
+              Sign out
+            </button>
+          )}
         </nav>
       )}
     </header>

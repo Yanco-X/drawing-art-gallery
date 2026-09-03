@@ -36,7 +36,7 @@ drawing-art-gallery/
 │       ├── components/    37
 │       ├── contexts/      3  (theme, role, ...)
 │       ├── hooks/         7  (incl. useAsync)
-│       ├── pages/         6  (Landing, Piece, Waived, Collection, Collections, Tags)
+│       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
 │       ├── services/      pieces.ts — the whole API client
 │       └── types/         the shared shapes
 └── context/               design and specification documents
@@ -281,7 +281,7 @@ grid must not do.
 
 ## 6. Frontend
 
-Six routes:
+Five routes:
 
 | Route | Page |
 |---|---|
@@ -289,7 +289,6 @@ Six routes:
 | `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions. `?view=1` opens the detail viewer. A waived piece renders its tombstone |
 | `/collections` | `CollectionsIndexPage` — every collection the caller may see |
 | `/collections/:slug` | `CollectionPage` — the set's label, then its pieces |
-| `/tags` | `TagsPage` — a placeholder, per §10 |
 | `/waived` | `WaivedPage` — the reserve, owner only |
 
 Anything unmatched redirects to `/home`.
@@ -600,22 +599,33 @@ feature instead:
 Deferred since the beginning, not dropped. Tags can be entered on upload and
 corrected afterwards, they are stored, and they render on the wall label.
 Nothing reads them: no filtering, and no view of the work sharing a tag.
-`/tags` exists as a placeholder that says so.
+
+**They are a filter, not a place.** `/tags` existed as a placeholder page and
+was removed on 2026-09-02, before anything was built on it. A gallery this
+size does not need a directory of its own tags — what it needs is a way to
+narrow the wall to the work carrying one. A page would have been a second
+route to maintain, a second empty state to design, and a second place a
+visitor can end up with nothing on screen.
 
 That gap sharpened twice. Piece editing gave the owner a control for curating
 tags with no consequence to curating them well. And the tombstone now wants a
 "similar works" panel, which needs *something* to compare on — tags are the
 only candidate the data model has, so this feature is what unblocks that one.
 
-**To build it:** `/tags` listing what exists with counts, `/tags/:slug`
-showing the work carrying one, and `GET /api/pieces?tag=<slug>` or a tags
-blueprint — neither exists. The pieces payload already includes `tags`, so
-the grid needs no new shape. `AllWorkSection` carries a standing comment that
-tag filtering is deliberately not wired up.
+**To build it:** `GET /api/pieces?tag=<slug>` does not exist yet. On the
+front, the chips on a wall label become controls that narrow `AllWorkSection`
+rather than links that navigate, and the gallery grows a way to clear the
+filter. The pieces payload already includes `tags`, so the grid needs no new
+shape, and `AllWorkSection` carries a standing comment saying exactly this.
+
+Whether the filter lives in the URL is the one open question. A query string
+makes a filtered view shareable and survives a reload; local state is less
+machinery. The collections work already argued that a set worth looking at is
+worth linking to, which points the same way here.
 
 **Live data note:** both existing tags — *Charcoal* and *Portrait* — are
-attached to nothing, so the first version of this page will be empty until
-some work is tagged.
+attached to nothing, so filtering by either shows an empty gallery until some
+work is tagged.
 
 ---
 
