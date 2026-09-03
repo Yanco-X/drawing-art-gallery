@@ -1,6 +1,6 @@
 export type Theme = 'dark' | 'light';
 
-/** Comes from auth in production; drives Upload vs. Owner sign in. */
+/** Answered by the session; drives every owner control on the site. */
 export type Role = 'visitor' | 'owner';
 
 /** User preference controlling masonry column count. */
@@ -83,6 +83,16 @@ export interface TileSource {
 }
 
 /** Just enough to name a collection: what the wall label links to. */
+/**
+ * The three answers to asking for a piece: it is here, it was here, or it
+ * never was. "Gone" carries only the title, which is all the API says about
+ * a piece taken off the wall.
+ */
+export type PieceResult =
+  | { state: 'found'; piece: Piece }
+  | { state: 'gone'; title: string }
+  | { state: 'missing' };
+
 export interface CollectionRef {
   id: string;
   name: string;

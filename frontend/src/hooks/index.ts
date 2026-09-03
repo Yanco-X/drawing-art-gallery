@@ -4,6 +4,8 @@ export { usePieceFilter } from './usePieceFilter';
 export { useFlipReflow } from './useFlipReflow';
 export { usePersistentState } from './usePersistentState';
 export { useTheme } from './useTheme';
+export { useSession } from './useSession';
+export { useSecretTrigger } from './useSecretTrigger';
 export {
   useGridDensity,
   GRID_DENSITIES,

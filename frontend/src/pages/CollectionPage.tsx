@@ -5,9 +5,8 @@ import { CollectionArrange } from '../components/CollectionArrange';
 import { CollectionOwnerActions } from '../components/CollectionOwnerActions';
 import { PageMessage } from '../components/PageMessage';
 import { PageShell } from '../components/PageShell';
-import { useAsync } from '../hooks';
+import { useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
-import { CURRENT_ROLE } from '../lib/session';
 import { fetchCollection } from '../services';
 import type { Collection } from '../types';
 
@@ -28,6 +27,8 @@ const BackLink = () => (
 const CollectionPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+
+  const { role } = useSession();
 
   // Wrapped, not inline: `useAsync` takes the loader as its dependency.
   const loadCollection = useMemo(
@@ -82,7 +83,7 @@ const CollectionPage = () => {
     );
   }
 
-  const isOwner = CURRENT_ROLE === 'owner';
+  const isOwner = role === 'owner';
 
   return (
     <PageShell>

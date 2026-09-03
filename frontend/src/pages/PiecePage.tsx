@@ -11,9 +11,8 @@ import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
 import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
-import { useAsync } from '../hooks';
+import { useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
-import { CURRENT_ROLE } from '../lib/session';
 import { fetchPiece, fetchPieces, fetchWaivedPieces } from '../services';
 import type { Piece } from '../types';
 
@@ -29,15 +28,25 @@ const BackLink = ({ waived = false }: { waived?: boolean }) => (
 const Message = ({
   eyebrow,
   headline,
+  /*
+   * A sentence carrying a title is longer than "That piece isn't here." and
+   * reads worse broken across two lines, so the tombstone gets a wider
+   * measure. Still an em cap, so it wraps on a phone rather than running to
+   * the edge of the screen.
+   */
+  measure = 'max-w-[14em]',
 }: {
   eyebrow: string;
   headline: string;
+  measure?: string;
 }) => (
   <section className="mx-auto flex w-full max-w-content flex-col gap-6 px-gutter pt-intro-top pb-section-lg">
     <p className="text-[12px] uppercase tracking-eyebrow text-faint">
       {eyebrow}
     </p>
-    <h1 className="max-w-[14em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
+    <h1
+      className={`${measure} font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty`}
+    >
       {headline}
     </h1>
     <div>
@@ -121,8 +130,10 @@ const PiecePage = () => {
   const loadPiece = useMemo(() => () => fetchPiece(id ?? ''), [id]);
   const load = useAsync(loadPiece);
   const [edited, setEdited] = useState<Piece | null>(null);
+  const { role } = useSession();
 
-  const fetched = load.status === 'ready' ? load.data : null;
+  const answer = load.status === 'ready' ? load.data : null;
+  const fetched = answer?.state === 'found' ? answer.piece : null;
   const piece = edited && edited.id === id ? edited : fetched;
 
   /*
@@ -205,8 +216,28 @@ const PiecePage = () => {
     );
   }
 
-  // Null rather than a rejection: a piece that does not exist, or is waived
-  // while we are not the owner, is an expected answer for this page.
+  /*
+   * Two absences, and they are not the same absence. A piece that was on
+   * the wall and came off it says so, by name -- whoever followed a link
+   * here saw it hanging, so the gallery owes them an explanation rather
+   * than a shrug. A piece that never existed gets the shrug.
+   */
+  if (answer?.state === 'gone') {
+    return (
+      <PageShell>
+        <Message
+          eyebrow="No longer exhibited"
+          measure="max-w-[24em]"
+          headline={
+            answer.title
+              ? `${answer.title} has been taken off the wall.`
+              : 'That work has been taken off the wall.'
+          }
+        />
+      </PageShell>
+    );
+  }
+
   if (piece === null) {
     return (
       <PageShell>
@@ -252,7 +283,7 @@ const PiecePage = () => {
             piece={piece}
             collections={piece.collections ?? []}
             actions={
-              CURRENT_ROLE === 'owner' ? (
+              role === 'owner' ? (
                 <PieceOwnerActions
                   piece={piece}
                   onChanged={refresh}

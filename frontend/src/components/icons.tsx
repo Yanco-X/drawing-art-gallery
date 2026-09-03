@@ -171,3 +171,26 @@ export const CloseIcon = () => (
     <path d="M5 5l14 14M19 5L5 19" />
   </Glyph>
 );
+
+/**
+ * An eye, for revealing what a password field is hiding.
+ *
+ * The one curved glyph in the set. A lens drawn from straight segments
+ * reads as a diamond rather than an eye, and this icon has to be
+ * recognised at a glance or it is just a shape in a text field.
+ */
+export const EyeIcon = () => (
+  <Glyph>
+    <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
+    <circle cx="12" cy="12" r="2.5" />
+  </Glyph>
+);
+
+/** The same eye, struck through: what is shown goes back to being hidden. */
+export const EyeHiddenIcon = () => (
+  <Glyph>
+    <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M4 20L20 4" />
+  </Glyph>
+);

@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Unlisted, not private. noindex rather than a robots.txt disallow:
+         a disallow does not de-index, and blocking the fetch stops the
+         crawler from ever seeing the tag that would. See context/AUTH.md. -->
+    <meta name="robots" content="noindex, nofollow" />
     <title>SketchyArt Gallery</title>
     <!-- Google Fonts: Instrument Serif (display) + Instrument Sans (UI).
          Self-host these before production. -->

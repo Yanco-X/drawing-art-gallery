@@ -1,4 +1,3 @@
-import { CURRENT_ROLE, OWNER_TOKEN } from '../lib/session';
 import type {
   Collection,
   CollectionPatch,
@@ -6,19 +5,38 @@ import type {
   NewCollection,
   NewPiece,
   Piece,
+  PieceResult,
   PiecePatch,
+  Role,
 } from '../types';
 
-/** An error the API reported, carrying its per-field details when present. */
+/** An error the API reported, carrying its status and per-field details. */
 export class ApiError extends Error {
+  status: number;
   details: Record<string, string>;
 
-  constructor(message: string, details: Record<string, string> = {}) {
+  constructor(
+    message: string,
+    status: number,
+    details: Record<string, string> = {},
+  ) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
     this.details = details;
   }
 }
+
+/*
+ * A lapsed session has to reach the interface from here, because this is
+ * where it is discovered. The provider registers a handler on mount; until
+ * it does, a 401 is just an error like any other.
+ */
+let onLapsed: (() => void) | null = null;
+
+export const whenSessionLapses = (handler: (() => void) | null): void => {
+  onLapsed = handler;
+};
 
 const raise = async (response: Response): Promise<never> => {
   let message = `Request failed (${response.status}).`;
@@ -31,7 +49,8 @@ const raise = async (response: Response): Promise<never> => {
     // A non-JSON body — a proxy error page, or the API being down. The
     // status line is all we have, and it is better than a parse error.
   }
-  throw new ApiError(message, details);
+  if (response.status === 401) onLapsed?.();
+  throw new ApiError(message, response.status, details);
 };
 
 /** Optional fields are omitted rather than sent empty, so the API stores null. */
@@ -59,7 +78,6 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
 
   const response = await fetch('/api/pieces', {
     method: 'POST',
-    headers: { 'X-Owner-Token': OWNER_TOKEN },
     body: form,
   });
 
@@ -70,17 +88,20 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
 /**
  * One piece by id, with the collections it appears in.
  *
- * Returns null on 404 rather than rejecting: a piece that does not exist —
- * or is waived while the caller is not the owner — is an expected answer
- * here, not a failure. Sends the owner token so the reserve is reachable.
+ * Three answers, not two. A piece that never existed and a piece taken off
+ * the wall are different facts, and the API says so — 410 carries the title
+ * of something the caller may well have seen hanging. Neither is a failure,
+ * so neither rejects.
  */
-export const fetchPiece = async (id: string): Promise<Piece | null> => {
-  const response = await fetch('/api/pieces/' + encodeURIComponent(id), {
-    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
-  });
-  if (response.status === 404) return null;
+export const fetchPiece = async (id: string): Promise<PieceResult> => {
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id));
+  if (response.status === 404) return { state: 'missing' };
+  if (response.status === 410) {
+    const body = await response.json().catch(() => ({}));
+    return { state: 'gone', title: body?.title ?? '' };
+  }
   if (!response.ok) await raise(response);
-  return response.json();
+  return { state: 'found', piece: await response.json() };
 };
 
 /** Gallery order, newest first — the same order the grid renders. */
@@ -107,9 +128,7 @@ export const fetchCollections = async (): Promise<CollectionSummary[]> => {
 export const fetchCollection = async (
   slug: string,
 ): Promise<Collection | null> => {
-  const response = await fetch('/api/collections/' + encodeURIComponent(slug), {
-    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
-  });
+  const response = await fetch('/api/collections/' + encodeURIComponent(slug));
   if (response.status === 404) return null;
   if (!response.ok) await raise(response);
   return response.json();
@@ -120,9 +139,7 @@ export const fetchCollection = async (
  * coming back may well belong in a set that has not been published yet.
  */
 export const fetchAllCollections = async (): Promise<CollectionSummary[]> => {
-  const response = await fetch('/api/collections?includePrivate=1', {
-    headers: OWNER_TOKEN ? { 'X-Owner-Token': OWNER_TOKEN } : {},
-  });
+  const response = await fetch('/api/collections?includePrivate=1');
   if (!response.ok) await raise(response);
   return response.json();
 };
@@ -130,11 +147,13 @@ export const fetchAllCollections = async (): Promise<CollectionSummary[]> => {
 /**
  * Whatever this caller is entitled to see — drafts included for the owner.
  *
- * Module-level rather than an inline arrow in each page, so it can be handed
- * straight to `useAsync` without refetching on every render.
+ * Returns the loader rather than calling it: the role is a runtime answer
+ * now, so the choice belongs to the pages, and handing `useAsync` a
+ * function that is stable for as long as the role is keeps its dependency
+ * stable too.
  */
-export const fetchVisibleCollections = (): Promise<CollectionSummary[]> =>
-  CURRENT_ROLE === 'owner' ? fetchAllCollections() : fetchCollections();
+export const collectionsFor = (role: Role) =>
+  role === 'owner' ? fetchAllCollections : fetchCollections;
 
 /**
  * Corrects a piece's wall label. The image is not replaceable — that would
@@ -150,7 +169,6 @@ export const updatePiece = async (
   const response = await fetch('/api/pieces/' + encodeURIComponent(id), {
     method: 'PATCH',
     headers: {
-      'X-Owner-Token': OWNER_TOKEN,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(patch),
@@ -167,7 +185,6 @@ export const updatePiece = async (
 export const deletePiece = async (id: string): Promise<void> => {
   const response = await fetch('/api/pieces/' + encodeURIComponent(id), {
     method: 'DELETE',
-    headers: { 'X-Owner-Token': OWNER_TOKEN },
   });
   // 204, so there is no body to read.
   if (!response.ok) await raise(response);
@@ -175,9 +192,7 @@ export const deletePiece = async (id: string): Promise<void> => {
 
 /** The reserve: pieces withdrawn from the gallery. Owner only. */
 export const fetchWaivedPieces = async (): Promise<Piece[]> => {
-  const response = await fetch('/api/pieces?waived=true', {
-    headers: { 'X-Owner-Token': OWNER_TOKEN },
-  });
+  const response = await fetch('/api/pieces?waived=true');
   if (!response.ok) await raise(response);
   return response.json();
 };
@@ -190,7 +205,6 @@ export const fetchWaivedPieces = async (): Promise<Piece[]> => {
 export const waivePiece = async (id: string): Promise<Piece> => {
   const response = await fetch('/api/pieces/' + encodeURIComponent(id) + '/waive', {
     method: 'POST',
-    headers: { 'X-Owner-Token': OWNER_TOKEN },
   });
   if (!response.ok) await raise(response);
   return response.json();
@@ -207,7 +221,6 @@ export const restorePiece = async (
   const response = await fetch('/api/pieces/' + encodeURIComponent(id) + '/restore', {
     method: 'POST',
     headers: {
-      'X-Owner-Token': OWNER_TOKEN,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ collectionIds }),
@@ -228,7 +241,6 @@ export const createCollection = async (
   const response = await fetch('/api/collections', {
     method: 'POST',
     headers: {
-      'X-Owner-Token': OWNER_TOKEN,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -255,7 +267,6 @@ export const updateCollection = async (
   const response = await fetch('/api/collections/' + encodeURIComponent(id), {
     method: 'PATCH',
     headers: {
-      'X-Owner-Token': OWNER_TOKEN,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(patch),
@@ -287,7 +298,6 @@ export const setCollectionPieces = async (
     {
       method: 'PUT',
       headers: {
-        'X-Owner-Token': OWNER_TOKEN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -301,7 +311,6 @@ export const setCollectionPieces = async (
 export const deleteCollection = async (id: string): Promise<void> => {
   const response = await fetch('/api/collections/' + encodeURIComponent(id), {
     method: 'DELETE',
-    headers: { 'X-Owner-Token': OWNER_TOKEN },
   });
   // 204, so there is no body to read.
   if (!response.ok) await raise(response);
@@ -320,7 +329,6 @@ export const setPieceCollections = async (
     {
       method: 'PUT',
       headers: {
-        'X-Owner-Token': OWNER_TOKEN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ collectionIds }),
@@ -328,4 +336,23 @@ export const setPieceCollections = async (
   );
   if (!response.ok) await raise(response);
   return response.json();
+};
+
+
+/**
+ * Ending the session, and asking who we are.
+ *
+ * Starting one lives in `keyhole.ts` instead: it is the only call that
+ * carries a password, and this module ships to everyone.
+ */
+export const signOut = async (): Promise<void> => {
+  await fetch('/api/session', { method: 'DELETE' });
+};
+
+/** Who the API thinks we are. Asked only when this browser has signed in. */
+export const fetchRole = async (): Promise<Role> => {
+  const response = await fetch('/api/session/me');
+  if (!response.ok) return 'visitor';
+  const body = await response.json();
+  return body?.role === 'owner' ? 'owner' : 'visitor';
 };

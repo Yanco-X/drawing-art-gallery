@@ -9,12 +9,18 @@ export {
   fetchCollection,
   fetchCollections,
   fetchAllCollections,
-  fetchVisibleCollections,
+  collectionsFor,
   waivePiece,
   restorePiece,
   setCollectionPieces,
   setPieceCollections,
   updateCollection,
   updatePiece,
+  signOut,
+  fetchRole,
+  whenSessionLapses,
   ApiError,
 } from './pieces';
+
+// Imported directly by the lazy dialog, never through this barrel:
+// re-exporting it here would pull the password field into every bundle.

@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CollectionGrid } from '../components/CollectionGrid';
 import { NewCollectionDialog } from '../components/NewCollectionDialog';
 import { PageShell } from '../components/PageShell';
 import { SectionState } from '../components/SectionState';
 import { ICON_BUTTON_ACCENT } from '../components/form-styles';
-import { useAsync } from '../hooks';
-import { CURRENT_ROLE } from '../lib/session';
-import { fetchVisibleCollections } from '../services';
+import { useAsync, useSession } from '../hooks';
+import { collectionsFor } from '../services';
 import type { CollectionSummary } from '../types';
 
 /*
@@ -15,7 +14,10 @@ import type { CollectionSummary } from '../types';
  * a visitor is never told they exist.
  */
 const CollectionsIndexPage = () => {
-  const collections = useAsync(fetchVisibleCollections);
+  const { role } = useSession();
+  const loadCollections = useMemo(() => collectionsFor(role), [role]);
+  const collections = useAsync(loadCollections);
+  const isOwner = role === 'owner';
 
   // Collections created since this page loaded. The response is the
   // collection the API just built, cover and count included, so this only
@@ -44,7 +46,7 @@ const CollectionsIndexPage = () => {
         {/* Under the description rather than in a section header: this page
             has no section heading to hang it from, and title-then-reason-
             then-action is the order it reads in anyway. */}
-        {CURRENT_ROLE === 'owner' && (
+        {isOwner && (
           <button
             type="button"
             onClick={() => setMaking(true)}
@@ -67,7 +69,7 @@ const CollectionsIndexPage = () => {
         )}
       </section>
 
-      {CURRENT_ROLE === 'owner' && (
+      {isOwner && (
         <NewCollectionDialog
           open={making}
           onClose={() => setMaking(false)}

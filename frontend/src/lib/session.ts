@@ -1,16 +1,28 @@
-import type { Role } from '../types';
-
 /**
- * Stands in for auth.
+ * What this browser remembers about being the owner.
  *
- * The backend guards owner-only endpoints with a shared secret sent as
- * `X-Owner-Token`; until real sessions exist, the UI treats "we hold that
- * secret" as "we are the owner". Set `VITE_OWNER_TOKEN` in
- * `frontend/.env.local` to match `OWNER_API_TOKEN` in `backend/.env`.
- *
- * Deriving the role from the token rather than hardcoding it means the
- * Upload button appears exactly when uploading would actually succeed.
+ * A marker, not a credential. The session itself lives in an HttpOnly
+ * cookie that this code cannot read, so all this records is whether asking
+ * the API who we are is worth a request. A visitor has never signed in
+ * here, so they make no auth request at all and leave no trace of the
+ * system in their network tab.
  */
-export const OWNER_TOKEN: string = import.meta.env.VITE_OWNER_TOKEN ?? '';
+export const OWNER_MARKER_KEY = 'sketchyart-owner';
 
-export const CURRENT_ROLE: Role = OWNER_TOKEN ? 'owner' : 'visitor';
+export const hasOwnerMarker = (): boolean => {
+  try {
+    return localStorage.getItem(OWNER_MARKER_KEY) === '1';
+  } catch {
+    // Private browsing or blocked storage: we simply ask every time.
+    return false;
+  }
+};
+
+export const rememberOwner = (remembered: boolean): void => {
+  try {
+    if (remembered) localStorage.setItem(OWNER_MARKER_KEY, '1');
+    else localStorage.removeItem(OWNER_MARKER_KEY);
+  } catch {
+    // Nothing to persist to; the session cookie still works for this tab.
+  }
+};

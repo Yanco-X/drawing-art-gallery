@@ -3,11 +3,11 @@
 Real sessions for the owner, and the first written statement of what the
 public half of the gallery is.
 
-**Status:** Specified 2026-09-02. **Backend built the same day** -- sessions,
-the seed command, the tombstone, the leak, and two new suites. The frontend
-is pass 2 and has not started: `CURRENT_ROLE` is still a constant and the
-owner token is still in the bundle, so nothing has changed in the browser
-yet.
+**Status:** Implemented 2026-09-02, in two passes. The backend carries
+sessions, the seed command, the tombstone and the closed leak, verified by
+257 checks across six suites. The frontend carries the session context, the
+gesture, the lazy dialog, the tombstone page and `noindex`, verified in a
+real browser over CDP. The owner token is gone from the bundle.
 
 Two things arrive together and belong in one document, because neither is
 meaningful alone. The gate has existed since the beginning -- eleven
@@ -253,12 +253,24 @@ what the interface shows.
 
 Two cheap things keep the cost of discovery up, and neither is load-bearing:
 
-- **The dialog is a lazy chunk.** Its markup and strings are not in the
-  bundle every visitor downloads, so searching that bundle for `password`
-  finds nothing. Vite already ships production source maps off.
-- **Nothing is named what it is.** Minification mangles variable names and
-  leaves string literals intact, so no shipped chunk, component or literal
-  says `admin`, `login` or `Owner sign in`.
+- **The dialog is a lazy chunk**, 1.8 KB that downloads only when something
+  opens it. The sign-in call moved to `services/keyhole.ts`, imported by
+  nothing else, so it lands in that chunk rather than in the shared one:
+  the main bundle contains no request carrying a password field. Vite
+  already ships production source maps off.
+- **Nothing is named what it is.** No shipped chunk, component or literal
+  says `admin` or `login`.
+
+**How far that actually goes, stated honestly.** The main bundle still
+contains `Sign out`, and alongside it `+ Upload`, `Waived`, `Restore`,
+`Waive`, `Delete` and every other owner control, because they are all
+statically imported. A reader searching that bundle learns there is an
+owner surface within seconds -- from the upload modal, not from the word
+`Sign out`. Hiding the one string while the other twenty ship would be
+theatre, so it was not done. What genuinely closes that gap is the
+code-splitting pass in section 11, and until it lands the claim this file
+makes is the narrow one: **the password field is not in the bundle a
+visitor downloads.** Nothing more.
 
 The obscurity is a bonus. It is not a reason to choose a weak password.
 
@@ -363,9 +375,18 @@ non-owner, matching `?waived=true`.
 module-level constant evaluated at import. Real sessions make the role
 asynchronous, and that breaks more than it looks like it does.
 
-**Three states, not two.** `owner | visitor | unknown`. Owner controls
-render only on `owner`, so nothing flashes on screen before the answer
-arrives and nothing disappears after it.
+**The marker is trusted on first paint, and corrected a moment later.**
+`Role` stayed `owner | visitor` -- a third case would have pushed into
+`Header`'s prop and every consumer that only ever cares about two -- and the
+context carries `known` alongside it.
+
+A visitor is resolved from the first paint and makes no auth request at all.
+The owner would otherwise see every owner control blank on every load and
+then appear, so the marker is believed immediately and `GET /api/session/me`
+confirms or downgrades. The cost is that someone else on the owner's own
+machine sees owner controls for a few hundred milliseconds; the backend
+refuses everything they press, so the failure is cosmetic and brief, against
+a flash the owner would see every single time.
 
 **`fetchVisibleCollections` stops working as written.**
 [`pieces.ts`](../frontend/src/services/pieces.ts) picks
@@ -404,16 +425,28 @@ type PieceResult =
 ### A lapsed session mid-action
 
 The owner is editing a wall label, the cookie has expired, the `PATCH`
-returns 401. The API client recognises 401 globally, flips the role to
-visitor, and surfaces the login **without discarding what was typed**. The
-edit is retried, not retyped.
+returns 401. The API client recognises 401 globally and opens the dialog
+over whatever is on screen.
+
+**It does not flip the role.** Flipping it would unmount `PieceOwnerActions`
+and take the half-written label with it -- the two halves of the original
+promise, "surface the login" and "keep what was typed", cannot both happen
+if the interface changes underneath. So the role is left alone, the edit
+dialog stays mounted underneath, and only dismissing the sign-in without
+signing in gives up the role.
+
+The failed request is not replayed. Retrying automatically would mean making
+every call site replayable, for a case that happens rarely; the owner presses
+Save again.
 
 ### Header
 
-`OwnerSignIn` and its `InertLink` usage are deleted from
-[`Header.tsx`](../frontend/src/components/Header.tsx). Signed in, that slot
-becomes logout -- which reveals nothing, because by then the only person
-seeing it is the owner.
+`OwnerSignIn` is deleted from
+[`Header.tsx`](../frontend/src/components/Header.tsx), and `InertLink` went
+with it: that component existed for this one call site and had no other
+caller left. Signed in, the slot becomes `Sign out` -- which reveals nothing,
+because by then the only person seeing it is the owner. A visitor gets
+nothing in its place, not even a hint of a door.
 
 STATUS §10 currently says that inert link "is where a real login would
 hang". That sentence is superseded: an invisible admin surface and a sign-in
@@ -443,6 +476,11 @@ link in the header are not both possible.
 | Unlisted first | The decision is cheap one way and irreversible the other |
 | Three role states | Two states means owner controls flash before the answer arrives |
 | `/me` gated on a local marker | A visitor's network tab shows no trace of the system |
+| The marker is believed on first paint | The alternative blanks every owner control on every load, to prevent something the backend already refuses |
+| A 401 does not flip the role | Flipping it unmounts the edit dialog and loses what was typed |
+| The failed request is not replayed | Every call site would have to become replayable, for a rare case |
+| Sign-in call in its own services module | Imported only by the lazy dialog, so no password field ships to visitors |
+| `Sign out` stays in the main bundle | Hiding one owner string while twenty others ship is theatre; the code-splitting pass is the real fix |
 
 ---
 
@@ -517,14 +555,18 @@ what holds the door in production is only what passes there.
 - A waived piece answers 410 with its title to a visitor and 200 to the
   owner
 
-### By hand, in a browser
+### In a browser, over CDP
 
-Against real PostgreSQL and MinIO: tap the copyright five times on desktop
-and on a phone, sign in, confirm the owner controls appear and the header
-offers logout, reload and stay signed in, close the browser and stay signed
-in, log out and confirm the gallery is a visitor's again with no sign of a
-login anywhere.
+Driven headless against the real stack, screenshots taken -- STATUS §11 is
+pointed about the last visual feature shipping with a blank minimap that the
+owner found by hand, with this route available the whole time and unused.
 
-**Take screenshots over CDP.** STATUS §11 is pointed about the last visual
-feature shipping with a blank minimap that the owner found by hand, with the
-Chrome-over-CDP route available the whole time and unused.
+Confirmed as a visitor: the header carries no sign-in and no upload; zero
+requests to `/api/session`; zero requests carrying `includePrivate`; five
+clicks on the copyright mark opens the dialog; a wrong key shows the API's
+own refusal; the waived piece renders its tombstone by name and an unknown
+id renders "Not found"; the spare path opens the dialog and lands on `/home`.
+
+**Still to be done by hand, because it needs the password:** signing in,
+the owner controls appearing, `Sign out`, and the session surviving both a
+reload and a closed browser. Also the gesture on a real phone.

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Role } from '../types';
-import { InertLink } from './InertLink';
+import { ACTION } from './form-styles';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NavItem {
@@ -60,20 +60,32 @@ const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   </Link>
 );
 
-const OwnerSignIn = ({ className = '' }: { className?: string }) => (
-  <InertLink
-    className={`text-[13px] uppercase tracking-btn text-faint transition-colors duration-200 hover:text-accent ${className}`}
+// Nothing stands in for this when signed out. A visitor is not shown a
+// door, per context/AUTH.md section 5.
+const SignOut = ({
+  onSignOut,
+  className = '',
+}: {
+  onSignOut?: () => void;
+  className?: string;
+}) => (
+  <button
+    type="button"
+    onClick={onSignOut}
+    className={`${ACTION} text-faint hover:text-accent ${className}`}
   >
-    Owner sign in
-  </InertLink>
+    Sign out
+  </button>
 );
 
 export const Header = ({
   role,
   onUploadClick,
+  onSignOut,
 }: {
   role: Role;
   onUploadClick?: () => void;
+  onSignOut?: () => void;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
@@ -100,16 +112,17 @@ export const Header = ({
         <div className="flex items-center gap-4">
           <ThemeToggle />
 
-          {role === 'owner' ? (
-            <button
-              type="button"
-              onClick={onUploadClick}
-              className="cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90"
-            >
-              + Upload
-            </button>
-          ) : (
-            <OwnerSignIn className="hidden sm:inline" />
+          {role === 'owner' && (
+            <>
+              <SignOut onSignOut={onSignOut} className="hidden sm:inline" />
+              <button
+                type="button"
+                onClick={onUploadClick}
+                className="cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90"
+              >
+                + Upload
+              </button>
+            </>
           )}
 
           <button
@@ -135,7 +148,7 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
-          {role === 'visitor' && <OwnerSignIn />}
+          {role === 'owner' && <SignOut onSignOut={onSignOut} />}
         </nav>
       )}
     </header>

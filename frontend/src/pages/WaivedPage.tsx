@@ -1,7 +1,6 @@
 import { AllWorkSection } from '../components/AllWorkSection';
 import { PageShell } from '../components/PageShell';
-import { useAsync } from '../hooks';
-import { CURRENT_ROLE } from '../lib/session';
+import { useAsync, useSession } from '../hooks';
 import { fetchWaivedPieces } from '../services';
 
 /*
@@ -12,9 +11,10 @@ import { fetchWaivedPieces } from '../services';
  * from here, by way of a piece's own page.
  */
 const WaivedPage = () => {
+  const { role } = useSession();
   const pieces = useAsync(fetchWaivedPieces);
 
-  if (CURRENT_ROLE !== 'owner') {
+  if (role !== 'owner') {
     return (
       <PageShell>
         <section className="mx-auto flex w-full max-w-content flex-col gap-6 px-gutter pt-intro-top pb-section-lg">

@@ -1,0 +1,26 @@
+# Unlisted. noindex in the page head is what actually keeps this out of
+# search results -- it survives being linked, which a disallow does not.
+# These rules are for the crawlers that harvest images for training sets
+# and honour robots.txt. The ones that do not honour it are not addressed
+# by anything here.
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: *
+Allow: /

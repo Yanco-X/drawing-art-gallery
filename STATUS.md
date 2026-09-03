@@ -286,7 +286,7 @@ Six routes:
 | Route | Page |
 |---|---|
 | `/home` | `LandingPage` — intro, collections, all work. `/` redirects here |
-| `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions. `?view=1` opens the detail viewer |
+| `/piece/:id` | `PiecePage` — the artwork, wall label, owner actions. `?view=1` opens the detail viewer. A waived piece renders its tombstone |
 | `/collections` | `CollectionsIndexPage` — every collection the caller may see |
 | `/collections/:slug` | `CollectionPage` — the set's label, then its pieces |
 | `/tags` | `TagsPage` — a placeholder, per §10 |
@@ -310,9 +310,14 @@ an empty gallery, a slow one and a broken one all look intentional.
 collection creation both return the created record, and the landing page
 puts it straight on screen.
 
-**`fetchCollections` is what a visitor sees.** `fetchVisibleCollections`
-picks it or `fetchAllCollections` on `CURRENT_ROLE`, so the owner's drafts
-survive a reload. Module-level, so it can be handed to `useAsync` directly.
+**`fetchCollections` is what a visitor sees.** `collectionsFor(role)`
+returns it or `fetchAllCollections`, so the owner's drafts survive a reload.
+It returns the loader rather than calling it, so a page can memoise on the
+role and hand the result to `useAsync` with a stable dependency.
+
+**The role is runtime state.** `useSession()` carries `role`, `known`, and
+the dialog. There is no `CURRENT_ROLE` constant any more, and no owner token
+in the bundle -- the session is an `HttpOnly` cookie the page cannot read.
 
 **Tailwind v4 with `@theme inline`.** Semantic tokens only — `text-dim`,
 `border-line`, `bg-surface` — swapped per theme via `data-theme`. Never a
@@ -336,20 +341,27 @@ Full vocabulary in [`context/DESIGN.md`](context/DESIGN.md).
 
 ## 7. Ownership, stated plainly
 
-**There is no authentication.** `CURRENT_ROLE` is a constant, and the owner
-token ships inside the JavaScript bundle. Whoever opens the gallery is the
-owner.
+**The gate holds.** Sessions landed on 2026-09-02. `is_owner()` and
+`require_owner` in `app/auth.py` are still the only place identity is
+decided — they now ask Flask-Login, and nothing else in the backend changed
+to make that true, which was the point of writing them that way.
 
-This is a known and accepted state of the project, not an oversight. Owner
-gating is written throughout the backend as a *statement of intent* — so
-that when real sessions land, the rules already exist and only the identity
-check is replaced. `is_owner()` and `require_owner` in `app/auth.py` are
-that single replacement point.
+The credential is a password on one owner row, hashed by Werkzeug and seeded
+by `flask --app app set-owner`. The session is an `HttpOnly` cookie with a
+remember cookie behind it, so closing the tab does not sign the owner out
+and JavaScript never reads the credential.
 
-Do not build features that depend on the gate actually holding.
+**The gallery shows no way in.** No sign-in link, no login route. Five
+clicks on the footer's `© 2026` opens a lazily-loaded dialog. That hiding is
+cosmetic and is not what holds the door — see
+[`context/AUTH.md`](context/AUTH.md) §5.
 
-**This is now the feature being built** — see §10. Until it lands, the
-sentence above still governs everything else.
+**`OWNER_API_TOKEN` still works, as a development and test credential.** It
+must be unset in production. `AUTH.md` §7 carries the condition; this line
+is the reminder.
+
+What a visitor may do is written down for the first time, in `AUTH.md` §1,
+and `tests/smoke_visitor.py` is named after it.
 
 ---
 
@@ -402,6 +414,8 @@ built-in `WebSocket`. Useful, but the owner tests by hand and prefers to.
 | Collection view — page, index, real links, private gating | Done |
 | Collection edition — details, arrange, cover, delete | Done |
 | Piece editing — the wall label, after upload | Done |
+| Detailed View — tiles, the viewer, the minimap | Done |
+| Authentication — sessions, the visitor contract, the invisible way in | Done |
 
 **Waived pieces** is specified in full in
 [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) — 12 sections, and
@@ -511,6 +525,32 @@ It now states the rule instead, split by shape: filled accent marks the one
 action a surface exists for, at most one per screen; outlined or hairline
 accent is the interface pointing at something, and may repeat.
 
+**Authentication**, 2026-09-02, specified in
+[`context/AUTH.md`](context/AUTH.md). Flask-Login replaced the shared secret
+inside `is_owner()` and `require_owner`, and nothing else in the backend
+changed to make that work. One owner, a password only, seeded by a prompted
+CLI command; a remember cookie, so closing the tab does not sign out.
+
+The half worth reading the document for is the other one: **the visitor
+contract**. What a visitor may do had only ever been defined by subtraction,
+and writing it down positively immediately found a leak —
+`?includePrivate=1` was never owner-gated and exposed every draft's name,
+slug, description, count and cover, from under a comment that said visitors
+never see unpublished collections. `tests/smoke_visitor.py` is named after
+the contract and walks the mutations from the url map, so the next one is
+covered the day it is written.
+
+A waived piece now answers **410 with its title** rather than 404. Someone
+returning to a bookmark saw the piece while it hung, so withholding its
+existence protects nothing and only looks broken — the one deliberate
+exception to the rule that a withheld thing is simply not there.
+
+The gallery shows no way in: no sign-in link, no login route, `OwnerSignIn`
+and `InertLink` both deleted. Five clicks on the footer's `© 2026` opens a
+lazily-loaded dialog, and an unlinked path whose hash is the only thing in
+the bundle is the spare key. That hiding is cosmetic, is documented as
+cosmetic, and is not what holds the door.
+
 ### Live data
 
 | | |
@@ -539,88 +579,33 @@ the rest of the gallery is untouched. Keep the discipline.
 
 ---
 
-## 10. Next: authentication, and what a visitor may do
+## 10. Next: tags that do something
 
-**This is the feature to build.** Nothing in §9 is outstanding — collections,
-piece editing, the tag placeholder and all three passes of Detailed View are
-done and in use.
+**Authentication is done**, in two passes on 2026-09-02, and specified in
+full in [`context/AUTH.md`](context/AUTH.md) — the visitor contract, the
+session design, the tombstone, and the reasoning behind each. Read that
+rather than a summary here.
 
-### The state of it today
+Two things it deliberately did not do, either of which could be the next
+feature instead:
 
-**There is no authentication.** `CURRENT_ROLE` in `frontend/src/lib/session.ts`
-is derived from `VITE_OWNER_TOKEN`, which means the owner's shared secret
-ships inside the JavaScript bundle. Anyone who opens the deployed gallery and
-reads the source is the owner. §7 says this plainly and it has been the
-accepted state since the beginning; it stops being acceptable the moment this
-is on the public internet.
+- **Waived derivatives are still anonymously fetchable.** §11. A
+  storage-layout problem; it needs its own decision about buckets and
+  presigned URLs, and it was never going to be fixed by adding a login.
+- **The owner surface still ships to every visitor.** §11. Worth doing as a
+  performance pass.
 
-What already exists is the *shape* of the rules, which is the expensive part:
+### The feature itself
 
-- **One replacement point.** `is_owner()` and `require_owner` in
-  `backend/app/auth.py` are the only things that decide identity. Twelve
-  endpoints carry `@require_owner`; six read paths branch on `is_owner()`.
-  Replacing those two functions replaces the whole scheme — nothing else in
-  the backend knows how identity is established.
-- **The rules are already enforced server-side.** A visitor cannot mutate
-  anything today even with the token absent; they get 401. The gate is real,
-  it is only the *credential* that is worthless.
-- **The read-path branches already exist too.** A waived piece 404s for a
-  visitor, a private collection 404s for a visitor, and a piece's collection
-  list is filtered to the public ones. Those are the visitor limitations, and
-  they are written and tested.
-- **A `users` table exists and is unused** — `id`, `email` (unique),
-  `password_hash`, `role`, `created_at`, plus a `pieces.user_id` foreign key
-  that is always null. Scaffolding, put there for exactly this feature. It
-  has never been written to, so its shape is still free to change.
+Deferred since the beginning, not dropped. Tags can be entered on upload and
+corrected afterwards, they are stored, and they render on the wall label.
+Nothing reads them: no filtering, and no view of the work sharing a tag.
+`/tags` exists as a placeholder that says so.
 
-### What to build
-
-**Decided and specified on 2026-09-02 in
-[`context/AUTH.md`](context/AUTH.md).** Read that rather than this section:
-it carries the visitor contract, the session design and the reasoning. The
-short version:
-
-- **Flask-Login, cookie-backed, permanent.** Not JWT — a one-user gallery
-  needs no statelessness, and a token in JavaScript is the problem being
-  solved. `is_owner()` and `require_owner` are the only things replaced.
-- **One owner, password only.** A row in the unused `users` table, seeded by
-  a prompted CLI command. `email` stays as an identifier, not a login field.
-- **The visitor contract is written down** and gets a fifth suite named
-  after it, `tests/smoke_visitor.py`.
-- **No sign-in link anywhere.** The header's inert `Owner sign in` is
-  deleted rather than wired up — the login is opened by a gesture on the
-  footer, per
-  [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md).
-  The sentence that link "is where a real login would hang" is superseded.
-- **A waived piece answers 410 with its title**, so a bookmark returns an
-  explanation rather than a 404.
-- **`GET /api/collections?includePrivate=1` is not owner-gated today** and
-  leaks every draft's name, slug, description, count and cover. Found while
-  writing the contract; fixed as part of this feature.
-
-### The gap that is genuinely a hole
-
-**Waived derivatives stay anonymously fetchable by URL.** The public bucket
-policy matches `sketchyart/*` rather than a prefix, so anyone who saw a piece
-while it was exhibited keeps a working link to its display and thumb
-renditions after it is waived — and now to its tiles as well. This was filed
-under §11 as "revisit when sessions land", and sessions are landing. It is a
-storage-layout problem rather than an auth one, so it does not get fixed for
-free by adding a login; it needs its own decision.
-
-The archival originals are *not* affected — they live in the private bucket
-and return 403 anonymously, verified.
-
-### After this: tags that do something
-
-Deferred, not dropped. Tags can be entered on upload and corrected
-afterwards, they are stored, and they render on the wall label. Nothing reads
-them: no filtering, and no view of the work sharing a tag. `/tags` exists as
-a placeholder that says so.
-
-That gap sharpened with piece editing — there is now a control for curating
-tags and no consequence to curating them well. What belongs on the page has
-not been decided.
+That gap sharpened twice. Piece editing gave the owner a control for curating
+tags with no consequence to curating them well. And the tombstone now wants a
+"similar works" panel, which needs *something* to compare on — tags are the
+only candidate the data model has, so this feature is what unblocks that one.
 
 **To build it:** `/tags` listing what exists with counts, `/tags/:slug`
 showing the work carrying one, and `GET /api/pieces?tag=<slug>` or a tags
@@ -628,27 +613,40 @@ blueprint — neither exists. The pieces payload already includes `tags`, so
 the grid needs no new shape. `AllWorkSection` carries a standing comment that
 tag filtering is deliberately not wired up.
 
+**Live data note:** both existing tags — *Charcoal* and *Portrait* — are
+attached to nothing, so the first version of this page will be empty until
+some work is tagged.
+
 ---
 
 ## 11. Known gaps
 
-Carried forward deliberately. None of these block §10.
+Carried forward deliberately.
 
-- **"Owner sign in" is inert** and **waived derivatives stay anonymously
-  fetchable**. Both have moved into §10 — they are part of the feature being
-  built rather than gaps carried past it.
+- **Waived derivatives stay anonymously fetchable.** The public bucket
+  policy matches `sketchyart/*` rather than a prefix, so a link to a waived
+  piece's `display.webp`, `thumb.webp` or tiles keeps working. Sessions did
+  not fix this and were never going to — it is a storage-layout problem, and
+  it is the most obvious thing to pick up next.
+- **The owner surface still ships to every visitor.** The upload modal,
+  arrange mode, the dialogs, `CollectionPicker` and `TagInput` are all
+  statically imported, so the main bundle says plainly that an owner exists.
+  Only the sign-in dialog is lazy. Worth fixing as a **performance** pass —
+  lazy chunks hide nothing from anyone looking — and `AUTH.md` §5 is explicit
+  that the bundle claim is narrow until it lands.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
-- **No suite looks at the UI.** The 210 checks cover the API, storage and
+- **No suite looks at the UI.** The 257 checks cover the API, storage and
   the image pipeline; nothing asserts that a page renders. Detailed View was
   verified by geometry, network and build, and its blank minimap was then
-  found by the owner in use. **§8's Chrome-over-CDP route was available the
-  whole time and went unused** — the bug would have shown in a screenshot.
-  Use it before saying a visual change works.
+  found by the owner in use. Authentication was the first feature driven
+  through Chrome over CDP before being handed over — by hand, not by a
+  suite, so it is a habit rather than a guarantee. Use it before saying a
+  visual change works.
 
 ---
 

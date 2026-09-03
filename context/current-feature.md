@@ -8,19 +8,19 @@ writes down, for the first time, what the public half of the site is.
 
 ## Status
 
-**Pass 1 done: the backend.** Sessions, the seed command, the tombstone, the
-`includePrivate` leak, and two new suites -- 257 checks across six. Full
-specification in [`AUTH.md`](./AUTH.md).
+**Done, in two passes on 2026-09-02.** Backend: sessions, the seed command,
+the tombstone, the closed leak, two new suites -- 257 checks across six.
+Frontend: the session context, the gesture, the lazy dialog, the tombstone
+page, `noindex`, and the owner token gone from the bundle. Verified in a
+real browser over CDP.
 
-**Pass 2 is the frontend, and has not started.** Nothing has changed in the
-browser: `CURRENT_ROLE` is still a module constant, `VITE_OWNER_TOKEN` is
-still in the bundle, and the header still shows the inert `Owner sign in`.
-The gallery behaves exactly as it did.
+Full specification and reasoning in [`AUTH.md`](./AUTH.md).
 
-Before pass 2 can be tried by hand, the owner runs once:
+**Still to try by hand**, because it needs the password: signing in, the
+owner controls appearing, `Sign out`, the session surviving a reload and a
+closed browser, and the gesture on a real phone.
 
-    cd backend
-    .venv/Scripts/python.exe -m flask --app app set-owner
+Next feature is tags that do something -- see `STATUS.md` section 10.
 
 ## Goals
 
@@ -135,3 +135,6 @@ in production is what passes there.
 - **2026-09-02**: Authentication pass 1, the backend. Flask-Login sessions,
   the `set-owner` command, the 410 tombstone, the `includePrivate` leak
   closed, and two new suites -- 257 checks across six.
+- **2026-09-02**: Authentication pass 2, the frontend. The session context,
+  the footer gesture, the lazy dialog, the tombstone page, `noindex`, and
+  `CURRENT_ROLE` and the owner token both deleted.
