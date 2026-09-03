@@ -5,7 +5,7 @@ public half of the gallery is.
 
 **Status:** Implemented 2026-09-02, in two passes. The backend carries
 sessions, the seed command, the tombstone and the closed leak, verified by
-257 checks across six suites. The frontend carries the session context, the
+287 checks across seven suites. The frontend carries the session context, the
 gesture, the lazy dialog, the tombstone page and `noindex`, verified in a
 real browser over CDP. The owner token is gone from the bundle.
 
@@ -465,7 +465,7 @@ link in the header are not both possible.
 | Password only, no username | One owner. `users.email` is an identifier, not a login field |
 | Seed by CLI, prompted | A password belongs in neither `.env` nor a migration |
 | In-memory rate limit | No dependency, no table; proportionate to one password on a one-user site |
-| Dev token retained | Keeps 210 checks running unmodified. Written down as a back door, with the removal condition |
+| Dev token retained | Keeps the existing suites running unmodified. Written down as a back door, with the removal condition |
 | 410 for a waived piece | The visitor already saw it; withholding protects nothing and looks broken |
 | 404 for a private collection | Nothing in the row says it was ever public, so the site cannot claim it was |
 | Tombstone shows the title only | The visitor arrived holding the link; the rest was taken off the wall on purpose |

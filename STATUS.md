@@ -4,7 +4,7 @@ A personal art gallery. The owner uploads drawings, the gallery exhibits
 them, and collections group them into sets. Built to be lived in rather
 than shipped to a market.
 
-**Last updated:** 2026-09-02
+**Last updated:** 2026-09-03
 **Purpose of this file:** a handoff. It is the current state of the project,
 what has been built, and what comes next.
 
@@ -23,21 +23,22 @@ what has been built, and what comes next.
 drawing-art-gallery/
 ├── AGENTS.md              working agreement — read this first
 ├── STATUS.md              this file
-├── backend/               28 .py files
+├── backend/               36 .py files
 │   ├── docker-compose.yml postgres + minio — note: not at the root
-│   ├── app/               config, models, schemas, auth, errors, db
-│   │   ├── api/           pieces.py, collections.py, helpers.py
-│   │   └── services/      storage adapters, images, slugs
-│   ├── migrations/        alembic, 4 revisions
+│   ├── app/               config, models, schemas, auth, cli, ratelimit, errors, db
+│   │   ├── api/           pieces.py, collections.py, session.py, socials.py, helpers.py
+│   │   └── services/      storage adapters, images, tiles, slugs
+│   ├── migrations/        alembic, 5 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
-│   └── tests/             4 suites, 210 checks
-├── frontend/              60 .ts/.tsx files
+│   └── tests/             7 suites, 287 checks
+├── frontend/              71 .ts/.tsx files
 │   └── src/
-│       ├── components/    37
-│       ├── contexts/      3  (theme, role, ...)
-│       ├── hooks/         7  (incl. useAsync)
+│       ├── components/    40 (incl. icons.tsx and platform-icons.tsx)
+│       ├── contexts/      theme, session, socials — provider + context per pair
+│       ├── hooks/         10 (incl. useAsync, useSession, useSocials)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
-│       ├── services/      pieces.ts — the whole API client
+│       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare path)
+│       ├── services/      pieces.ts — the API client; keyhole.ts — sign-in only
 │       └── types/         the shared shapes
 └── context/               design and specification documents
 ```
@@ -78,7 +79,27 @@ npm run dev                   # :5173, proxies /api and /media to 127.0.0.1:5000
 
 ```bash
 curl http://127.0.0.1:5000/api/health
+curl http://127.0.0.1:5000/api/session/me     # {"role": "visitor"}
 ```
+
+### Signing in
+
+The gallery shows no way in — that is the design, not a missing button. Five
+clicks within three seconds on the `© 2026` in the footer opens the dialog.
+Full reasoning in [`context/AUTH.md`](context/AUTH.md) §5.
+
+The owner already exists in the live database. On a fresh one, create them:
+
+```bash
+.venv/Scripts/python.exe -m flask --app app set-owner
+```
+
+It prompts for an email — an identifier only, never asked for at sign-in —
+and a password. A password never goes in `.env` or a migration.
+
+**For a development session, `OWNER_API_TOKEN` is usually easier.** It still
+satisfies every owner route, which is how the suites run. It must be unset
+in production; see §7.
 
 ### Environment
 
@@ -95,11 +116,10 @@ Recreate them from this table if they are missing.
 | `SECRET_KEY` | any 64 hex characters — signs the session cookie |
 | `FLASK_DEBUG` | `1` |
 
-`frontend/.env.local`
-
-| Key | Local value |
-|---|---|
-| `VITE_OWNER_TOKEN` | `dev-owner-token` |
+**`frontend/.env.local` is no longer needed.** It held `VITE_OWNER_TOKEN`,
+which shipped the owner's secret inside the bundle. Both the variable and
+the code reading it are gone; an existing file is harmless and can be
+deleted.
 
 S3 settings fall back to working defaults in `app/config.py` — bucket
 `sketchyart`, private bucket `sketchyart-private`, endpoint
@@ -227,8 +247,9 @@ Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ## 5. API
 
-16 routes. Everything under `/api`. `[owner]` means the route requires the
-owner token in `X-Owner-Token`.
+20 routes. Everything under `/api`. `[owner]` means the route requires the
+owner: a session cookie, or `X-Owner-Token` while the development
+credential is still configured — see §7.
 
 ### Pieces
 
@@ -340,6 +361,24 @@ in the bundle -- the session is an `HttpOnly` cookie the page cannot read.
 `border-line`, `bg-surface` — swapped per theme via `data-theme`. Never a
 raw hex in a component.
 
+**Utilities beat component classes.** Tailwind emits `@layer utilities`
+after `@layer components`, so a utility on the same element wins over a
+class defined in `index.css` regardless of the order you wrote them. This
+already produced one silent bug: `grid` alongside `.menu-panel` beat its
+`display: none`, leaving an invisible sheet of buttons over the control
+beneath it. Put layout on a child, not on the element carrying the class.
+
+**Two things are lazily loaded, and both are owner-facing.** `Keyhole`
+(sign-in) and `SocialsDialog`. OpenSeadragon is the third lazy chunk.
+Everything else — the upload modal, arrange mode, every other dialog — is
+statically imported and ships to visitors; see §11.
+
+**Three providers wrap the router**, in `App.tsx`: theme, session, socials.
+Each is a `*Provider.tsx` plus a `*-context.ts`, kept apart so the provider
+file exports only a component and react-refresh stays happy. `PageShell`
+remounts on every navigation, so anything the header needs is fetched in a
+provider rather than in the shell.
+
 **One accent, one exception.** `danger` is the single sanctioned second
 colour, and it is spent. Contrast verified AA in every theme. Filled accent
 marks the one action a surface exists for, at most one per screen; outlined
@@ -349,8 +388,10 @@ accent is the interface pointing at something and may repeat.
 the bundle. OpenSeadragon is imported dynamically inside `DetailedView`, so
 it builds as a 348 KB chunk that only downloads when the viewer opens —
 `@types/openseadragon` is a devDependency and never ships. `AGENTS.md` §2
-means nothing else gets added without asking: the icons, the masonry, the
-drag-and-drop and the modals are all hand-rolled, deliberately.
+means nothing else gets added without asking: the icons, the platform marks,
+the masonry, the drag-and-drop and the modals are all hand-rolled,
+deliberately. The backend has one addition, Flask-Login, approved on
+2026-09-02.
 
 Full vocabulary in [`context/DESIGN.md`](context/DESIGN.md).
 
@@ -394,6 +435,7 @@ cd backend
 .venv/Scripts/python.exe tests/smoke_waived.py         # 40
 .venv/Scripts/python.exe tests/smoke_visitor.py        # 26
 .venv/Scripts/python.exe tests/smoke_session.py        # 21
+.venv/Scripts/python.exe tests/smoke_socials.py        # 27
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
 
@@ -402,7 +444,8 @@ cd backend
 walks the mutations from the url map rather than a hand-written list, so one
 added later is covered the day it is written. `smoke_session.py` runs with
 `OWNER_API_TOKEN` empty — the one place that proves the gallery does not
-depend on the development credential.
+depend on the development credential. `smoke_socials.py` covers the list
+the header menu reads, including the url schemes it refuses.
 
 The first six run against an in-memory store and a throwaway database.
 **`integration_live.py` runs against the real stack** — a live Flask,
@@ -605,10 +648,12 @@ odd host. The scheme is now judged before anything is rewritten.
 | | |
 |---|---|
 | Pieces | 14 rows — 13 exhibited, 1 waived (*Untitled Study VII*) |
-| Tags | 2 — *Charcoal* and *Portrait*, both attached to nothing |
-| Collections | 2 — **Testing** (public, 6) and **Yankito** (public, 4) |
+| Tags | 4 — *Pencil* and *Reference* on one piece each; *Charcoal* and *Portrait* on nothing |
+| Collections | 2 — **Testing** (public, 5) and **Yankito** (public, 4) |
+| Socials | 1 — Instagram |
+| Users | 1 — the owner |
 
-Counted against the live database on 2026-09-01. It moves whenever the owner
+Counted against the live database on 2026-09-03. It moves whenever the owner
 uploads, so treat it as a sketch of the shape rather than a number to trust.
 
 **The owner created both collections, curated them, and waived that piece.**
@@ -694,19 +739,33 @@ Carried forward deliberately.
   Only the sign-in dialog is lazy. Worth fixing as a **performance** pass —
   lazy chunks hide nothing from anyone looking — and `AUTH.md` §5 is explicit
   that the bundle claim is narrow until it lands.
+- **The owner's header scrolls sideways between 640 and ~860px.** At 768 it
+  wants 848px of content. Four nav items, a wordmark and three controls do
+  not fit once the desktop nav appears at 640. A visitor is fine — fewer nav
+  items and no Upload. The fix is moving the nav and the menu button from
+  `sm` to `lg`, which is three class changes and also changes the visitor's
+  header between 640 and 1024, so it was left as the owner's call rather
+  than done quietly. Raised three times; deferred each time, deliberately.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
-- **No suite looks at the UI.** The 257 checks cover the API, storage and
+- **No suite looks at the UI.** The 287 checks cover the API, storage and
   the image pipeline; nothing asserts that a page renders. Detailed View was
   verified by geometry, network and build, and its blank minimap was then
   found by the owner in use. Authentication was the first feature driven
   through Chrome over CDP before being handed over — by hand, not by a
   suite, so it is a habit rather than a guarantee. Use it before saying a
   visual change works.
+
+  **And drive it with real input events.** A check that called
+  `element.click()` reported the socials dialog's Add button working while
+  it was in fact covered by an invisible panel: `.click()` dispatches
+  straight to the node and skips hit testing entirely. Use
+  `document.elementFromPoint` or `Input.dispatchMouseEvent` to prove a
+  control is actually reachable.
 
 ---
 
@@ -724,6 +783,7 @@ Read in this order:
 | [`context/COLLECTIONS.md`](context/COLLECTIONS.md) | Viewing and editing collections; the private-draft rules |
 | [`context/AUTH.md`](context/AUTH.md) | Sessions, the visitor contract, the invisible way in |
 | [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md) | The full-window viewer: tiles, zoom, minimap |
+| [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md) | The admin-access strategies `AUTH.md` was decided against |
 | [`context/coding-preferences.md`](context/coding-preferences.md) | How code should read |
 | [`context/current-feature.md`](context/current-feature.md) | Scratch space for the feature in flight |
 

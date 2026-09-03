@@ -168,6 +168,10 @@ not-found and unavailable states.
 `InertLink` survives this pass. "Owner sign in" and the Tags nav item are
 still inert, which is what it is for.
 
+> Both are gone as of 2026-09-02, and `InertLink` with them: the sign-in
+> link was deleted rather than wired up, and the Tags page was removed in
+> favour of tags as a filter. See `AUTH.md` §5 and `STATUS.md` §10.
+
 ---
 
 ## 7. Frontend fetching
@@ -175,10 +179,15 @@ still inert, which is what it is for.
 `fetchCollections` stays honest as *what a visitor sees*. `fetchAllCollections`
 already exists and sends the owner token with `?includePrivate=1`.
 
-The landing row and the index choose between them on `CURRENT_ROLE`. The
-choice is made once, in a module-level function per page, so it can be
-passed to `useAsync` as a stable dependency rather than an inline arrow —
-the trap documented in `useAsync`.
+The landing row and the index choose between them on the role. The choice
+is made once per page and memoised, so it can be passed to `useAsync` as a
+stable dependency rather than an inline arrow — the trap documented in
+`useAsync`.
+
+> Written when the role was `CURRENT_ROLE`, a module constant. Since
+> sessions landed the role is runtime state from `useSession()`, so the
+> choice moved into the pages as `collectionsFor(role)` inside a `useMemo`.
+> The rule it describes is unchanged.
 
 A new `fetchCollection(slug)` returns `Collection | null`, mirroring
 `fetchPiece`: null on 404, because a collection that does not exist — or is

@@ -168,7 +168,7 @@ Letter-spacing carries meaning and pairs with case:
 |---|---|---|
 | `0.02em` | Wordmark | Mixed |
 | `0.06em` | Nav, control labels, collection counts | Uppercase, except control labels |
-| `0.08em` | Buttons, footer, "Owner sign in" | Uppercase |
+| `0.08em` | Buttons, footer, menu rows | Uppercase |
 | `0.24em` | Eyebrow | Uppercase |
 
 Line-height is `1.05` on the display headline and default everywhere else.
@@ -230,10 +230,12 @@ All motion must be skipped under `prefers-reduced-motion: reduce`.
 Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, bottom border in `line`. Padding `20px` vertical.
 
 * **Wordmark** -- "Sketchy" in `text` plus "Art" in accent italic, Instrument Serif 24px.
-* **Nav** -- Gallery / Collections / Tags, 14px uppercase. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a three-cluster `space-between` row and is correct.
+* **Nav** -- Gallery / Collections / Socials, 14px uppercase, plus Waived for the owner. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a three-cluster `space-between` row and is correct.
+* **Socials** is a button, not a link, and carries a chevron -- the only thing marking it apart from its neighbours, and what says a click opens rather than goes.
 * **Theme toggle** -- 1px `line` border, transparent fill, glyph plus label. **The label names the theme currently active, not the one it switches to.** The accessible name states the action.
-* **Owner state** -- a solid accent "+ Upload" button. **Visitor state** -- an "Owner sign in" text link in `faint`.
-* **Below 640px** -- the nav collapses behind a menu button drawn as three 1px bars, the toggle drops to its glyph, and "Owner sign in" moves into the menu panel.
+* **Owner state** -- a solid accent "+ Upload" button, then a 36px square sign-out button set 40px apart from it. The gap is deliberate: the two are next to each other but are not the same kind of act, and a mis-click ends the session someone was about to upload into.
+* **Visitor state** -- nothing. No sign-in link, no hint that an owner exists; `AUTH.md` §5 has the reasoning.
+* **Below 640px** -- the nav collapses behind a menu button drawn as three 1px bars, the toggle drops to its glyph, and the socials and sign-out move into the menu panel, where they can carry labels.
 
 ### Icon buttons
 
