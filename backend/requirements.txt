@@ -5,6 +5,9 @@ alembic>=1.14
 # and would need a local C toolchain to build.
 psycopg[binary]>=3.2.10
 python-dotenv>=1.0
+# Owner sessions. Werkzeug ships with Flask and does the password hashing;
+# Flask-Login only carries the user id in the signed session cookie.
+flask-login>=0.6.3
 # Image decoding, EXIF handling, resizing, WebP encoding.
 Pillow>=11.0
 # S3-compatible object storage. Works against AWS S3, Cloudflare R2,

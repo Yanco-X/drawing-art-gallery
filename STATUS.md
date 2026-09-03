@@ -92,6 +92,7 @@ Recreate them from this table if they are missing.
 | `DATABASE_URL` | `postgresql+psycopg://sketchyart:sketchyart@localhost:5432/sketchyart` |
 | `STORAGE_BACKEND` | `s3` |
 | `OWNER_API_TOKEN` | `dev-owner-token` |
+| `SECRET_KEY` | any 64 hex characters — signs the session cookie |
 | `FLASK_DEBUG` | `1` |
 
 `frontend/.env.local`
@@ -223,7 +224,7 @@ owner token in `X-Owner-Token`.
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/pieces` | Exhibited only. `?waived=true` `[owner]` returns the reserve, newest waived first |
-| `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`. 404 for a waived piece unless owner |
+| `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`. **410 and a tombstone** for a waived piece unless owner |
 | `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives and the Deep Zoom pyramid. Repeated `collectionIds` fields join the piece to collections in the same transaction |
 | `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags. Only keys present are touched. Allowed on a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
@@ -235,12 +236,20 @@ owner token in `X-Owner-Token`.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/collections` | Public only. `?includePrivate=1` for all |
+| `GET` | `/api/collections` | Public only. `?includePrivate=1` `[owner]` for all |
 | `GET` | `/api/collections/<slug>` | Detail with pieces in `display_order`. 404 for a private collection unless owner |
 | `POST` | `/api/collections` `[owner]` | Optional `pieceIds` in pick order, `coverPieceId` |
 | `PATCH` | `/api/collections/<id>` `[owner]` | `name`, `slug`, `description`, `isPublic`, `coverPieceId`. The UI never sends `slug`, so a rename keeps the URL |
 | `PUT` | `/api/collections/<id>/pieces` `[owner]` | Replaces membership and rewrites order |
 | `DELETE` | `/api/collections/<id>` `[owner]` | Removes the grouping. Pieces are untouched |
+
+### Session
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/session` | Password in, cookie out. Rate limited, and every failure answers the same 401 |
+| `DELETE` | `/api/session` `[owner]` | Clears the session and the remember cookie |
+| `GET` | `/api/session/me` | `{"role": "owner"}` or `{"role": "visitor"}` |
 
 ### Other
 
@@ -346,18 +355,27 @@ sentence above still governs everything else.
 
 ## 8. Verification
 
-Four suites, 210 checks, no test framework — each is a script that prints
+Six suites, 257 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
 cd backend
-.venv/Scripts/python.exe tests/smoke_collections.py    # 54
+.venv/Scripts/python.exe tests/smoke_collections.py    # 55
 .venv/Scripts/python.exe tests/smoke_uploads.py        # 90
-.venv/Scripts/python.exe tests/smoke_waived.py         # 38
+.venv/Scripts/python.exe tests/smoke_waived.py         # 40
+.venv/Scripts/python.exe tests/smoke_visitor.py        # 23
+.venv/Scripts/python.exe tests/smoke_session.py        # 21
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
 
-The first three run against an in-memory store and a throwaway database.
+`smoke_visitor.py` asserts the contract in
+[`context/AUTH.md`](context/AUTH.md) §1 with no credentials at all, and
+walks the mutations from the url map rather than a hand-written list, so one
+added later is covered the day it is written. `smoke_session.py` runs with
+`OWNER_API_TOKEN` empty — the one place that proves the gallery does not
+depend on the development credential.
+
+The first five run against an in-memory store and a throwaway database.
 **`integration_live.py` runs against the real stack** — a live Flask,
 PostgreSQL and MinIO. It creates a fixture titled `__integration_fixture__`,
 cleans up only that, and asserts the rest of the gallery is untouched. It

@@ -103,7 +103,11 @@ check("waiving twice is refused",
       client.post(f"/api/pieces/{a}/waive", headers=OWNER).status_code == 409)
 
 print("\n== a waived piece is hidden from visitors, not from the owner ==")
-check("visitor gets 404", client.get(f"/api/pieces/{a}").status_code == 404)
+gone = client.get(f"/api/pieces/{a}")
+check("visitor gets 410, not 404", gone.status_code == 410, str(gone.status_code))
+check("the tombstone names the piece", gone.get_json().get("title") == "Alpha")
+check("and carries nothing else of it", set(gone.get_json()) == {"error", "title"},
+      str(sorted(gone.get_json())))
 check("owner gets 200", client.get(f"/api/pieces/{a}", headers=OWNER).status_code == 200)
 check("the reserve list needs the owner token",
       client.get("/api/pieces?waived=true").status_code == 401)

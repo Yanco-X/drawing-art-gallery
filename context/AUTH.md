@@ -3,10 +3,14 @@
 Real sessions for the owner, and the first written statement of what the
 public half of the gallery is.
 
-**Status:** Specified 2026-09-02. Not built.
+**Status:** Specified 2026-09-02. **Backend built the same day** -- sessions,
+the seed command, the tombstone, the leak, and two new suites. The frontend
+is pass 2 and has not started: `CURRENT_ROLE` is still a constant and the
+owner token is still in the bundle, so nothing has changed in the browser
+yet.
 
 Two things arrive together and belong in one document, because neither is
-meaningful alone. The gate has existed since the beginning -- twelve
+meaningful alone. The gate has existed since the beginning -- eleven
 endpoints carry `@require_owner` and six read paths branch on `is_owner()`
 -- but the credential that opens it ships inside the JavaScript bundle, so
 the rules describe a site rather than defend one. This feature replaces the
@@ -41,7 +45,7 @@ list requires the owner.
 
 | | |
 |---|---|
-| Write anything | All twelve mutations answer 401 |
+| Write anything | Every mutation answers 401 |
 | Reach the reserve | `GET /api/pieces?waived=true` answers 401 |
 | Reach a waived piece | `GET /api/pieces/<id>` answers 410 -- see §2 |
 | Reach a draft collection | `GET /api/collections/<slug>` answers 404 |
@@ -133,10 +137,10 @@ redirecting.
 | `Secure` | config-driven | Off over local http, on in production |
 | Lifetime | permanent, remember cookie | Closing the tab does not sign out |
 
-**`SECRET_KEY` is a new required config value.**
-[`config.py`](../backend/app/config.py) has none today. It signs the session
-cookie; rotating it signs the owner out everywhere. It goes in
-`backend/.env` and into STATUS §2's table.
+**`SECRET_KEY` is a new required config value.** It signs the session
+cookie; rotating it signs the owner out everywhere. Absent, a new key is
+minted per process, so sessions simply do not survive a restart -- annoying
+rather than unsafe, which is the right way round for a missing secret.
 
 ### CSRF
 
@@ -244,7 +248,7 @@ and `POST /api/session` answers 401 to anybody who guesses it, so the
 The worst case of discovery is that a stranger taps the copyright and is
 shown a password box -- which an ordinary login page would have handed them
 on arrival. Everything real lives behind that box: the hash, the attempt
-limit, the `HttpOnly` cookie, and twelve endpoints that refuse regardless of
+limit, the `HttpOnly` cookie, and every endpoint that refuses regardless of
 what the interface shows.
 
 Two cheap things keep the cost of discovery up, and neither is load-bearing:
@@ -479,7 +483,9 @@ link in the header are not both possible.
 ### A suite named after the contract
 
 `tests/smoke_visitor.py` -- the fifth suite. It walks every route with no
-credentials at all and asserts §1 line by line. The visitor rules are
+credentials at all and asserts §1 line by line. Sessions get a sixth,
+`tests/smoke_session.py`: a file named after the contract should test the
+contract, and signing in is not a visitor act. The visitor rules are
 currently tested incidentally, scattered through the suites that own each
 feature; nothing tests *visitor* as a thing, which is how the
 `includePrivate` leak survived.
@@ -491,7 +497,14 @@ feature; nothing tests *visitor* as a thing, which is how the
 - A piece in a draft collection reports no membership
 - `?includePrivate=1` and `?waived=true` both answer 401
 
+The mutation checks are walked from the url map rather than listed by hand,
+so a mutation added later is covered by this suite the day it is written.
+
 ### Session checks
+
+`smoke_session.py` runs with `OWNER_API_TOKEN` empty. It is the one place
+that proves the gallery does not depend on the development credential:
+what holds the door in production is only what passes there.
 
 - The right password sets a cookie; a wrong one answers 401 and says nothing
   about why

@@ -15,6 +15,7 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from flask_login import UserMixin
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -46,7 +47,7 @@ piece_tags = Table(
 )
 
 
-class User(Base):
+class User(Base, UserMixin):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

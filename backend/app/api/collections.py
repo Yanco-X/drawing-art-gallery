@@ -89,8 +89,14 @@ def _apply_cover(session, collection: Collection, raw_cover) -> None:
 def list_collections():
     session = SessionLocal()
     stmt = select(Collection).order_by(Collection.created_at.desc(), Collection.name)
-    # Visitors never see unpublished collections. Owners pass ?includePrivate=1.
-    if request.args.get("includePrivate") != "1":
+    # Visitors never see unpublished collections. Owners pass
+    # ?includePrivate=1, and asking without credentials is refused rather
+    # than quietly downgraded -- a draft's name and cover are as private as
+    # its contents.
+    if request.args.get("includePrivate") == "1":
+        if not is_owner():
+            raise ApiError("Owner credentials required.", status=401)
+    else:
         stmt = stmt.where(Collection.is_public.is_(True))
     collections = session.scalars(
         stmt.options(selectinload(Collection.piece_links))

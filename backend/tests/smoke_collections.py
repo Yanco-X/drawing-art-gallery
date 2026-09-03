@@ -210,8 +210,12 @@ print("\n== visibility ==")
 client.patch(f"/api/collections/{cid}", json={"isPublic": False}, headers=OWNER)
 public = client.get("/api/collections").get_json()
 check("private hidden from the default list", cid not in [c["id"] for c in public])
-withprivate = client.get("/api/collections?includePrivate=1").get_json()
+withprivate = client.get("/api/collections?includePrivate=1", headers=OWNER).get_json()
 check("private visible with includePrivate=1", cid in [c["id"] for c in withprivate])
+check(
+    "includePrivate=1 needs the owner, like ?waived=true does",
+    client.get("/api/collections?includePrivate=1").status_code == 401,
+)
 
 # 404 rather than 403 on the detail route: the response must not confirm
 # that a draft sits at this slug. Same reasoning as a waived piece.

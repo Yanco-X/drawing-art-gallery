@@ -1,19 +1,35 @@
 import hmac
+import uuid
 from functools import wraps
 
 from flask import current_app, request
+from flask_login import LoginManager, current_user
 
+from .db import SessionLocal
 from .errors import ApiError
+from .models import User
+
+login_manager = LoginManager()
 
 
-def is_owner() -> bool:
+def init_auth(app) -> None:
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        try:
+            return SessionLocal().get(User, uuid.UUID(user_id))
+        except (ValueError, AttributeError, TypeError):
+            return None
+
+
+def _token_matches() -> bool:
     """
-    Whether this request carries owner credentials.
+    The development and test credential.
 
-    Read paths need to ask rather than be told: a waived piece resolves for
-    the owner and 404s for everyone else, which is a branch, not a refusal.
-    Returns False when no token is configured, so an unconfigured deployment
-    shows only what a visitor would see.
+    Kept so the smoke suites exercise owner endpoints without driving a
+    login. It must be unset in production, where the session is the only way
+    in -- context/AUTH.md section 7.
     """
     expected = current_app.config.get("OWNER_API_TOKEN") or ""
     if not expected:
@@ -21,28 +37,30 @@ def is_owner() -> bool:
     return hmac.compare_digest(request.headers.get("X-Owner-Token", ""), expected)
 
 
+def is_owner() -> bool:
+    """
+    Whether this request carries owner credentials.
+
+    Read paths need to ask rather than be told: a waived piece resolves for
+    the owner and answers 410 for everyone else, which is a branch, not a
+    refusal.
+    """
+    if current_user.is_authenticated and current_user.role == "owner":
+        return True
+    return _token_matches()
+
+
 def require_owner(view):
     """
-    Placeholder guard for owner-only endpoints.
+    Guard for owner-only endpoints.
 
-    Real auth (Flask-Login or JWT) is not built yet, so mutations are gated
-    on a shared secret sent as X-Owner-Token. It fails closed: with no token
-    configured the endpoint refuses rather than waving everyone through,
-    because the alternative is an unauthenticated write API.
-
-    Replace this decorator wholesale when sessions land -- nothing else
-    depends on how it works.
+    The single place identity is enforced. Nothing else in the backend knows
+    how it is established, which is what made replacing the shared secret
+    with a session a change to this file alone.
     """
 
     @wraps(view)
     def wrapper(*args, **kwargs):
-        expected = current_app.config.get("OWNER_API_TOKEN") or ""
-        if not expected:
-            raise ApiError(
-                "Owner endpoints are disabled: set OWNER_API_TOKEN in the "
-                "environment to enable them.",
-                status=503,
-            )
         if not is_owner():
             raise ApiError("Owner credentials required.", status=401)
         return view(*args, **kwargs)

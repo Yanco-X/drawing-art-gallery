@@ -8,9 +8,19 @@ writes down, for the first time, what the public half of the site is.
 
 ## Status
 
-Specified, not built. Full specification in [`AUTH.md`](./AUTH.md), settled
-across a design conversation on 2026-09-02. The owner reads that before any
-code is written.
+**Pass 1 done: the backend.** Sessions, the seed command, the tombstone, the
+`includePrivate` leak, and two new suites -- 257 checks across six. Full
+specification in [`AUTH.md`](./AUTH.md).
+
+**Pass 2 is the frontend, and has not started.** Nothing has changed in the
+browser: `CURRENT_ROLE` is still a module constant, `VITE_OWNER_TOKEN` is
+still in the bundle, and the header still shows the inert `Owner sign in`.
+The gallery behaves exactly as it did.
+
+Before pass 2 can be tried by hand, the owner runs once:
+
+    cd backend
+    .venv/Scripts/python.exe -m flask --app app set-owner
 
 ## Goals
 
@@ -22,9 +32,9 @@ code is written.
 - **An invisible way in.** No sign-in link anywhere. Five clicks on the
   footer copyright mark open a lazily-loaded dialog; a hashed unlinked path
   is the spare key.
-- **The visitor contract, positively stated** -- and enforced by a fifth
-  suite, `tests/smoke_visitor.py`, that walks every route with no
-  credentials.
+- **The visitor contract, positively stated** -- and enforced by
+  `tests/smoke_visitor.py`, which walks every route with no credentials, and
+  by `tests/smoke_session.py`, which runs with the development token off.
 - **A tombstone for a waived piece.** 410 and the title, so a bookmark
   returns an explanation rather than a 404.
 - **The `includePrivate=1` leak closed.** It is not owner-gated today.
@@ -64,9 +74,10 @@ decision is cheap in one direction and irreversible in the other, so it
 starts closed.
 
 **The dev token stays, and is written down as a back door.**
-`OWNER_API_TOKEN` keeps the 210 existing checks running unmodified. It must
-be unset in production, and that condition lives in `AUTH.md` §7 rather than
-in anyone's memory.
+`OWNER_API_TOKEN` keeps the existing suites running unmodified. It must be
+unset in production, and that condition lives in `AUTH.md` §7 rather than in
+anyone's memory -- `smoke_session.py` runs without it, so what holds the door
+in production is what passes there.
 
 ## Deferred
 
@@ -121,3 +132,6 @@ in anyone's memory.
   `?view=1`, the minimap, and the `DESIGN.md` accent rule rewritten.
 - **2026-09-02**: Authentication specified. `context/AUTH.md`, and the
   admin-access handoff moved into `context/`.
+- **2026-09-02**: Authentication pass 1, the backend. Flask-Login sessions,
+  the `set-owner` command, the 410 tombstone, the `includePrivate` leak
+  closed, and two new suites -- 257 checks across six.

@@ -3,9 +3,12 @@ import os
 from flask import Flask, jsonify, send_from_directory
 
 from .api import api_bp
+from .auth import init_auth
+from .cli import register_cli
 from .config import Config
 from .db import SessionLocal, init_engine
 from .errors import register_error_handlers
+from .ratelimit import AttemptLimiter
 from .storage import LocalStorage, build_storage
 
 
@@ -21,7 +24,12 @@ def create_app(
     init_engine(database_url or app.config["DATABASE_URL"], **(engine_options or {}))
 
     app.extensions["storage"] = storage or build_storage(config_object)
+    app.extensions["login_attempts"] = AttemptLimiter(
+        app.config["LOGIN_MAX_ATTEMPTS"], app.config["LOGIN_ATTEMPT_WINDOW"]
+    )
 
+    init_auth(app)
+    register_cli(app)
     register_error_handlers(app)
     app.register_blueprint(api_bp)
 

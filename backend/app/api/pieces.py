@@ -49,10 +49,16 @@ def list_pieces():
 def get_piece(piece_id):
     session = SessionLocal()
     piece = session.get(Piece, piece_id)
-    # 404 rather than 403 for a waived piece: a 403 would confirm it
-    # exists, which is the one fact being withheld.
-    if piece is None or (piece.is_waived and not is_owner()):
+    if piece is None:
         raise ApiError("Piece not found.", status=404)
+    if piece.is_waived and not is_owner():
+        # 410 rather than 404: whoever holds this link saw the piece while
+        # it hung, so withholding its existence protects nothing and only
+        # makes the gallery look broken. The title and nothing else -- the
+        # label and the image came off the wall on purpose.
+        return jsonify(
+            {"error": "This work is no longer exhibited.", "title": piece.title}
+        ), 410
     return jsonify(piece_detail_to_dict(piece))
 
 
