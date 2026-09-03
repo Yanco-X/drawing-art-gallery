@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { SOCIALS } from '../lib/socials';
 import type { Role } from '../types';
 import { SignOutIcon } from './icons';
+import { SocialLink, SocialsMenu } from './SocialsMenu';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NavItem {
@@ -117,6 +119,7 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} />
           ))}
+          <SocialsMenu socials={SOCIALS} />
         </nav>
 
         <div className="flex items-center gap-4">
@@ -162,6 +165,17 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
+          {/* Listed flat rather than behind another disclosure: a dropdown
+              inside an open menu is a second click for a panel that would
+              have to find room inside a panel. */}
+          {SOCIALS.length > 0 && (
+            <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col border-t border-line pt-2">
+              {SOCIALS.map((social) => (
+                <SocialLink key={social.id} social={social} />
+              ))}
+            </div>
+          )}
+
           {/* The square does not fit the bar on a phone -- the row already
               carries the wordmark, the toggle, Upload and the menu button,
               and adding a fifth wrapped Upload onto two lines. Here it can

@@ -3,6 +3,18 @@ export type Theme = 'dark' | 'light';
 /** Answered by the session; drives every owner control on the site. */
 export type Role = 'visitor' | 'owner';
 
+/**
+ * One place the artist can be found. `platform` picks the icon and is the
+ * stable key; `label` is what the menu says, so a second Instagram account
+ * can be named apart from the first.
+ */
+export interface Social {
+  id: string;
+  platform: string;
+  label: string;
+  url: string;
+}
+
 /** User preference controlling masonry column count. */
 export type GridDensity = 'airy' | 'comfortable' | 'dense';
 
