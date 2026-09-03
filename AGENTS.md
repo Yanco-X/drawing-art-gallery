@@ -41,6 +41,8 @@ This document establishes the basic rules and guidelines for AI agents working o
 - @context/DESIGN.md contains the design guidelines and rules.
 - @context/STORAGE.md contains how data and image files are stored, the upload pipeline, and the storage adapter.
 - @context/WAIVED-PIECES.md contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
+- @context/AUTH.md contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
+- @context/gallery-admin-access-handoff.md contains the admin-access strategies that AUTH.md was decided against.
 - @context/PROJECT.md contains the project pillars, goals.
 - @context/STRUCTURE.md contains the project structure.
 - @README.md contains the overall project context and roadmap.

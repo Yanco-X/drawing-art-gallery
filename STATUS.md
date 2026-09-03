@@ -557,21 +557,28 @@ What already exists is the *shape* of the rules, which is the expensive part:
 
 ### What to build
 
-The decisions have not been made. Worth putting to the owner before writing
-anything:
+**Decided and specified on 2026-09-02 in
+[`context/AUTH.md`](context/AUTH.md).** Read that rather than this section:
+it carries the visitor contract, the session design and the reasoning. The
+short version:
 
-- **Sessions or tokens.** Flask-Login with a server-side session cookie is
-  the smaller, safer thing for a single-owner gallery, and it keeps the
-  credential out of JavaScript entirely. JWT buys statelessness that a
-  one-user site does not need.
-- **One owner, or real accounts.** The `users` table implies accounts; the
-  gallery implies one artist. If it is only ever one owner, the table may be
-  overbuilt and a single hashed credential in config would do.
-- **What a visitor may do, positively stated.** Right now "visitor" is
-  defined by subtraction — everything not owner-gated. Worth writing down as
-  its own list, because that list is the public contract of the site.
-- **The `Owner sign in` link in the header is inert.** It is where a real
-  login would hang.
+- **Flask-Login, cookie-backed, permanent.** Not JWT — a one-user gallery
+  needs no statelessness, and a token in JavaScript is the problem being
+  solved. `is_owner()` and `require_owner` are the only things replaced.
+- **One owner, password only.** A row in the unused `users` table, seeded by
+  a prompted CLI command. `email` stays as an identifier, not a login field.
+- **The visitor contract is written down** and gets a fifth suite named
+  after it, `tests/smoke_visitor.py`.
+- **No sign-in link anywhere.** The header's inert `Owner sign in` is
+  deleted rather than wired up — the login is opened by a gesture on the
+  footer, per
+  [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md).
+  The sentence that link "is where a real login would hang" is superseded.
+- **A waived piece answers 410 with its title**, so a bookmark returns an
+  explanation rather than a 404.
+- **`GET /api/collections?includePrivate=1` is not owner-gated today** and
+  leaks every draft's name, slug, description, count and cover. Found while
+  writing the contract; fixed as part of this feature.
 
 ### The gap that is genuinely a hole
 
@@ -639,6 +646,7 @@ Read in this order:
 | [`context/STORAGE.md`](context/STORAGE.md) | Keys, buckets, adapters, derivatives |
 | [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) | The most complete feature spec in the repository |
 | [`context/COLLECTIONS.md`](context/COLLECTIONS.md) | Viewing and editing collections; the private-draft rules |
+| [`context/AUTH.md`](context/AUTH.md) | Sessions, the visitor contract, the invisible way in |
 | [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md) | The full-window viewer: tiles, zoom, minimap |
 | [`context/coding-preferences.md`](context/coding-preferences.md) | How code should read |
 | [`context/current-feature.md`](context/current-feature.md) | Scratch space for the feature in flight |
