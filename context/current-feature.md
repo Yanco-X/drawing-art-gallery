@@ -1,106 +1,65 @@
 # Current Feature
 
-Authentication, and the visitor contract.
+Socials: a menu of where the artist can be found, curated by the owner.
 
-Asked for on 2026-09-02. The owner token ships inside the JavaScript bundle,
-so whoever opens the gallery is the owner. This replaces the credential and
-writes down, for the first time, what the public half of the site is.
+Asked for on 2026-09-02: a SOCIALS dropdown in the header, each option
+carrying the platform's icon and a redirect icon, with the owner able to add
+and edit the links.
 
 ## Status
 
-**Done, in two passes on 2026-09-02.** Backend: sessions, the seed command,
-the tombstone, the closed leak, two new suites -- 257 checks across six.
-Frontend: the session context, the gesture, the lazy dialog, the tombstone
-page, `noindex`, and the owner token gone from the bundle. Verified in a
-real browser over CDP.
+**Done, in two passes on 2026-09-02.** Pass 1 put the dropdown on screen
+against a hard-coded array. Pass 2 replaced it with a `socials` table, two
+routes, and a manage dialog -- 287 checks across seven suites, and the
+dialog driven in a real browser over CDP.
 
-Full specification and reasoning in [`AUTH.md`](./AUTH.md).
-
-**Still to try by hand**, because it needs the password: signing in, the
-owner controls appearing, `Sign out`, the session surviving a reload and a
-closed browser, and the gesture on a real phone.
-
-Next feature is tags that do something -- see `STATUS.md` section 10.
-
-## Goals
-
-- **Real sessions.** Flask-Login, cookie-backed, permanent via the remember
-  cookie. `is_owner()` and `require_owner` in `app/auth.py` are the only
-  things replaced.
-- **One owner, password only.** A row in the unused `users` table, seeded by
-  a prompted CLI command. No registration, no reset, no email flow.
-- **An invisible way in.** No sign-in link anywhere. Five clicks on the
-  footer copyright mark open a lazily-loaded dialog; a hashed unlinked path
-  is the spare key.
-- **The visitor contract, positively stated** -- and enforced by
-  `tests/smoke_visitor.py`, which walks every route with no credentials, and
-  by `tests/smoke_session.py`, which runs with the development token off.
-- **A tombstone for a waived piece.** 410 and the title, so a bookmark
-  returns an explanation rather than a 404.
-- **The `includePrivate=1` leak closed.** It is not owner-gated today.
+Next feature is tags as a filter over the gallery -- see `STATUS.md`
+section 10. The header still scrolls sideways between 640 and ~860px for
+the owner; deferred on the owner's call.
 
 ## Decisions
 
-Argued in full in [`AUTH.md`](./AUTH.md) §10. The ones that shaped
-everything else:
+**Two routes, not five.** `GET /api/socials` and `PUT /api/socials`. The
+dialog edits a list and saves it once, so the API takes a list and writes it
+once. Reordering comes free, a half-finished edit cannot half-apply, and
+rows are matched by id so an edit keeps its row.
 
-**Cookie, not JWT.** A one-user gallery needs no statelessness, and a token
-in JavaScript is the problem being solved rather than a different shape of
-solution. Flask-Login over hand-rolling the same cookie, for `remember=True`
-and for a conventional path if accounts ever become real.
+**No visibility flag.** A link the owner is not ready to share is simply not
+added, and deleting one is a click. A flag would have bought a second
+visitor rule to write down and test for a case that has never come up.
 
-**`SameSite=Lax`, not Strict.** Strict withholds the cookie on inbound
-links, so arriving from Discord or a note would show the owner a logged-out
-gallery until they navigated internally. Lax still blocks cross-site
-mutations, because every mutation is POST, PATCH, PUT or DELETE -- which is
-also why no CSRF token scheme is needed while the API stays same-origin.
+**Marks are code, not data.** The table stores a key; the drawing lives in
+`components/platform-icons.tsx`. An uploaded SVG would mean accepting a
+format that can carry script, then sanitising, storing and serving it, to
+avoid a one-line addition to that file. An unknown platform gets a generic
+link mark and still works.
 
-**A tap gesture, not a hotkey.** The owner edits and uploads from a phone,
-where a keyboard sequence does not exist. A `click` fires for a mouse and a
-tap alike, so one code path serves both.
+**One registry, three jobs.** The same list gives the menu its mark, the
+dialog its picker, and a pasted url its platform. Keeping them together is
+what stops the picker offering something the menu cannot draw.
 
-**The hiding is cosmetic and its failure mode is cosmetic.** The listener
-ships in the bundle and `POST /api/session` answers anyone who guesses it.
-The worst case of discovery is a password box, which a visible login would
-have offered on arrival. Everything real is behind it.
-
-**410 for a waived piece, 404 for a private collection.** A piece carries
-`waived_at`, which is a record that it was once exhibited; a collection
-carries nothing that says it was ever public. The split falls out of the
-data rather than needing a new column.
-
-**Unlisted, not private.** `noindex` plus per-bot `robots.txt` rules. The
-decision is cheap in one direction and irreversible in the other, so it
-starts closed.
-
-**The dev token stays, and is written down as a back door.**
-`OWNER_API_TOKEN` keeps the existing suites running unmodified. It must be
-unset in production, and that condition lives in `AUTH.md` §7 rather than in
-anyone's memory -- `smoke_session.py` runs without it, so what holds the door
-in production is what passes there.
-
-## Deferred
-
-- **Deployment and origin.** Undecided. The code assumes same-origin and
-  puts the cookie flags in config. If production splits the origins, CSRF
-  tokens become mandatory and `ProxyFix` is needed for the rate limiter.
-- **Waived derivatives.** Still anonymously fetchable by URL. A
-  storage-layout problem that a login does not fix; its own session.
-- **Code-splitting the owner surface.** Worth doing as a performance pass,
-  not a security one. After this feature, which gives it the runtime role it
-  needs.
-- **Open Graph tags and the share image.** Their own pass.
-- **Tags that do something.** Still the feature after this one.
+**Platform marks live apart from `icons.tsx`.** They copy someone else's
+shape and keep rounded corners the house set forbids. Separate file,
+separate rule, stated once.
 
 ## Notes
 
-- **Run it**: see `STATUS.md` §2.
-- **New config**: `SECRET_KEY` in `backend/.env`. It signs the session
-  cookie, and rotating it signs the owner out everywhere.
-- **New dependency**: Flask-Login, approved on 2026-09-02. Werkzeug already
-  ships with Flask and does the password hashing.
-- **Verify with screenshots.** `STATUS.md` §11 is pointed about the last
-  visual feature shipping with a blank minimap the owner found by hand.
+- **Run it**: see `STATUS.md` section 2. New migration `e5b71c94f0a2`.
+- **A `javascript:` url was accepted at first.** The check tested for `://`
+  before prepending `https://`, so `javascript:alert(1)` was rewritten into a
+  valid https url with an odd host. Found by the suite, not by review.
+- **The pass-1 Instagram link was carried into the database** so nothing was
+  lost when the hard-coded array was deleted.
+- **Some marks are impressionistic at 16px**, DeviantArt most of all. Each is
+  one path string; a better drawing is a one-line swap.
+- **`+ Add` was dead, and the browser check had said it worked.** The
+  platform picker's panel carried Tailwind's `grid` alongside `.menu-panel`;
+  utilities cascade after components, so `display: grid` beat
+  `display: none` and left an invisible 176x134 sheet of buttons over the
+  Add button. The check missed it because it called `.click()` on the
+  element, which bypasses hit testing entirely -- a real mouse event at the
+  button's coordinates landed on the panel instead. Verify clickability with
+  `elementFromPoint` or a dispatched mouse event, not with `.click()`.
 
 ## History
 
@@ -138,3 +97,7 @@ in production is what passes there.
 - **2026-09-02**: Authentication pass 2, the frontend. The session context,
   the footer gesture, the lazy dialog, the tombstone page, `noindex`, and
   `CURRENT_ROLE` and the owner token both deleted.
+- **2026-09-02**: The tags placeholder page removed. Tags become a filter
+  over the gallery rather than a route of their own.
+- **2026-09-02**: Socials, both passes. The dropdown, the `socials` table,
+  two routes, twelve platform marks, and a manage dialog.

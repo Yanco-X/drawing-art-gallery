@@ -136,6 +136,22 @@ check(
 )
 
 
+print("\n== a visitor may see where the artist is ==")
+client.put(
+    "/api/socials",
+    headers=OWNER,
+    json=[{"platform": "instagram", "label": "__contract__ IG",
+           "url": "https://example.com/x"}],
+)
+res = client.get("/api/socials")
+check("the socials list is public", res.status_code == 200, str(res.status_code))
+check("and carries the link",
+      [s["label"] for s in res.get_json()] == ["__contract__ IG"],
+      str(res.get_json()))
+check("with no ordering field to disagree with the array",
+      "displayOrder" not in res.get_json()[0], str(sorted(res.get_json()[0])))
+
+
 print("\n== a visitor is not told what is withheld ==")
 res = client.get(f"/api/collections/{draft['slug']}")
 check("a draft collection 404s by slug", res.status_code == 404, str(res.status_code))

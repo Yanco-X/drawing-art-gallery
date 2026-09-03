@@ -8,6 +8,8 @@ import type {
   PieceResult,
   PiecePatch,
   Role,
+  Social,
+  SocialDraft,
 } from '../types';
 
 /** An error the API reported, carrying its status and per-field details. */
@@ -356,3 +358,29 @@ export const fetchRole = async (): Promise<Role> => {
   const body = await response.json();
   return body?.role === 'owner' ? 'owner' : 'visitor';
 };
+
+/** Where the artist can be found. Public: a visitor sees the same list. */
+export const fetchSocials = async (): Promise<Social[]> => {
+  const response = await fetch('/api/socials');
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
+ * The whole list, in the order it should appear.
+ *
+ * A replace rather than per-row writes: the dialog edits a list and saves
+ * it once, so a half-finished edit cannot half-apply and reordering needs
+ * no endpoint of its own. The array position is the order, which is why
+ * nothing here sends one.
+ */
+export const saveSocials = async (socials: SocialDraft[]): Promise<Social[]> => {
+  const response = await fetch('/api/socials', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(socials),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+

@@ -18,6 +18,8 @@ export {
   updatePiece,
   signOut,
   fetchRole,
+  fetchSocials,
+  saveSocials,
   whenSessionLapses,
   ApiError,
 } from './pieces';

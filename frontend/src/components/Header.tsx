@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { SOCIALS } from '../lib/socials';
+import { useSocials } from '../hooks';
 import type { Role } from '../types';
 import { SignOutIcon } from './icons';
 import { SocialLink, SocialsMenu } from './SocialsMenu';
@@ -100,6 +100,7 @@ export const Header = ({
   onSignOut?: () => void;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { socials } = useSocials();
   const { pathname } = useLocation();
   const navItems = buildNavItems(pathname, role);
 
@@ -119,7 +120,7 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} />
           ))}
-          <SocialsMenu socials={SOCIALS} />
+          <SocialsMenu />
         </nav>
 
         <div className="flex items-center gap-4">
@@ -168,9 +169,9 @@ export const Header = ({
           {/* Listed flat rather than behind another disclosure: a dropdown
               inside an open menu is a second click for a panel that would
               have to find room inside a panel. */}
-          {SOCIALS.length > 0 && (
+          {socials.length > 0 && (
             <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col border-t border-line pt-2">
-              {SOCIALS.map((social) => (
+              {socials.map((social) => (
                 <SocialLink key={social.id} social={social} />
               ))}
             </div>

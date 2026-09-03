@@ -154,6 +154,36 @@ class Piece(Base):
         return f"{self.tile_prefix}/{level}/{column}_{row}.webp"
 
 
+class Social(Base):
+    """
+    Where the artist can be found. One row per link in the header menu.
+
+    `platform` is a key, not a display name: it selects the drawn mark in
+    the frontend's registry, and a platform with no mark falls back to a
+    generic one rather than failing. Free text rather than an enum, so
+    joining a new site is a row instead of a migration.
+
+    `label` is separate because it is what the menu says -- two accounts on
+    the same platform need different words and the same icon.
+    """
+
+    __tablename__ = "socials"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    platform: Mapped[str] = mapped_column(String(40), nullable=False)
+    label: Mapped[str] = mapped_column(String(80), nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # Not unique: the list is replaced whole, and a reshuffle passes through
+    # transient duplicates. Same reasoning as CollectionPiece.display_order.
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 class Collection(Base):
     __tablename__ = "collections"
 

@@ -5,6 +5,7 @@ export { useFlipReflow } from './useFlipReflow';
 export { usePersistentState } from './usePersistentState';
 export { useTheme } from './useTheme';
 export { useSession } from './useSession';
+export { useSocials } from './useSocials';
 export { useSecretTrigger } from './useSecretTrigger';
 export {
   useGridDensity,

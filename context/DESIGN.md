@@ -209,12 +209,17 @@ The motion budget is deliberately small.
 | 300ms | Theme swap (background and colour) |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
+| 200ms `cubic-bezier(0.2, 0, 0, 1)` | A menu panel opening and closing -- opacity, and an 8px drop |
 
 No stagger and no scale. Motion acknowledges an action and gets out of the way.
 
-**Dialogs are the one sanctioned entrance**, added 2026-09-01. A modal takes the whole screen away from whatever was under it, and appearing in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
+**A surface arriving over the page is the sanctioned entrance**, added 2026-09-01 for dialogs and extended to menu panels on 2026-09-02. Something that covers what was under it and appears in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
+
+The 8px goes the way the surface came from: a dialog rises, a menu hanging below its button drops. Nothing else animates in. This is a rule about surfaces, not a licence to animate the page.
 
 The exit is the part that needs modern CSS: `close()` removes the element in the same frame, so `display` and `overlay` transition with `allow-discrete` to hold it in the top layer long enough to fade, and `@starting-style` supplies the pre-open values. Browsers without either show and hide the dialog outright, which is what happened before.
+
+A menu panel needs the same treatment for the same reason, minus `overlay` -- it is not in the top layer. It stays mounted and toggles `display` through `data-open`, so `display: none` keeps its links out of the tab order while it is shut, and `allow-discrete` holds the element long enough to fade on the way out. Both live in `index.css` rather than in the components: the exit cannot be written as utility classes without becoming unreadable, and the two entrances belong next to each other.
 
 All motion must be skipped under `prefers-reduced-motion: reduce`.
 
@@ -290,6 +295,8 @@ Not present in the original handoff -- designed against this system as a **galle
 * **Artwork** -- capped at `78vh` so a tall portrait still sits beside its label instead of pushing it below the fold, and centred in its column, since the cap often leaves it narrower than the column and hugging one edge would strand the rule. 1px `line` border and the `hatch` behind it, exactly as in the grid.
 * **Wall label** -- title at `clamp(22px, 2.4vw, 32px)` serif, then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
 * **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
+* **Platform marks are the one place this set copies someone else's shape.** They live in `components/platform-icons.tsx`, apart from `icons.tsx`, because they break the house rules on purpose -- Instagram keeps its rounded corners, YouTube its pill. A brand is recognised or it is nothing. Everything else in `icons.tsx` is still square-cornered, unfilled and drawn to this design.
+
 * **Tags render as static bordered chips, not links** -- there is nowhere for a chip to point. Tags are planned as a filter over the gallery rather than as pages of their own, so a chip becomes a control that narrows the grid, not a link that navigates. A chip that looks clickable but is not is worse than a plain one.
 * **Prev/next** -- neighbours in gallery order, sharing the back-link row above the artwork and right-aligned against it. Same treatment as the back link (13px uppercase, `0.08em`, `faint`, accent on hover), so the row reads as one set of quiet actions. Piece titles move to the tooltip and the accessible name; at this size the labels alone carry the action, and keeping them short is what lets the control stay above the fold. Ends are open rather than wrapping, and the unavailable side renders disabled at 40% opacity rather than being omitted, so the row does not reflow between pieces.
 * **Not found** -- an unknown id gets the eyebrow-plus-headline treatment from the intro, at a reduced size, with a link back.

@@ -132,3 +132,17 @@ def collection_to_dict(collection: Collection) -> dict:
         **collection_summary_to_dict(collection),
         "pieces": [piece_to_dict(link.piece) for link in collection.piece_links],
     }
+
+
+def social_to_dict(social) -> dict:
+    """
+    The menu's shape. `displayOrder` is not sent: the array order is the
+    order, and returning both would invite a caller to disagree with itself.
+    """
+    return {
+        "id": str(social.id),
+        "platform": social.platform,
+        "label": social.label,
+        "url": social.url,
+    }
+

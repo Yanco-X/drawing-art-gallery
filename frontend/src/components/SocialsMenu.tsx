@@ -1,22 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useSession, useSocials } from '../hooks';
 import type { Social } from '../types';
-import {
-  ChevronDownIcon,
-  ExternalIcon,
-  InstagramIcon,
-  LinkIcon,
-} from './icons';
+import { ChevronDownIcon, EditIcon, ExternalIcon } from './icons';
+import { markFor } from './platform-icons';
 
-/*
- * Platform to mark. A platform with nothing drawn for it still gets a row
- * and a generic link icon rather than an empty space, which is what lets
- * pass 2 accept a platform this file has never heard of.
- */
-const MARKS: Record<string, () => React.ReactElement> = {
-  instagram: InstagramIcon,
-};
+// Only the owner ever opens this, so it stays out of the bundle a visitor
+// downloads -- the same argument as the sign-in dialog.
+const SocialsDialog = lazy(() =>
+  import('./SocialsDialog').then((module) => ({
+    default: module.SocialsDialog,
+  })),
+);
 
-const markFor = (platform: string) => MARKS[platform.toLowerCase()] ?? LinkIcon;
+const ROW =
+  'flex items-center gap-3 px-4 py-3 text-[13px] tracking-btn uppercase ' +
+  'transition-colors duration-200';
 
 /**
  * One row. Shared with the mobile menu, which lists the links directly
@@ -29,7 +27,7 @@ export const SocialLink = ({ social }: { social: Social }) => {
       href={social.url}
       target="_blank"
       rel="noreferrer noopener"
-      className="flex items-center gap-3 px-4 py-3 text-[13px] tracking-btn text-muted uppercase transition-colors duration-200 hover:text-accent"
+      className={`${ROW} text-muted hover:text-accent`}
     >
       <Mark />
       <span className="flex-1">{social.label}</span>
@@ -50,9 +48,13 @@ export const SocialLink = ({ social }: { social: Social }) => {
  * nav, and it is what says a click opens something rather than goes
  * somewhere.
  */
-export const SocialsMenu = ({ socials }: { socials: Social[] }) => {
+export const SocialsMenu = () => {
+  const { socials, replace } = useSocials();
+  const { role } = useSession();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const isOwner = role === 'owner';
 
   useEffect(() => {
     if (!open) return;
@@ -70,7 +72,9 @@ export const SocialsMenu = ({ socials }: { socials: Social[] }) => {
     };
   }, [open]);
 
-  if (socials.length === 0) return null;
+  // Nothing to point at and nothing to manage: a visitor gets no button at
+  // all rather than one that opens an empty panel.
+  if (socials.length === 0 && !isOwner) return null;
 
   return (
     <div ref={root} className="relative">
@@ -94,15 +98,45 @@ export const SocialsMenu = ({ socials }: { socials: Social[] }) => {
         </span>
       </button>
 
-      {open && (
-        <div
-          className="absolute top-full left-0 z-20 mt-4 min-w-[200px] border border-line bg-surface py-1"
-          onClick={() => setOpen(false)}
-        >
-          {socials.map((social) => (
-            <SocialLink key={social.id} social={social} />
-          ))}
-        </div>
+      {/* Rendered whether or not it is open, so closing can be animated:
+          unmounting would take the element away in the same frame and there
+          would be nothing left to fade. `display: none` keeps the links out
+          of the tab order while it is shut. */}
+      <div
+        data-open={open}
+        onClick={() => setOpen(false)}
+        className="menu-panel absolute top-full left-0 z-20 mt-4 min-w-[200px] border border-line bg-surface py-1"
+      >
+        {socials.map((social) => (
+          <SocialLink key={social.id} social={social} />
+        ))}
+
+        {isOwner && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={`${ROW} w-full cursor-pointer border-none bg-transparent text-faint hover:text-accent ${
+              socials.length > 0 ? 'mt-1 border-t border-line pt-3' : ''
+            }`}
+          >
+            <EditIcon />
+            <span className="flex-1 text-left">Manage</span>
+          </button>
+        )}
+      </div>
+
+      {isOwner && editing && (
+        <Suspense fallback={null}>
+          <SocialsDialog
+            open={editing}
+            socials={socials}
+            onClose={() => setEditing(false)}
+            onSaved={(saved) => {
+              replace(saved);
+              setEditing(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

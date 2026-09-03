@@ -40,6 +40,7 @@ list requires the owner.
 | Browse public collections | The index, and any public collection in its curated `display_order` |
 | See a piece's public memberships | The `collections` array, filtered to public ones |
 | Move through the work | Prev/next, `?view=1` deep links, collection slugs that survive a rename |
+| See where the artist is | The socials menu. There is nothing private in it -- a link the owner is not ready to share is not added |
 
 ### A visitor may not
 

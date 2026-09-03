@@ -64,7 +64,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report c2574bd3ea94
+alembic upgrade head          # should report e5b71c94f0a2
 flask --app app run --port 5000
 ```
 
@@ -114,8 +114,8 @@ credentials are the same pair.
 
 ## 3. Data model
 
-Seven tables: `pieces`, `collections`, `collection_pieces`, `tags`,
-`piece_tags`, `users`, `alembic_version`.
+Eight tables: `pieces`, `collections`, `collection_pieces`, `tags`,
+`piece_tags`, `users`, `socials`, `alembic_version`.
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
@@ -132,12 +132,22 @@ across a rename has no equivalent here: there is no address to protect.
 **`collection_pieces`** — the join, carrying `display_order`. This is the
 curation: a collection's order lives here and nowhere else.
 
-`users` exists in the schema and is unused. It is scaffolding for the
-authentication that has not been built.
+**`socials`** — id, platform, label, url, `display_order`, timestamps. One
+row per link in the header menu. `platform` is a key into the frontend's
+icon registry, not a display name, and it is free text rather than an enum
+so joining a new site is a row instead of a migration. `label` is separate
+because two accounts on one platform need different words and the same mark.
+
+There is no visibility flag. A link the owner is not ready to share is
+simply not added, and deleting one is a click.
+
+`users` holds exactly one row: the owner, written by `flask --app app
+set-owner`. `pieces.user_id` is still null on every row -- authorship was
+never the point of the table.
 
 ### Migrations
 
-Four revisions, head `a7f4d91c3b28`. History is immutable — add a
+Five revisions, head `e5b71c94f0a2`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -145,6 +155,7 @@ revision, never edit one.
 64c7a2ba6f09  drop pieces.original_filename
 c2574bd3ea94  add pieces.waived_at
 a7f4d91c3b28  add pieces.tiles_ready
+e5b71c94f0a2  add socials
 ```
 
 ### Two model notes worth carrying
@@ -250,6 +261,13 @@ owner token in `X-Owner-Token`.
 | `POST` | `/api/session` | Password in, cookie out. Rate limited, and every failure answers the same 401 |
 | `DELETE` | `/api/session` `[owner]` | Clears the session and the remember cookie |
 | `GET` | `/api/session/me` | `{"role": "owner"}` or `{"role": "visitor"}` |
+
+### Socials
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/socials` | Public. Ordered by `display_order` |
+| `PUT` | `/api/socials` `[owner]` | The whole list, replaced. Array position is the order, so nothing sends `displayOrder`. http and https only |
 
 ### Other
 
@@ -366,7 +384,7 @@ and `tests/smoke_visitor.py` is named after it.
 
 ## 8. Verification
 
-Six suites, 257 checks, no test framework — each is a script that prints
+Seven suites, 287 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
@@ -374,7 +392,7 @@ cd backend
 .venv/Scripts/python.exe tests/smoke_collections.py    # 55
 .venv/Scripts/python.exe tests/smoke_uploads.py        # 90
 .venv/Scripts/python.exe tests/smoke_waived.py         # 40
-.venv/Scripts/python.exe tests/smoke_visitor.py        # 23
+.venv/Scripts/python.exe tests/smoke_visitor.py        # 26
 .venv/Scripts/python.exe tests/smoke_session.py        # 21
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
@@ -386,7 +404,7 @@ added later is covered the day it is written. `smoke_session.py` runs with
 `OWNER_API_TOKEN` empty — the one place that proves the gallery does not
 depend on the development credential.
 
-The first five run against an in-memory store and a throwaway database.
+The first six run against an in-memory store and a throwaway database.
 **`integration_live.py` runs against the real stack** — a live Flask,
 PostgreSQL and MinIO. It creates a fixture titled `__integration_fixture__`,
 cleans up only that, and asserts the rest of the gallery is untouched. It
@@ -415,6 +433,7 @@ built-in `WebSocket`. Useful, but the owner tests by hand and prefers to.
 | Piece editing — the wall label, after upload | Done |
 | Detailed View — tiles, the viewer, the minimap | Done |
 | Authentication — sessions, the visitor contract, the invisible way in | Done |
+| Socials — a header menu the owner curates | Done |
 
 **Waived pieces** is specified in full in
 [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) — 12 sections, and
@@ -549,6 +568,37 @@ and `InertLink` both deleted. Five clicks on the footer's `© 2026` opens a
 lazily-loaded dialog, and an unlinked path whose hash is the only thing in
 the bundle is the spare key. That hiding is cosmetic, is documented as
 cosmetic, and is not what holds the door.
+
+**Socials**, 2026-09-02, in two passes. A dropdown in the nav listing where
+the artist can be found, each row carrying the platform's mark and a
+leaving-arrow. Pass 1 was the menu against a hard-coded array, so the shape
+was on screen before there was anywhere to store it; pass 2 replaced the
+array with a table and gave the owner a dialog.
+
+**Two routes, not five.** The dialog edits a list and saves it once, so
+`PUT /api/socials` takes a list and writes it once -- the same call
+`PUT /api/collections/<id>/pieces` already makes for membership. Reordering
+comes free with it and needs no endpoint of its own, and a half-finished
+edit cannot half-apply. Rows are matched by id, so an edit keeps its row
+rather than being deleted and recreated.
+
+**Marks are code, not data.** The database stores a key -- `instagram`,
+`artstation` -- and `components/platform-icons.tsx` maps it to a drawing.
+Accepting an uploaded SVG instead would mean taking a file format that can
+carry script, sanitising it, storing it and serving it, all to avoid a
+one-line addition to that file. A platform with no mark still works and
+shows a generic link icon, which is what lets the dialog accept a site
+nobody has drawn yet.
+
+That one registry does three jobs: the mark in the menu, the choices in the
+dialog's picker, and the hostnames that let a pasted url name its own
+platform. Pasting `artstation.com/…` fills in the platform and the label,
+so most rows are one field rather than three.
+
+**A `javascript:` url was accepted at first**, and the suite caught it. The
+check tested for `://` before prepending `https://`, so `javascript:alert(1)`
+became `https://javascript:alert(1)` -- a perfectly good https url with an
+odd host. The scheme is now judged before anything is rewritten.
 
 ### Live data
 

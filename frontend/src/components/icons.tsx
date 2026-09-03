@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
  * Not Unicode dingbats either — ✎ and friends render as colour emoji on
  * Windows, and this project has no emoji in it.
  */
-const Glyph = ({
+export const Glyph = ({
   children,
   filled = false,
 }: {
@@ -219,28 +219,3 @@ export const ExternalIcon = () => (
     <path d="M20 4l-8 8" />
   </Glyph>
 );
-
-/*
- * Platform marks.
- *
- * The one place this set copies someone else's shape rather than drawing
- * its own. A brand is recognised or it is nothing, so Instagram keeps its
- * rounded corners even though everything else here is square. Anything
- * without a mark of its own falls back to LinkIcon.
- */
-export const InstagramIcon = () => (
-  <Glyph>
-    <rect x="3" y="3" width="18" height="18" rx="5" />
-    <circle cx="12" cy="12" r="4.5" />
-    <circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" />
-  </Glyph>
-);
-
-/** The stand-in for a platform with no mark drawn for it yet. */
-export const LinkIcon = () => (
-  <Glyph>
-    <path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-6-6l-1.5 1.5" />
-    <path d="M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 0 0 6 6L12.5 17" />
-  </Glyph>
-);
-

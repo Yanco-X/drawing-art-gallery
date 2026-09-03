@@ -15,6 +15,17 @@ export interface Social {
   url: string;
 }
 
+/**
+ * A row on its way to the API. `id` is absent for one being added, which is
+ * how the server tells an edit from an insert.
+ */
+export interface SocialDraft {
+  id?: string;
+  platform: string;
+  label: string;
+  url: string;
+}
+
 /** User preference controlling masonry column count. */
 export type GridDensity = 'airy' | 'comfortable' | 'dense';
 
