@@ -4,6 +4,7 @@ import { CollectionsSection } from '../components/CollectionsSection';
 import { IntroSection } from '../components/IntroSection';
 import { NewCollectionDialog } from '../components/NewCollectionDialog';
 import { PageShell } from '../components/PageShell';
+import { Spotlight } from '../components/Spotlight';
 import { ICON_BUTTON_ACCENT } from '../components/form-styles';
 import { useAsync, useSession } from '../hooks';
 import { collectionsFor, fetchPieces } from '../services';
@@ -47,6 +48,13 @@ const LandingPage = () => {
 
   return (
     <PageShell onPieceUploaded={(piece) => setAdded((now) => [piece, ...now])}>
+      {/*
+        The newest few, which is what `GET /api/pieces` already orders by --
+        so the band costs no second request, and a piece uploaded in this
+        session enters it at the front along with everything else.
+      */}
+      <Spotlight pieces={allPieces} />
+
       {SHOW_INTRO && <IntroSection />}
 
       <CollectionsSection

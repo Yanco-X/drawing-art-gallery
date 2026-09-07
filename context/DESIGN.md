@@ -210,8 +210,11 @@ The motion budget is deliberately small.
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A menu panel opening and closing -- opacity, and an 8px drop |
+| 200ms | One spotlight slide crossfading into the next -- opacity, nothing else |
 
 No stagger and no scale. Motion acknowledges an action and gets out of the way.
+
+**A carousel does not license a slide.** The spotlight crossfades because there is no horizontal translate anywhere in this table, and adding one for the sake of a familiar pattern is exactly the drift this section exists to prevent. Opacity was already the sanctioned way for one surface to replace another.
 
 **A surface arriving over the page is the sanctioned entrance**, added 2026-09-01 for dialogs and extended to menu panels on 2026-09-02. Something that covers what was under it and appears in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
 
@@ -246,6 +249,23 @@ The theme toggle's treatment, generalised: 1px `line` border, transparent fill, 
 Deliberately not an icon font or a package -- several hundred kilobytes for five glyphs, and `AGENTS.md` §2 rules out new dependencies without asking. Deliberately not Unicode dingbats either: ✎ and its neighbours render as colour emoji on Windows, and there are no emoji in this project.
 
 **Three weights, in `components/form-styles.ts`.** `ICON_BUTTON` is the default, `line` border going accent on hover. `ICON_BUTTON_ACCENT` is bordered in accent and fills on hover -- a useful action inside a section, like "+ New collection". `PAGE_ACTION` is filled from the start and full width: the one action a page exists for, at most one per screen. See Accent for which is which. `ICON_BUTTON_DANGER` and `ICON_BUTTON_INERT` cover the destructive and the unavailable.
+
+### Spotlight
+
+The band above the intro on the landing page: the newest five pieces, one at a time, shown nearly whole beside its label. Added 2026-09-03, modelled on the hero band at artsy.net.
+
+* **Full bleed, inner content capped.** The section spans the viewport; the grid inside it is capped at 2400px and centred. This is the header and footer rule, not the content-region rule, and it is the one place a *content* region takes it -- recorded under Deviations.
+* **Split 55/45 in the artwork's favour**, collapsing to one column below 1024px. The artwork is the subject, the same reasoning that gives the upload modal's image the larger half. No new breakpoint.
+* **Contained, never cropped.** `object-contain` over the `hatch` ground, at `clamp(360px, 60vh, 620px)` beside the label and `clamp(260px, 44vh, 420px)` above it. A hero band elsewhere crops to fill its half, which suits photography and beheads a portrait. Hatch carries whatever the piece does not, exactly as on the piece page.
+* **The title takes the piece-title step**, `clamp(22px, 2.4vw, 32px)`, not the display step. The intro headline sits directly beneath and is the page's own voice; two headlines at the same size argue with each other.
+* **The action is outlined.** `ICON_BUTTON_ACCENT`, because the header already spends the filled accent on "+ Upload" for the owner and the rule is one per screen.
+* **No caption over the artwork.** The title is already in the label; an overlay would say it twice.
+* **Slides stack in one grid cell**, not absolutely. The band takes the height of the tallest, so it never resizes as it advances, and the stacked layout needs no fixed height of its own. The label is centred beside the artwork and top-aligned below it, so the slack a short label leaves falls as padding rather than as a hole between a piece and its title.
+* **Indicators are position, not progress.** One hairline per slide, `line` going `accent` for the current one, each a button with 12px of padding above and below so a 1px rule is still a target. A rule that filled over eight seconds would make the timer legible and would also put continuous motion on screen for as long as the page is open.
+* **Autoplay at eight seconds**, paused by hover and by focus landing inside the band, and ended for good by any deliberate advance -- a band that moves on eight seconds after someone chose a slide is taking the choice back. It does not start at all under `prefers-reduced-motion`.
+* **The pause control is the word `PAUSE`, not a glyph.** WCAG 2.2.2 wants an explicit way to stop anything moving for more than five seconds. A pause mark at 16px is two 1.5-unit bars almost touching, which is the mud the density icons had to be filled to escape; that exception was granted for columns and is not extended here. Hidden under reduced motion, where there is nothing to pause.
+* **Inactive slides are `inert`**, which keeps their "View piece" link out of the tab order and out of hit testing. Verified with `elementFromPoint` and a dispatched mouse event, not with `.click()`.
+* **Zero pieces renders nothing. One piece renders the piece**, with no indicators, no chevrons and no timer.
 
 ### Intro
 
@@ -377,3 +397,4 @@ Recorded so they are not mistaken for drift:
 3. **The density control is new.** The prototype exposed density as a developer knob with no UI.
 4. **Tag filter chips are not currently shown.** Pieces still carry tags; the chip row was removed pending real filtering work.
 5. **A per-image failure fallback was added**, which the prototype did not design.
+6. **The spotlight band breaks the content cap**, deliberately. Layout says content regions are capped at 2400px with gutters and only the header and footer span the viewport. The band spans it too, because a hero that stops 64px short of the edge reads as a wide card rather than as a wall. Its inner grid still caps at 2400px, so it lines up with everything below it, and the rule holds everywhere else.

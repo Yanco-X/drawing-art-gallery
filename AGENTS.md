@@ -52,11 +52,43 @@ This document establishes the basic rules and guidelines for AI agents working o
 
 # Commands
 
-## Frontend
-- `npm run dev` - Start the development server.
+Three things, in this order. `STATUS.md` section 2 carries the full detail:
+the environment files, the migration head to expect, and how to sign in.
+
+## 1. Infrastructure
+
+Postgres and MinIO must be up before the backend is useful. SQLAlchemy's
+engine is lazy, so `flask run` starts perfectly happily without them and the
+first request touching the database is what fails -- which makes a stopped
+container look like a broken API rather than a missing step.
+
+Run this from `backend/`, where the compose file lives -- from the
+repository root it fails with "no configuration file provided", and the
+named volumes would not be reused.
+
+- `docker compose up -d` - postgres:5432, minio:9000, console:9001.
+
+## 2. Backend
+
+From `backend/`, with the virtual environment active.
+
+- `.\.venv\Scripts\Activate.ps1` - activate, on PowerShell. Bash wants
+  `source .venv/Scripts/activate` instead.
+- `alembic upgrade head` - apply migrations.
+- `flask --app app run --port 5000` - start the development server.
+
+`python run.py` starts the same app, but only once the environment is
+active and the containers are already up. Activation is the step most often
+missed.
+
+## 3. Frontend
+
+From `frontend/`.
+
+- `npm run dev` - Start the development server on :5173, proxying `/api`
+  and `/media` to 127.0.0.1:5000.
 - `npm run build` - Build the project for production.
 
-## Backend
-- `python run.py` - Start the development server.
+## Verify
 
-
+- `curl http://127.0.0.1:5000/api/health`

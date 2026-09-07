@@ -13,3 +13,4 @@ export {
   GRID_DENSITY_COLUMNS,
   GRID_DENSITY_LABELS,
 } from './useGridDensity';
+export { useSpotlight, SPOTLIGHT_COUNT } from './useSpotlight';

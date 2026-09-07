@@ -9,9 +9,12 @@ segmented rules beneath marking position.
 
 ## Status
 
-**Specified, not built.** Pass 1 is the band against the pieces the landing
-page already fetches. Curation is pass 2 and is deliberately not designed
-yet.
+**Pass 1 done on 2026-09-03.** The band, the hook, two chevrons, and the
+`DESIGN.md` section. No backend change, no new dependency, no new
+breakpoint. Driven in a real browser over CDP: hit testing, the tab order,
+both themes, and the stacked layout at 420px.
+
+Curation is pass 2 and is deliberately not designed yet.
 
 ## Decisions
 
@@ -74,6 +77,13 @@ rule. It is hidden under reduced motion, where there is nothing to pause.
 seconds would make the timer legible, and it would also put continuous
 motion on screen for as long as the page is open. Position, not progress.
 
+**The chevrons wrap; the piece page's do not.** `PieceNav` leaves its ends
+open and renders the unavailable side disabled, because a gallery is a
+sequence with a first and a last. A spotlight is a loop -- it has to be, or
+autoplay would run to the end and stop with no way back short of clicking.
+The two rules look contradictory and are not: one is a walk, the other a
+cycle.
+
 ## Notes
 
 - Slides are `role="region"`, `aria-roledescription="carousel"`. Inactive
@@ -89,6 +99,19 @@ motion on screen for as long as the page is open. Position, not progress.
 - Zero pieces renders nothing. One piece renders the piece with no
   chevrons, no segments and no autoplay.
 - Landing page only. Collection and filtered routes do not get a band.
+- **The stacked slides were the risk, and they held.** Five layers in one
+  grid cell is the same shape as the socials bug -- an invisible sheet over
+  a live control. `elementFromPoint` at the centre of the "View piece" link,
+  every segment and both chevrons returned the intended element, and only
+  one of the five links was outside an `[inert]` subtree. `inert` is doing
+  the work; `pointer-events-none` is belt and braces for browsers without it.
+- **Only two renditions download on load**, confirmed by counting `img`
+  elements carrying a `src`. The set of wanted slides grows and never
+  shrinks, so stepping back does not refetch.
+- **A JSX comment placed before the root element of a `return` is a parse
+  error**, not a comment -- it makes the return two children. It belongs
+  above the `return`, or inside the element. Cost one broken dev-server
+  render mid-session.
 
 ## History
 

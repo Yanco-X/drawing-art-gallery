@@ -16,7 +16,7 @@ what has been built, and what comes next.
 |---|---|
 | Frontend | React 19, TypeScript, Vite, Tailwind v4, React Router |
 | Backend | Python 3.14, Flask, SQLAlchemy 2.0, Alembic |
-| Database | PostgreSQL 16 (Docker) |
+| Database | PostgreSQL 17 (Docker) |
 | Objects | MinIO, S3 API (Docker) |
 
 ```

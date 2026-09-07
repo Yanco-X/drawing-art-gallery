@@ -219,3 +219,17 @@ export const ExternalIcon = () => (
     <path d="M20 4l-8 8" />
   </Glyph>
 );
+
+/** Steps back through the spotlight. */
+export const ChevronLeftIcon = () => (
+  <Glyph>
+    <path d="M15 6l-6 6 6 6" />
+  </Glyph>
+);
+
+/** Steps forward through the spotlight. */
+export const ChevronRightIcon = () => (
+  <Glyph>
+    <path d="M9 6l6 6-6 6" />
+  </Glyph>
+);
