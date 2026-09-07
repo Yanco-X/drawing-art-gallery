@@ -50,6 +50,11 @@ def piece_to_dict(piece: Piece) -> dict:
         # second request, since the band can then work out its own five from
         # the list it already has.
         "spotlightOrder": piece.spotlight_order,
+        # Where a crop should be aimed, in percent. Null is centre, which is
+        # what the browser does unasked -- so the pair is only ever set on a
+        # piece the owner has actually placed.
+        "focalX": piece.focal_x,
+        "focalY": piece.focal_y,
         "tags": [tag_to_dict(tag) for tag in piece.tags],
     }
 

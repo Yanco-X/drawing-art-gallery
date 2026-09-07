@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession, useSpotlight } from '../hooks';
-import { pickedIds, spotlightSlots } from '../lib/spotlight';
+import { focalPosition, pickedIds, spotlightSlots } from '../lib/spotlight';
 import type { Piece } from '../types';
 import { ICON_BUTTON, ICON_BUTTON_ACCENT, SUBTLE_ACTION } from './form-styles';
 import { ChevronLeftIcon, ChevronRightIcon, GearIcon } from './icons';
@@ -12,15 +12,17 @@ import { ChevronLeftIcon, ChevronRightIcon, GearIcon } from './icons';
 const SpotlightDialog = lazy(() => import('./SpotlightDialog'));
 
 /*
- * The band at the top of the gallery: one piece shown nearly whole, its
- * label beside it.
+ * The band at the top of the gallery: one piece filling its half, its label
+ * beside it.
  *
- * Contained rather than cropped. A hero band elsewhere on the web fills its
- * half by cutting the image to fit, which is fine for photography and
- * beheads a portrait. The hatch carries whatever the piece does not, the
- * same way it does on the piece page.
+ * Cropped, not contained -- but aimed. Contain left hatch bars either side
+ * of every portrait, and no amount of zoom closed them, because the panel is
+ * wider than the work and scaling only ate the axis that was already full.
+ * Cover fills the half outright and `object-position` says which part of the
+ * piece survives, which the owner sets per piece. Centre-cropping alone is
+ * what beheads a portrait; a focal point is what makes cover safe.
  */
-const BAND = 'h-[clamp(260px,44vh,420px)] lg:h-[clamp(360px,60vh,620px)]';
+const BAND = 'h-[clamp(320px,52vh,500px)] lg:h-[clamp(440px,72vh,780px)]';
 
 const SpotlightArtwork = ({
   piece,
@@ -49,7 +51,10 @@ const SpotlightArtwork = ({
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : 'auto'}
             onError={() => setFailed(true)}
-            className="max-h-full max-w-full object-contain"
+            /* A continuous per-piece value, so it cannot be a static class.
+               See the inline-style exceptions in DESIGN.md. */
+            style={{ objectPosition: focalPosition(piece) }}
+            className="h-full w-full object-cover"
           />
         )
       )}
@@ -206,7 +211,7 @@ export const Spotlight = ({ pieces }: { pieces: Piece[] }) => {
           {slides.map((piece, at) => (
             <div
               key={piece.id}
-              className={`col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-[55fr_45fr] ${
+              className={`col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-[66fr_34fr] ${
                 at === index ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
               aria-hidden={at !== index}

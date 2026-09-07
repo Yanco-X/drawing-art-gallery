@@ -255,8 +255,13 @@ Deliberately not an icon font or a package -- several hundred kilobytes for five
 The band above the intro on the landing page: the newest five pieces, one at a time, shown nearly whole beside its label. Added 2026-09-03, modelled on the hero band at artsy.net.
 
 * **Full bleed, inner content capped.** The section spans the viewport; the grid inside it is capped at 2400px and centred. This is the header and footer rule, not the content-region rule, and it is the one place a *content* region takes it -- recorded under Deviations.
-* **Split 55/45 in the artwork's favour**, collapsing to one column below 1024px. The artwork is the subject, the same reasoning that gives the upload modal's image the larger half. No new breakpoint.
-* **Contained, never cropped.** `object-contain` over the `hatch` ground, at `clamp(360px, 60vh, 620px)` beside the label and `clamp(260px, 44vh, 420px)` above it. A hero band elsewhere crops to fill its half, which suits photography and beheads a portrait. Hatch carries whatever the piece does not, exactly as on the piece page.
+* **Split 66/34 in the artwork's favour**, collapsing to one column below 1024px. The artwork is the subject, the same reasoning that gives the upload modal's image the larger half. No new breakpoint. Widened from 55/45 on 2026-09-06; note the interaction below, which is that a wider panel means *more* empty ground beside a portrait, not less.
+* **Cover, aimed by a per-piece focal point.** `object-fit: cover` at `clamp(440px, 72vh, 780px)` beside the label and `clamp(320px, 52vh, 500px)` above it, with `object-position` from the piece's stored focal point. The artwork fills its half outright; nothing is letterboxed.
+
+  This replaced contain plus a zoom on 2026-09-06, and the reasoning is worth keeping, because contain looked like the safer choice. Every piece here is portrait or square while the panel is wider than it is tall, so a contained fit was limited by height and left hatch bars down both sides. Scaling past the fit did not close them: it ate the axis that was already full. Measured, a 1.14 scale cost 12.3% of the height -- heads and feet -- and took nothing off the bars. **No zoom value fills a bar**, because the slack and the crop are on different axes.
+
+  Cover fills the panel by definition. What made it unsafe before was only that the crop was centred, and centre-cropping a portrait beheads it. A focal point is what makes cover safe, so the two arrived together and neither works without the other.
+* **The focal point is a fact about the piece, not about the band.** `focalX` and `focalY`, two nullable percentages on the piece row, null meaning centre. Stored as numbers rather than baked into a cropped rendition: a second derivative per piece would cost a pipeline stage, another copy of every image and a backfill, where two integers cost about thirty bytes in a payload the page already fetches and are spent at paint time, on an image the browser is drawing anyway. Any other cropping surface can read the same pair.
 * **The title takes the piece-title step**, `clamp(22px, 2.4vw, 32px)`, not the display step. The intro headline sits directly beneath and is the page's own voice; two headlines at the same size argue with each other.
 * **The action is outlined.** `ICON_BUTTON_ACCENT`, because the header already spends the filled accent on "+ Upload" for the owner and the rule is one per screen.
 * **No caption over the artwork.** The title is already in the label; an overlay would say it twice.
@@ -277,9 +282,23 @@ The band above the intro on the landing page: the newest five pieces, one at a t
 * **The dialog is a sibling of the band, never a child.** However the top layer paints a `<dialog>`, it is still a DOM descendant of wherever it sits, so its events bubble: as a child, an arrow key typed in the search field advanced the carousel behind it.
 * **Autoplay stops while the dialog is open**, through a suspend flag rather than the hover hold. Opening the dialog takes the pointer off the band, which fires the mouse-leave that would release a hold and set the band running behind the cover.
 
+### Focal picker
+
+Where a piece's crop is aimed, in the Edit details dialog. Added 2026-09-06 with the spotlight's move to cover.
+
+* **Two views of one pair of numbers**: the whole artwork with a mark on it, and beneath it the band's own shape cropping live. Choosing on the full image and judging the crop are different jobs, and a control that only did the first would have the owner saving and reloading to find out what they picked.
+* **The preview uses the band's real ratio**, roughly 3:2, not a round number. A preview at the wrong shape lies about what will be cut.
+* **The mark is a hairline cross, not a filled dot.** A dot covers the exact detail being aimed at, and this set has no filled marks outside the density icons.
+* **It replaced a static preview**, which showed the artwork beside a line explaining that the artwork does not change -- true, and nothing to do. The crop is the one thing about the image this dialog can set, and setting it still does not touch the file.
+* **Pointer capture, not window listeners.** The element keeps receiving moves once the pointer leaves it, the browser cleans up a cancelled gesture, and touch and mouse are one code path. `touch-none` is required with it: without it a drag scrolls the dialog instead of moving the point.
+* **Arrow keys move it**, 2% a press and 10% with Shift, on a focusable frame carrying its coordinates in its accessible name. 1% a press would be forty presses to cross a piece.
+* **"Centre" clears it back to null** rather than writing 50, so a piece that was never placed stays distinguishable from one deliberately centred.
+
 ### Intro
 
-Optional. Eyebrow in `faint` at 12px / `0.24em`, then the display headline capped at `14em` with `text-wrap: pretty`. Shown on the root gallery view; hidden on filtered and collection routes.
+Optional. Eyebrow in `faint` at 12px / `0.24em`, then the headline capped at `14em` with `text-wrap: pretty`. Shown on the root gallery view; hidden on filtered and collection routes.
+
+**On the landing page it is deliberately quieter than the other headings**, at `clamp(22px, 2.6vw, 34px)` with its own padding rather than the `intro-top` / `intro-bottom` tokens. It follows the spotlight band, and a full display headline immediately under a piece shown at 72vh reads as a second, competing hero. The shared tokens and the display step are left alone because six other headings spend them -- the collection, collections index, piece, waived and message pages.
 
 ### Collection card
 
@@ -383,13 +402,16 @@ Top border in `line`, 28px vertical padding, content split left and right and al
 
 ### Inline style exceptions
 
-`coding-preferences.md` forbids inline styles, and the rule holds everywhere a value is known ahead of time. Three values in this UI are resolved at runtime and cannot be expressed as static utility classes, because Tailwind only emits classes it can see in the source:
+`coding-preferences.md` forbids inline styles, and the rule holds everywhere a value is known ahead of time. Four values in this UI are resolved at runtime and cannot be expressed as static utility classes, because Tailwind only emits classes it can see in the source:
 
 1. `aspect-ratio` on a piece thumbnail -- a continuous value from stored image dimensions.
 2. `columns` on the masonry -- selected from the density map at runtime.
 3. The collection swatch gradient -- selected by card index.
+4. `object-position` on a spotlight slide and in the focal picker -- two percentages stored per piece, and the mark's own `left` / `top` while it is being dragged.
 
-Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as static class lookups. Case 1 cannot. These are the only sanctioned exceptions; anything else uses a token.
+Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as static class lookups. Cases 1 and 4 cannot: both are continuous per-piece numbers, and case 4 changes on every pointer move. These are the only sanctioned exceptions; anything else uses a token.
+
+The Tailwind rule behind all four is worth restating, because it is the trap: a class only exists if the literal string appears in the source. `` `scale-[${n}]` `` or `` `object-[${x}%_${y}%]` `` compiles, ships, and silently does nothing.
 
 ## Accessibility
 

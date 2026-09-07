@@ -87,6 +87,30 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
+def _parse_focal(raw, field: str):
+    """
+    A focal coordinate: a whole percent from 0 to 100, or null for centre.
+
+    Null is stored rather than 50 so a piece the owner has never placed can
+    be told from one they placed in the middle on purpose. Nothing reads the
+    difference today; it costs nothing to keep, and it cannot be recovered
+    later once every row says 50.
+    """
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ApiError(
+            "A focal point is a percentage.", details={field: str(raw)}
+        )
+    if not 0 <= value <= 100:
+        raise ApiError(
+            "A focal point is between 0 and 100.", details={field: str(raw)}
+        )
+    return value
+
+
 def _parse_year(raw):
     """
     A year from a form string or a JSON number.
@@ -266,6 +290,10 @@ def update_piece(piece_id):
 
     if "createdDate" in data:
         piece.created_date = _parse_created_date(data["createdDate"])
+
+    for key, attribute in (("focalX", "focal_x"), ("focalY", "focal_y")):
+        if key in data:
+            setattr(piece, attribute, _parse_focal(data[key], key))
 
     if "tags" in data:
         if not isinstance(data["tags"], list):

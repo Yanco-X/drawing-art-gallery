@@ -19,6 +19,10 @@ route, a gear in the control row, and a lazy dialog reusing the collection
 picker. 35 new checks, and the whole loop -- pick, save, reload -- driven in
 a real browser as the owner.
 
+**Pass 3 done on 2026-09-06.** The band fills its half with `object-fit:
+cover`, aimed by a focal point the owner drags onto each piece in the Edit
+details dialog. Twelve new checks.
+
 ## Decisions
 
 **The newest five stay the default, and the default is stored nowhere.**
@@ -68,19 +72,19 @@ name, a slug, a description and a visibility rule, none of which the
 spotlight has any use for, and one marked collection would have shown up in
 the collections grid needing to be hidden.
 
-**Contained, not cropped.** The band shows the piece nearly entire, which
-means `object-contain` over the `hatch` ground, exactly as the piece page
-treats artwork. Artsy crops to fill; that reads as editorial photography
-and beheads a portrait. A tall piece therefore sits centred with hatch
-either side, and that is correct -- the alternative, sizing the artwork
-panel from each piece's `aspectRatio`, makes the text panel change width on
-every advance.
+**Contained, not cropped -- superseded in pass 3.** Pass 1 argued that
+cropping to fill reads as editorial photography and beheads a portrait. That
+was true of a *centred* crop, which is the only kind available without a
+focal point; see the cover decision below. What survives the change is the
+rejected alternative: sizing the artwork panel from each piece's
+`aspectRatio` would make the label change width on every advance.
 
 **Full bleed, inner content capped.** The band spans the viewport, the
 artwork panel running to the left edge with no gutter, and the grid inside
 is capped at 2400px and centred -- the rule the header and footer already
-follow. Split is 55/45 in the artwork's favour, the same reasoning that
-gives the upload modal's image the larger half: it is the subject.
+follow. Split is 66/34 in the artwork's favour -- 55/45 at first, widened on the
+owner's call -- the same reasoning that gives the upload modal's image the
+larger half: it is the subject.
 
 This is a deviation from "content regions are capped at 2400px" and is
 recorded in `DESIGN.md` rather than left to be discovered.
@@ -123,6 +127,32 @@ autoplay would run to the end and stop with no way back short of clicking.
 The two rules look contradictory and are not: one is a walk, the other a
 cycle.
 
+**Cover with a focal point, not contain with a zoom.** Contain left hatch
+bars down both sides of every portrait, and raising the zoom did not close
+them -- the panel is wider than the work, so the slack is horizontal while
+a scale eats the vertical. Measured, 1.14 cost 12.3% of the height, which
+is heads and feet, and took nothing off the bars. Cover fills the panel by
+definition; the only thing wrong with it was that a centred crop beheads a
+portrait, which is exactly what a focal point fixes. The two had to arrive
+together.
+
+**The focal point belongs to the piece, not to the spotlight.** It is a
+fact about the artwork -- where the face is -- and any surface that crops
+can read it. Putting it on the spotlight entry would have made it
+unavailable to the picker tiles, and lost it whenever a piece left the
+band.
+
+**Two integers, not a cropped rendition.** Baking a hero crop per piece
+would mean a pipeline stage, a second copy of every image and a backfill
+over the archived originals. `object-position` costs thirty bytes in a
+payload the page already fetches, and the browser spends it while drawing
+an image it was drawing anyway. This was the explicit ask: no traffic or
+compute overhead.
+
+**Null means centre; 50 means centred on purpose.** Nothing reads the
+difference today. It costs nothing to keep and cannot be recovered once
+every row says 50.
+
 ## Notes
 
 - Slides are `role="region"`, `aria-roledescription="carousel"`. Inactive
@@ -138,6 +168,17 @@ cycle.
 - Zero pieces renders nothing. One piece renders the piece with no
   chevrons, no segments and no autoplay.
 - Landing page only. Collection and filtered routes do not get a band.
+- **The focal picker uses pointer capture**, so the mark keeps tracking
+  once the pointer leaves the frame and touch and mouse are one path.
+  `touch-none` is not optional with it -- without it a drag scrolls the
+  dialog instead of moving the point.
+- **A near-miss worth recording.** The band appeared to ignore a saved
+  focal point: slide one still rendered `50% 50%`. It was correct. Two
+  pieces share the title *Night Calls IX*, the spotlight had been curated
+  by hand, and slide one was the other one -- which has no focal point.
+  Comparing by id rather than by title is what settled it.
+- **`tests/smoke_uploads.py` deletes `pid` partway through**, so anything
+  appended to that suite needs its own upload rather than reusing it.
 - **The stacked slides were the risk, and they held.** Five layers in one
   grid cell is the same shape as the socials bug -- an invisible sheet over
   a live control. `elementFromPoint` at the centre of the "View piece" link,

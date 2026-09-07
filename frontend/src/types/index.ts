@@ -83,6 +83,17 @@ export interface Piece {
    * what keeps it free of a second request.
    */
   spotlightOrder: number | null;
+  /**
+   * Where a crop should be aimed, as percentages across and down the image.
+   * Null on both is dead centre, which is the browser's own default.
+   *
+   * The spotlight fills its half with `object-fit: cover`, so something is
+   * always cut; this is what says which part survives. Two numbers rather
+   * than a second cropped rendition -- the browser is drawing the image
+   * anyway, and `object-position` costs nothing to honour.
+   */
+  focalX: number | null;
+  focalY: number | null;
   /** Present on GET /api/pieces/<id> only, not in the list payload. */
   collections?: CollectionRef[];
   /**
@@ -185,6 +196,9 @@ export interface PiecePatch {
   year?: string | number | null;
   /** YYYY-MM-DD, or null to clear. */
   createdDate?: string | null;
+  /** 0-100, or null to go back to centre. */
+  focalX?: number | null;
+  focalY?: number | null;
   /** The whole list — an omitted tag is a removed one. */
   tags?: string[];
 }

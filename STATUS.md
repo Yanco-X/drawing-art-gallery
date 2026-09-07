@@ -29,12 +29,12 @@ drawing-art-gallery/
 │   │   ├── api/           pieces.py, collections.py, session.py, socials.py,
 │   │   │                  spotlight.py, helpers.py
 │   │   └── services/      storage adapters, images, tiles, slugs
-│   ├── migrations/        alembic, 6 revisions
+│   ├── migrations/        alembic, 7 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
-│   └── tests/             8 suites, 322 checks
+│   └── tests/             8 suites, 306 checks
 ├── frontend/              75 .ts/.tsx files
 │   └── src/
-│       ├── components/    42 (incl. icons.tsx and platform-icons.tsx)
+│       ├── components/    43 (incl. icons.tsx and platform-icons.tsx)
 │       ├── contexts/      theme, session, socials — provider + context per pair
 │       ├── hooks/         11 (incl. useAsync, useSession, useSpotlight)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
@@ -67,7 +67,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report f3a17c0d5b92
+alembic upgrade head          # should report b8e42d1a6c37
 flask --app app run --port 5000
 ```
 
@@ -141,7 +141,8 @@ Eight tables: `pieces`, `collections`, `collection_pieces`, `tags`,
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
-`updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`.
+`updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`, `focal_x`,
+`focal_y`.
 
 **`spotlight_order`** is the slot a piece holds in the landing page band,
 counting from zero, or null for one the owner never picked. A nullable
@@ -151,6 +152,15 @@ say what one integer says. Deliberately not unique -- `PUT /api/spotlight`
 rewrites the whole list in one transaction, and a unique index would make an
 ordinary reorder collide with itself partway through. Waiving a piece clears
 it, for the reason waiving already drops collection membership.
+
+**`focal_x` and `focal_y`** are where a crop should be aimed, as whole
+percentages across and down the image, null on both meaning centre. The
+spotlight fills its half with `object-fit: cover`, so something is always
+cut; these say what survives. Two integers rather than a cropped rendition
+per piece -- a second derivative would cost a pipeline stage, another copy
+of every image and a backfill, where this costs about thirty bytes in a
+payload the page already fetches and is spent by the browser at paint time.
+Set through `PATCH /api/pieces/<id>` like any other label field.
 
 **A piece has no slug.** It is addressed by id everywhere — the route is
 `/piece/:id`, and object keys derive from the id. Worth stating because
@@ -178,7 +188,7 @@ never the point of the table.
 
 ### Migrations
 
-Six revisions, head `f3a17c0d5b92`. History is immutable — add a
+Seven revisions, head `b8e42d1a6c37`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -188,6 +198,7 @@ c2574bd3ea94  add pieces.waived_at
 a7f4d91c3b28  add pieces.tiles_ready
 e5b71c94f0a2  add socials
 f3a17c0d5b92  add pieces.spotlight_order
+b8e42d1a6c37  add pieces.focal_x and pieces.focal_y
 ```
 
 ### Two model notes worth carrying
@@ -270,7 +281,7 @@ credential is still configured — see §7.
 | `GET` | `/api/pieces` | Exhibited only. `?waived=true` `[owner]` returns the reserve, newest waived first |
 | `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`. **410 and a tombstone** for a waived piece unless owner |
 | `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives and the Deep Zoom pyramid. Repeated `collectionIds` fields join the piece to collections in the same transaction |
-| `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags. Only keys present are touched. Allowed on a waived piece |
+| `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags, focalX, focalY. Only keys present are touched. Allowed on a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
 | `POST` | `/api/pieces/<id>/waive` `[owner]` | 409 if already waived |
 | `POST` | `/api/pieces/<id>/restore` `[owner]` | Optional `{"collectionIds": [...]}`, one transaction |
@@ -443,7 +454,7 @@ and `tests/smoke_visitor.py` is named after it.
 
 ## 8. Verification
 
-Eight suites, 322 checks, no test framework — each is a script that prints
+Eight suites, 306 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
@@ -781,7 +792,7 @@ Carried forward deliberately.
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
-- **No suite looks at the UI.** The 322 checks cover the API, storage and
+- **No suite looks at the UI.** The 306 checks cover the API, storage and
   the image pipeline; nothing asserts that a page renders. Detailed View was
   verified by geometry, network and build, and its blank minimap was then
   found by the owner in use. Authentication was the first feature driven

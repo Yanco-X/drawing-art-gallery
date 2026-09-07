@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { ApiError, updatePiece } from '../services';
 import type { Piece } from '../types';
 import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
+import { FocalPicker } from './FocalPicker';
 import { TagInput } from './TagInput';
 
 /*
@@ -37,9 +38,12 @@ export const PieceDetailsDialog = ({
   const [year, setYear] = useState(piece.year === null ? '' : String(piece.year));
   const [createdDate, setCreatedDate] = useState(piece.createdDate ?? '');
   const [tags, setTags] = useState(piece.tags.map((tag) => tag.name));
+  const [focal, setFocal] = useState<{ x: number | null; y: number | null }>({
+    x: piece.focalX,
+    y: piece.focalY,
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
 
   /*
    * Mounted only while open, so the fields above initialise from the piece
@@ -73,6 +77,8 @@ export const PieceDetailsDialog = ({
         // and a mistyped year would silently vanish instead of being refused.
         year: year.trim() || null,
         createdDate: createdDate || null,
+        focalX: focal.x,
+        focalY: focal.y,
         tags,
       });
       onSaved(saved);
@@ -122,26 +128,23 @@ export const PieceDetailsDialog = ({
         </div>
 
         <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto p-6 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <span className={LABEL}>Artwork</span>
-            {/* The hatch sits underneath, so a slow or broken load shows the
-                placeholder rather than a hole. */}
-            <div className="hatch flex items-center justify-center border border-line p-2">
-              {failed ? (
-                <span className="py-16 font-mono text-[11px] tracking-[0.05em] text-faint">
-                  [ artwork unavailable ]
-                </span>
-              ) : (
-                <img
-                  src={piece.imageUrl}
-                  alt={piece.title}
-                  onError={() => setFailed(true)}
-                  className="max-h-[420px] w-full object-contain"
-                />
-              )}
-            </div>
+          <div className="flex flex-col gap-4">
+            {/*
+              The preview earns its place by being editable. It used to be
+              the artwork and a line saying the artwork does not change --
+              true, and nothing to do. The focal point is the one thing about
+              the image itself this dialog can set, and it is still not a
+              change to the file.
+            */}
+            <FocalPicker
+              piece={piece}
+              x={focal.x}
+              y={focal.y}
+              onChange={setFocal}
+            />
             <p className="text-[12px] text-faint">
-              The wall label only — the artwork itself stays as uploaded.
+              The wall label and the crop — the artwork itself stays as
+              uploaded.
             </p>
           </div>
 

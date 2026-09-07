@@ -422,6 +422,52 @@ check("no tiles left behind",
       not any(k.startswith(f"{tid}/") for k in storage.objects),
       str([k for k in storage.objects if k.startswith(f"{tid}/")][:3]))
 
+print("\n== the focal point ==")
+fid = upload("Focal Subject").get_json()["id"]
+res = client.get(f"/api/pieces/{fid}", headers=OWNER).get_json()
+check("a new piece has no focal point",
+      res["focalX"] is None and res["focalY"] is None,
+      f"{res['focalX']},{res['focalY']}")
+check("it is on the list payload too",
+      "focalX" in client.get("/api/pieces").get_json()[0])
+
+res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalX": 50, "focalY": 14})
+check("the owner places it", res.status_code == 200, str(res.status_code))
+check("and it comes back",
+      (res.get_json()["focalX"], res.get_json()["focalY"]) == (50, 14),
+      str((res.get_json()["focalX"], res.get_json()["focalY"])))
+
+check("0 and 100 are both inside the range",
+      client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"focalX": 0, "focalY": 100}).status_code == 200)
+check("101 is refused",
+      client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"focalY": 101}).status_code == 400)
+check("a negative is refused",
+      client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"focalY": -1}).status_code == 400)
+check("a word is refused",
+      client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"focalY": "abc"}).status_code == 400)
+after = client.get(f"/api/pieces/{fid}", headers=OWNER).get_json()
+check("the refusals changed nothing",
+      (after["focalX"], after["focalY"]) == (0, 100),
+      str((after["focalX"], after["focalY"])))
+
+# The pair is only touched when its key is sent, like every other field
+# on this route -- a form that edits a title must not recentre the crop.
+check("an untouched key is left alone",
+      client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"title": "Focal Test"}).get_json()["focalY"] == 100)
+res = client.patch(f"/api/pieces/{fid}", headers=OWNER,
+                   json={"focalX": None, "focalY": None})
+check("null clears it back to centre",
+      (res.get_json()["focalX"], res.get_json()["focalY"]) == (None, None),
+      str((res.get_json()["focalX"], res.get_json()["focalY"])))
+check("a visitor cannot place it",
+      client.patch(f"/api/pieces/{fid}", json={"focalY": 20}).status_code == 401)
+
+
 failed = [c for c in checks if not c[1]]
 print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")
 if failed:

@@ -106,6 +106,18 @@ class Piece(Base):
     # schema holds rather than a filter every future query must remember.
     spotlight_order: Mapped[int | None] = mapped_column(Integer)
 
+    # Where to aim a crop, as percentages across and down the image. Null on
+    # both is dead centre, which is what every browser does unasked and what
+    # every piece uploaded before this existed keeps.
+    #
+    # Two integers, and deliberately nothing more. The alternative is baking
+    # a cropped rendition per piece, which costs storage, a pipeline stage
+    # and a backfill; these two numbers cost thirty bytes in the payload and
+    # are spent by the browser at paint time, where the image is being drawn
+    # anyway.
+    focal_x: Mapped[int | None] = mapped_column(Integer)
+    focal_y: Mapped[int | None] = mapped_column(Integer)
+
     created_date: Mapped[date | None] = mapped_column(Date)  # when the art was made
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), index=True

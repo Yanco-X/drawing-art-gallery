@@ -43,3 +43,19 @@ export const spotlightSlots = (
 
   return [...chosen, ...newest].slice(0, SPOTLIGHT_COUNT);
 };
+
+/** Dead centre: what a browser does with no `object-position` of its own. */
+export const CENTRE_FOCAL = 50;
+
+/**
+ * A piece's `object-position`, from its stored focal point.
+ *
+ * Null falls back to centre rather than being stored as 50, so a piece the
+ * owner has never placed stays distinguishable from one they deliberately
+ * centred. Nothing reads that difference today; it is free to keep and
+ * impossible to recover once every row says 50.
+ */
+export const focalPosition = (
+  piece: Pick<Piece, 'focalX' | 'focalY'>,
+): string =>
+  `${piece.focalX ?? CENTRE_FOCAL}% ${piece.focalY ?? CENTRE_FOCAL}%`;
