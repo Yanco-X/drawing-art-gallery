@@ -74,6 +74,7 @@ export const DetailedView = ({
   onNavigate: (piece: Piece) => void;
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const chromeTimer = useRef<number | undefined>(undefined);
@@ -99,7 +100,23 @@ export const DetailedView = ({
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    else if (!open && dialog.open) {
+      /*
+       * Leave fullscreen on the way out, or the frame stays fullscreen
+       * inside a `display: none` dialog: the window keeps the whole screen,
+       * draws nothing in it, and the person is left on the page underneath
+       * with no browser chrome and nothing on screen to say why.
+       *
+       * Only ours. A fullscreen element elsewhere on the page is not this
+       * component's to close.
+       */
+      if (
+        document.fullscreenElement &&
+        dialog.contains(document.fullscreenElement)
+      )
+        void document.exitFullscreen().catch(() => undefined);
+      dialog.close();
+    }
   }, [open]);
 
   /* ---- chrome that gets out of the way ---- */
@@ -311,11 +328,24 @@ export const DetailedView = ({
     return () => document.removeEventListener('fullscreenchange', sync);
   }, []);
 
+  /*
+   * Requested on the frame inside the dialog, never on the dialog itself.
+   *
+   * A `dialog` is one of the few elements the Fullscreen API names as
+   * ineligible -- it is already a top-layer element, and the spec will not
+   * let one element be in the top layer for two reasons at once. Asking
+   * anyway rejects with `TypeError: Dialog elements are invalid`, which is
+   * what this button did, silently, for as long as it has existed. The frame
+   * is an ordinary div, so it is eligible, and being a descendant of the
+   * open dialog it still paints above everything.
+   *
+   * The catch stays, because fullscreen can still be refused for reasons
+   * worth ignoring rather than crashing on -- an embedding page without
+   * `allow="fullscreen"`, chiefly. It no longer hides a mistake of ours.
+   */
   const toggleFullscreen = () => {
-    // Requested on the dialog rather than the document, so the top layer
-    // and the fullscreen element are the same node.
     if (document.fullscreenElement) void document.exitFullscreen();
-    else void dialogRef.current?.requestFullscreen().catch(() => undefined);
+    else void frameRef.current?.requestFullscreen().catch(() => undefined);
   };
 
   /* ---- keyboard ---- */
@@ -353,16 +383,37 @@ export const DetailedView = ({
       ref={dialogRef}
       aria-labelledby={headingId}
       onKeyDown={onKeyDown}
-      // Escape fires cancel. The viewer owns a history entry, so closing has
-      // to go back rather than simply hiding, or the URL and the screen stop
-      // agreeing with each other.
+      /*
+       * Escape fires cancel. The viewer owns a history entry, so closing has
+       * to go back rather than simply hiding, or the URL and the screen stop
+       * agreeing with each other.
+       *
+       * And it steps out one level at a time. An open modal's cancel gets
+       * Escape before the browser can act on it and `preventDefault` spends
+       * it, so the browser never performs its own exit: the first Escape has
+       * to do that here, leaving the piece on screen the way a video player
+       * does, and the second closes the viewer.
+       */
       onCancel={(event) => {
         event.preventDefault();
+        if (document.fullscreenElement) {
+          void document.exitFullscreen().catch(() => undefined);
+          return;
+        }
         onClose();
       }}
       className="m-0 h-screen max-h-none w-screen max-w-none border-none bg-bg p-0 text-text backdrop:bg-black/90"
     >
-      <div className="relative h-full w-full overflow-hidden">
+      {/*
+        The frame, and the element that goes fullscreen. It carries its own
+        background rather than borrowing the dialog's: once it is the
+        fullscreen element it is the thing painting the screen, and the
+        ground behind a letterboxed drawing has to come from somewhere.
+      */}
+      <div
+        ref={frameRef}
+        className="relative h-full w-full overflow-hidden bg-bg"
+      >
         {/*
           The first frame, instantly: the piece page behind has already
           loaded this exact file, so it is in cache and paints before

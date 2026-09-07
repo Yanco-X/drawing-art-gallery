@@ -152,8 +152,11 @@ Full-window shell and zoom/pan.
 - Opens on `display.webp` — already cached by the page behind it, so the
   first frame is instant — then swaps to tiles.
 - Falls back to `display.webp` when `tileSource` is null.
-- A fullscreen toggle inside the overlay. `requestFullscreen` on the dialog
-  element works; seizing the whole screen unprompted does not.
+- A fullscreen toggle inside the overlay. Requested on the frame inside the
+  dialog, never on the dialog itself; seizing the whole screen unprompted is
+  refused by the browser, so it has to be a button someone presses. This
+  bullet originally read "`requestFullscreen` on the dialog element works" —
+  it never did, and nothing noticed until Pass 4.
 - Prev/next stay live, resetting zoom on navigation, so the viewer is a
   browsing mode rather than a detour.
 
@@ -310,6 +313,72 @@ appending its `navigator` class and writing inline styles. React owns the
 wrapper, whose className changes every time the minimap shows or hides, and
 re-applying it would wipe OpenSeadragon's mutations. The inner element takes
 no changing props, so React renders it once and never touches it again.
+
+## Pass 4 — done 2026-09-07
+
+The Fullscreen button had never worked. It was reported as doing nothing,
+and it did exactly nothing: `requestFullscreen` on a `dialog` rejects with
+`TypeError: Dialog elements are invalid`, and the `.catch(() => undefined)`
+wrapped around it threw the error away. It had been like that since the
+feature shipped on 2 September.
+
+Two further faults sat behind it, both unreachable while the first one
+stood, and both of which strand the person on the other side of the screen.
+
+### Decided 2026-09-07
+
+**The frame goes fullscreen, not the dialog.** A `dialog` is one of the
+handful of elements the Fullscreen API names as ineligible: it is already a
+top-layer element, and the spec will not let one element be in the top layer
+for two reasons at once. The wrapper div inside it is an ordinary element,
+so it is eligible, and being a descendant of the open dialog it still paints
+above everything. Measured in a headed Chrome — headless reports fullscreen
+state that the window never actually takes — the viewport becomes the screen
+at 2560×1440, the canvas fills it, and the rail stays hit-testable.
+
+`documentElement` works too and was tested beside it. The frame won because
+it is the thing that *is* the viewer: fullscreening the root would put the
+piece page into fullscreen as well and apply `:fullscreen` to the whole app,
+a broader claim than this button is making.
+
+**The catch stays, but it no longer covers for us.** Fullscreen can still be
+refused for reasons worth ignoring rather than crashing on — an embedding
+page without `allow="fullscreen"`, chiefly. What it must not do is swallow a
+mistake of ours, which is what it did here for five days. The reason this
+was invisible rather than merely broken is worth keeping in mind: a rejected
+promise with a `.catch` that returns `undefined` is indistinguishable, from
+the outside, from a button that was never wired up.
+
+**Escape steps out one level at a time.** An open modal's `cancel` gets
+Escape before the browser can act on it, and this component calls
+`preventDefault`, so the browser's own exit never runs. Left alone, one
+Escape closed the viewer and left the fullscreen behind: the page underneath
+at full screen size, no browser chrome, no dialog, and nothing on screen to
+say why or how to get out. The first Escape now leaves fullscreen and keeps
+the piece up, the way a video player does; the second closes the viewer.
+
+**Closing the viewer takes the fullscreen with it.** The same collision in
+the other order. The dialog is closed with `close()` and never unmounted, so
+a fullscreen frame inside it stays connected and stays fullscreen — inside a
+`display: none` subtree, drawing nothing at all. The close path exits first,
+and only when the fullscreen element is the viewer's own; a fullscreen
+element elsewhere on the page is not this component's to close.
+
+**The frame carries its own background.** Once it is the element painting
+the screen, the ground beside a letterboxed drawing has to come from
+somewhere, and borrowing the dialog's stops working at exactly the moment
+the frame is the thing on screen.
+
+### Checked
+
+`check-fullscreen.mjs`, 26 assertions, driving the component's own button
+through the input pipeline rather than `el.click()` — `requestFullscreen`
+needs transient user activation, and a synthetic click carries none, so any
+other way of testing it would have manufactured the failure being looked
+for. Covers: the button and the `f` key both toggling; the frame rather than
+the dialog being what goes fullscreen; the viewport reaching the screen and
+returning; the label and icon following `fullscreenchange`; Escape at each
+of its two levels; and closing from fullscreen leaving nothing behind.
 
 ## Open
 
