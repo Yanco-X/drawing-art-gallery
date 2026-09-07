@@ -55,6 +55,7 @@ def piece_to_dict(piece: Piece) -> dict:
         # piece the owner has actually placed.
         "focalX": piece.focal_x,
         "focalY": piece.focal_y,
+        "focalZoom": piece.focal_zoom,
         "tags": [tag_to_dict(tag) for tag in piece.tags],
     }
 

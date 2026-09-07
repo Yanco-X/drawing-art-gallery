@@ -33,6 +33,12 @@ This document establishes the basic rules and guidelines for AI agents working o
 ## 6. Clear Communication
 - Keep the user updated on what steps are being taken and why.
 - Provide clear summaries of the changes made during a session.
+- If the live gallery data changes underneath you mid-session -- the
+  spotlight order, a piece's details, anything in the running app -- stop
+  and ask whether the owner made the change and what they did. Do not
+  investigate and do not restore anything until they answer. They are using
+  the app while you work, so a surprising state is a question for them
+  before it is a bug for you, and one question is cheaper than a hunt.
 
 ## 7. Context & References
 - Take into account md files for context, these files are meant to be read.

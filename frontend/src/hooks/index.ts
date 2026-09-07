@@ -14,3 +14,4 @@ export {
   GRID_DENSITY_LABELS,
 } from './useGridDensity';
 export { useSpotlight } from './useSpotlight';
+export { useFrameAspect } from './useFrameAspect';

@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useSession, useSpotlight } from '../hooks';
-import { focalPosition, pickedIds, spotlightSlots } from '../lib/spotlight';
+import { useFrameAspect, useSession, useSpotlight } from '../hooks';
+import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
 import type { Piece } from '../types';
 import { ICON_BUTTON, ICON_BUTTON_ACCENT, SUBTLE_ACTION } from './form-styles';
 import { ChevronLeftIcon, ChevronRightIcon, GearIcon } from './icons';
@@ -15,12 +15,20 @@ const SpotlightDialog = lazy(() => import('./SpotlightDialog'));
  * The band at the top of the gallery: one piece filling its half, its label
  * beside it.
  *
- * Cropped, not contained -- but aimed. Contain left hatch bars either side
- * of every portrait, and no amount of zoom closed them, because the panel is
- * wider than the work and scaling only ate the axis that was already full.
- * Cover fills the half outright and `object-position` says which part of the
- * piece survives, which the owner sets per piece. Centre-cropping alone is
- * what beheads a portrait; a focal point is what makes cover safe.
+ * Cropped, not contained -- but aimed, and sized. Contain left hatch bars
+ * either side of every portrait with no way out, because the panel is wider
+ * than the work and a scale over contain only ate the axis that was already
+ * full. Cover fills the half outright, `object-position` says which part of
+ * the piece survives, and a per-piece zoom says how much of it to show.
+ * Centre-cropping alone is what beheads a portrait; a focal point is what
+ * makes cover safe, and the zoom is what makes it optional -- under 100 the
+ * hatch comes back, on the pieces where the owner decides that is the trade.
+ *
+ * The zoom is spent over `contain` rather than over `cover`, because a
+ * transform scales what `object-fit` already cropped and cannot give back
+ * what cover threw away. `framePiece` says which fit and which scale; the
+ * frame's own shape is measured, since where cover and contain coincide
+ * depends on it.
  */
 const BAND = 'h-[clamp(320px,52vh,500px)] lg:h-[clamp(440px,72vh,780px)]';
 
@@ -36,9 +44,14 @@ const SpotlightArtwork = ({
   priority: boolean;
 }) => {
   const [failed, setFailed] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const framing = framePiece(piece, useFrameAspect(panelRef));
 
   return (
-    <div className={`hatch flex items-center justify-center ${BAND}`}>
+    <div
+      ref={panelRef}
+      className={`hatch flex items-center justify-center overflow-hidden ${BAND}`}
+    >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
           [ artwork ]
@@ -51,10 +64,17 @@ const SpotlightArtwork = ({
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : 'auto'}
             onError={() => setFailed(true)}
-            /* A continuous per-piece value, so it cannot be a static class.
-               See the inline-style exceptions in DESIGN.md. */
-            style={{ objectPosition: focalPosition(piece) }}
-            className="h-full w-full object-cover"
+            /* Continuous per-piece values, so they cannot be static classes.
+               See the inline-style exceptions in DESIGN.md. The origin is the
+               focal point, so the zoom pivots on what the owner aimed at
+               rather than drifting back to the middle of the frame. */
+            style={{
+              objectFit: framing.fit,
+              objectPosition: framing.position,
+              transformOrigin: framing.position,
+              transform: `scale(${framing.scale})`,
+            }}
+            className="h-full w-full"
           />
         )
       )}

@@ -29,6 +29,10 @@ change -- `PUT /api/spotlight` already took an ordered list. 49 browser
 checks, including a real drag driven through `Input.setInterceptDrags`
 rather than a synthesised `DragEvent`.
 
+**Pass 5 done on 2026-09-06.** `pieces.focal_zoom`: how much of a piece the
+band shows, not only which part of it. 15 new API checks and 37 in a
+browser.
+
 ## Decisions
 
 **The newest five stay the default, and the default is stored nowhere.**
@@ -186,6 +190,47 @@ ordered list and rewritten the indices in one transaction, and reordering
 the same five ids is a case its suite already covered. Dragging changes the
 array the Save button was already sending.
 
+**A fixed crop was the other half of the problem.** The focal point chose
+which part of a piece survives; it could not choose how much. `cover` picks
+the smallest scale that fills the frame, and for a tall portrait in a wide
+slot that scale throws most of the drawing away -- the focal point was only
+picking which part of the loss to keep. Most of this gallery is tall
+portraits, so this was the common case, not the corner.
+
+**A scale over `cover` does not work, and looked like it did.** The first
+attempt was `transform: scale()` over the existing `object-fit: cover`. It
+is wrong: `object-fit` crops at layout time and a transform only scales
+what came out, so scaling below 1 draws the same crop smaller rather than
+revealing more. On real artwork the difference is invisible -- a smaller
+copy of a crop reads as "more of the piece" to the eye, and it fooled me
+into shipping a demo that claimed the feature worked. A test image of
+sixteen numbered bands settled it in one screenshot: the same bands at
+every scale. Synthetic fixtures beat real content for questions of fact.
+
+**So the zoom is spent over `contain`.** `contain` starts with the whole
+piece in frame, so a scale has something to give back. `fillRatio` is where
+`contain` and `cover` coincide -- decided entirely by the two aspect ratios
+-- so a stored 100 renders exactly what the band drew before any of this
+existed, at any size the band happens to be.
+
+**Null still means `cover`, with no arithmetic at all.** Every piece the
+owner has never sized takes the old path: no measurement, no transform, an
+exact fill guaranteed at every breakpoint. That keeps the arithmetic off
+the landing page's first paint, where the band is the LCP element.
+
+**The frame has to be measured.** Where `cover` and `contain` meet depends
+on the frame's aspect ratio, and the band's is `clamp()`-sized. Pure CSS
+cannot express it: `max()` across two axes is not available, and the
+`min-width` plus `aspect-ratio` trick that looks like it should work
+distorts the box instead -- tested, 165x110 where 165x660 was wanted. So
+`useFrameAspect` puts a `ResizeObserver` on the panel. It fires once on
+`observe()` with the current size, so nothing is read synchronously and
+there is no `setState` in an effect body for the lint rule to object to.
+
+**A multiple of fill, not a crop rectangle.** Four numbers would describe
+the crop exactly at one viewport and wrongly at every other. A point and a
+multiple mean the same thing at any size.
+
 ## Notes
 
 - Slides are `role="region"`, `aria-roledescription="carousel"`. Inactive
@@ -227,6 +272,21 @@ array the Save button was already sending.
   Comparing by id rather than by title is what settled it.
 - **`tests/smoke_uploads.py` deletes `pid` partway through**, so anything
   appended to that suite needs its own upload rather than reusing it.
+- **The band's slide 0 is not `pieces[0]`.** The list is newest-first; the
+  band shows the curated order. A test that wrote to `d[0]` and then read
+  the band was measuring two different pieces. Logging the `alt` is what
+  caught it -- the second time this exact confusion has cost a debugging
+  round, after the two pieces sharing a title in pass 3.
+- **`getBoundingClientRect` is the post-transform box.** Comparing a
+  computed `transform-origin` against it measures a scaled element against
+  its own scale. `offsetWidth` / `offsetHeight` are the layout box.
+- **`getComputedStyle` resolves `transform-origin` to pixels** but leaves
+  `object-position` in percent, so the two can only be compared through the
+  element's size.
+- **Escaping through a heredoc ate a `
+` again**, turning a Python string
+  literal into a syntax error. Payloads with escapes go in a file written
+  by the editor tool, never inline in a shell command.
 - **The stacked slides were the risk, and they held.** Five layers in one
   grid cell is the same shape as the socials bug -- an invisible sheet over
   a live control. `elementFromPoint` at the centre of the "View piece" link,

@@ -38,9 +38,14 @@ export const PieceDetailsDialog = ({
   const [year, setYear] = useState(piece.year === null ? '' : String(piece.year));
   const [createdDate, setCreatedDate] = useState(piece.createdDate ?? '');
   const [tags, setTags] = useState(piece.tags.map((tag) => tag.name));
-  const [focal, setFocal] = useState<{ x: number | null; y: number | null }>({
+  const [focal, setFocal] = useState<{
+    x: number | null;
+    y: number | null;
+    zoom: number | null;
+  }>({
     x: piece.focalX,
     y: piece.focalY,
+    zoom: piece.focalZoom,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +84,7 @@ export const PieceDetailsDialog = ({
         createdDate: createdDate || null,
         focalX: focal.x,
         focalY: focal.y,
+        focalZoom: focal.zoom,
         tags,
       });
       onSaved(saved);
@@ -140,6 +146,7 @@ export const PieceDetailsDialog = ({
               piece={piece}
               x={focal.x}
               y={focal.y}
+              zoom={focal.zoom}
               onChange={setFocal}
             />
             <p className="text-[12px] text-faint">

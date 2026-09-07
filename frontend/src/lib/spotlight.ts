@@ -59,3 +59,64 @@ export const focalPosition = (
   piece: Pick<Piece, 'focalX' | 'focalY'>,
 ): string =>
   `${piece.focalX ?? CENTRE_FOCAL}% ${piece.focalY ?? CENTRE_FOCAL}%`;
+
+/** Filling the frame exactly: what `object-fit: cover` does unasked. */
+export const FILL_ZOOM = 100;
+
+/**
+ * The bounds the API will accept. Below the floor a piece is an island in
+ * the hatch; above the ceiling the rendition is being upscaled past what
+ * it can hold.
+ */
+export const ZOOM_MIN = 40;
+export const ZOOM_MAX = 250;
+
+/**
+ * The scale that turns `contain` into `cover` for one piece in one frame.
+ *
+ * `cover` and `contain` pick the largest and the smallest scale that touch
+ * the frame, so the ratio between them is decided entirely by the two
+ * aspect ratios. It is what lets a stored number mean `fill` at any size
+ * the band happens to be.
+ */
+export const fillRatio = (imageAspect: number, frameAspect: number): number =>
+  Math.max(frameAspect / imageAspect, imageAspect / frameAspect);
+
+export interface Framing {
+  fit: 'cover' | 'contain';
+  scale: number;
+  position: string;
+}
+
+/**
+ * How to draw one piece in a frame of a given shape.
+ *
+ * `object-fit` crops at layout time and `transform` only scales what came
+ * out, so a scale over `cover` cannot reveal anything `cover` had already
+ * thrown away -- it just draws the same crop smaller. Measured, not
+ * assumed: a test image of numbered bands showed the same bands at every
+ * scale. So the zoom is spent over `contain`, which starts with the whole
+ * piece in frame and has something left to give back.
+ *
+ * `fillRatio` is where `contain` and `cover` coincide, so a stored 100
+ * renders exactly what the band did before any of this existed.
+ *
+ * A piece with no zoom, or a frame not yet measured, takes plain `cover`.
+ * That needs no arithmetic and is exactly right for every piece the owner
+ * has never sized, which is the landing page's first paint.
+ */
+export const framePiece = (
+  piece: Pick<Piece, 'focalX' | 'focalY' | 'focalZoom' | 'aspectRatio'>,
+  frameAspect: number,
+): Framing => {
+  const position = focalPosition(piece);
+  if (piece.focalZoom === null || !frameAspect || !piece.aspectRatio) {
+    return { fit: 'cover', scale: 1, position };
+  }
+  return {
+    fit: 'contain',
+    scale:
+      fillRatio(piece.aspectRatio, frameAspect) * (piece.focalZoom / 100),
+    position,
+  };
+};

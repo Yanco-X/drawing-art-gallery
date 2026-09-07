@@ -118,6 +118,19 @@ class Piece(Base):
     focal_x: Mapped[int | None] = mapped_column(Integer)
     focal_y: Mapped[int | None] = mapped_column(Integer)
 
+    # How large the piece is drawn inside that frame, as a percent of the
+    # size that just fills it. Null is 100 -- fill it exactly, which is what
+    # `object-fit: cover` does unasked and what every piece kept before this
+    # existed. Under 100 the piece no longer fills its half and the hatch
+    # shows around it, which is the owner's choice to make per piece: a tall
+    # portrait cropped to a wide slot loses most of itself at 100.
+    #
+    # Relative to fill rather than an absolute scale, because the band is
+    # `clamp()`-sized and changes shape between breakpoints. A stored crop
+    # rectangle would be right at one viewport and wrong at every other;
+    # a point and a multiple of fill mean the same thing at any size.
+    focal_zoom: Mapped[int | None] = mapped_column(Integer)
+
     created_date: Mapped[date | None] = mapped_column(Date)  # when the art was made
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), index=True

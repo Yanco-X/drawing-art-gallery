@@ -294,6 +294,10 @@ Where a piece's crop is aimed, in the Edit details dialog. Added 2026-09-06 with
 * **It replaced a static preview**, which showed the artwork beside a line explaining that the artwork does not change -- true, and nothing to do. The crop is the one thing about the image this dialog can set, and setting it still does not touch the file.
 * **Pointer capture, not window listeners.** The element keeps receiving moves once the pointer leaves it, the browser cleans up a cancelled gesture, and touch and mouse are one code path. `touch-none` is required with it: without it a drag scrolls the dialog instead of moving the point.
 * **Arrow keys move it**, 2% a press and 10% with Shift, on a focusable frame carrying its coordinates in its accessible name. 1% a press would be forty presses to cross a piece.
+* **A zoom slider under the preview**, because the preview is the only thing it visibly changes. 100% is the size that fills the band exactly, which is what every piece did before the control existed; under it the piece stops filling its half and the hatch shows around it, over it the crop tightens. A line beneath the slider says which of the three is happening, rather than leaving the hatch to be discovered on the live page.
+* **The zoom is spent over `contain`, not over `cover`.** `object-fit` crops at layout time and a transform only scales what came out, so a scale over `cover` draws the same crop smaller instead of revealing more -- measured with a test image of numbered bands, which showed the same bands at every scale. Over `contain` the whole piece starts in frame and the scale has something to give back. Where the two coincide depends on the frame's shape, so the band measures its own; the picker's preview is 3:2 by construction and takes the constant.
+* **A native range input**, styled to a hairline track and a square thumb in `index.css`. It brings keyboard stepping and its value in the accessibility tree; none of that is worth rebuilding for one field.
+* **"Fill" clears it back to null** rather than writing 100, the same reasoning as "Centre".
 * **"Centre" clears it back to null** rather than writing 50, so a piece that was never placed stays distinguishable from one deliberately centred.
 
 ### Intro
@@ -409,7 +413,7 @@ Top border in `line`, 28px vertical padding, content split left and right and al
 1. `aspect-ratio` on a piece thumbnail -- a continuous value from stored image dimensions.
 2. `columns` on the masonry -- selected from the density map at runtime.
 3. The collection swatch gradient -- selected by card index.
-4. `object-position` on a spotlight slide and in the focal picker -- two percentages stored per piece, and the mark's own `left` / `top` while it is being dragged.
+4. `object-position` on a spotlight slide and in the focal picker -- two percentages stored per piece, and the mark's own `left` / `top` while it is being dragged. `object-fit`, `transform-origin` and the zoom's `scale()` ride along with it: all four are one per-piece framing, and a Tailwind class cannot hold a continuous value.
 
 Cases 2 and 3 draw from a fixed, enumerable set and *could* be rewritten as static class lookups. Cases 1 and 4 cannot: both are continuous per-piece numbers, and case 4 changes on every pointer move. These are the only sanctioned exceptions; anything else uses a token.
 

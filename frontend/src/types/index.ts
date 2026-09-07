@@ -94,6 +94,15 @@ export interface Piece {
    */
   focalX: number | null;
   focalY: number | null;
+  /**
+   * How large the piece is drawn inside that crop, as a percent of the
+   * size that just fills the frame. Null is 100 -- fill it exactly.
+   *
+   * Under 100 the piece stops filling its half and the hatch shows
+   * around it. A multiple of fill rather than an absolute scale, so it
+   * means the same thing at every breakpoint the band is sized to.
+   */
+  focalZoom: number | null;
   /** Present on GET /api/pieces/<id> only, not in the list payload. */
   collections?: CollectionRef[];
   /**
@@ -199,6 +208,8 @@ export interface PiecePatch {
   /** 0-100, or null to go back to centre. */
   focalX?: number | null;
   focalY?: number | null;
+  /** 40-250, or null to go back to filling the frame. */
+  focalZoom?: number | null;
   /** The whole list — an omitted tag is a removed one. */
   tags?: string[];
 }

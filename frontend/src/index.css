@@ -319,6 +319,60 @@
     }
   }
 
+  /*
+   * The one slider in the application, for the spotlight zoom.
+   *
+   * A native range input rather than a built control: it already carries
+   * keyboard stepping, the value in the accessibility tree and the drag,
+   * and none of that is worth rewriting for one field. Only the paint is
+   * replaced -- a hairline track and a small square thumb, because this
+   * system has no rounded corners and no filled shapes outside the density
+   * icons. The pseudo-elements cannot be grouped: a selector a browser
+   * does not recognise invalidates the whole rule, so WebKit's and
+   * Firefox's are written out separately on purpose.
+   */
+  .sa-slider {
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .sa-slider:focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .sa-slider::-webkit-slider-runnable-track {
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .sa-slider::-moz-range-track {
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .sa-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 9px;
+    height: 9px;
+    /* Half the thumb, less half the track, to sit it on the line. */
+    margin-top: -4px;
+    border: none;
+    border-radius: 0;
+    background: var(--color-accent);
+  }
+
+  .sa-slider::-moz-range-thumb {
+    width: 9px;
+    height: 9px;
+    border: none;
+    border-radius: 0;
+    background: var(--color-accent);
+  }
+
   .sa-minimap .displayregion {
     /* One hairline, per the system. OpenSeadragon's own geometry still
        reckons on 2px, so the rectangle sits a pixel out -- invisible at this

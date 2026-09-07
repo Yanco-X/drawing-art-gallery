@@ -1,23 +1,38 @@
 import { useCallback, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
-import { CENTRE_FOCAL } from '../lib/spotlight';
+import {
+  CENTRE_FOCAL,
+  FILL_ZOOM,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  framePiece,
+} from '../lib/spotlight';
 import type { Piece } from '../types';
 import { LABEL, SUBTLE_ACTION } from './form-styles';
 
 /*
- * Where the spotlight aims its crop on this piece.
+ * How the spotlight frames this piece: where it aims, and how close.
  *
- * Two views of one number pair: the whole artwork with a mark on it, and
- * beside it the band's actual shape showing what survives. Choosing on the
+ * Two views of one set of numbers: the whole artwork with a mark on it, and
+ * beneath it the band's actual shape showing what survives. Choosing on the
  * full image and judging on the crop are different jobs, and a control that
  * only did the first would have the owner saving and reloading to find out
  * what they picked.
+ *
+ * The zoom sits under the preview rather than beside the mark, because the
+ * preview is the only thing it visibly changes. Under 100% the piece stops
+ * filling its half and the hatch shows around it -- said in a line beneath
+ * the slider rather than left to be discovered on the live page.
  *
  * The band is 66/34 of a 2400px measure at up to 780px tall, so its artwork
  * half is roughly 3:2. The preview uses that rather than a round number,
  * because a preview at the wrong shape lies about what will be cut.
  */
 const BAND_RATIO = '3 / 2';
+/* The same shape as a number, for working out where cover and contain
+   meet. Taken from the constant rather than measured: the preview is that
+   ratio by construction, so measuring it could only agree. */
+const BAND_ASPECT = 3 / 2;
 
 const clamp = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
 
@@ -25,13 +40,20 @@ export const FocalPicker = ({
   piece,
   x,
   y,
+  zoom,
   onChange,
 }: {
   piece: Piece;
   /** Null means the piece has never been placed; the mark sits at centre. */
   x: number | null;
   y: number | null;
-  onChange: (next: { x: number | null; y: number | null }) => void;
+  /** Null means it has never been sized; the piece fills the frame. */
+  zoom: number | null;
+  onChange: (next: {
+    x: number | null;
+    y: number | null;
+    zoom: number | null;
+  }) => void;
 }) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
@@ -39,6 +61,7 @@ export const FocalPicker = ({
 
   const atX = x ?? CENTRE_FOCAL;
   const atY = y ?? CENTRE_FOCAL;
+  const atZoom = zoom ?? FILL_ZOOM;
   const placed = x !== null || y !== null;
 
   const place = useCallback(
@@ -49,9 +72,10 @@ export const FocalPicker = ({
       onChange({
         x: clamp(((event.clientX - box.left) / box.width) * 100),
         y: clamp(((event.clientY - box.top) / box.height) * 100),
+        zoom,
       });
     },
-    [onChange],
+    [onChange, zoom],
   );
 
   /*
@@ -84,10 +108,19 @@ export const FocalPicker = ({
     const move = moves[event.key];
     if (!move) return;
     event.preventDefault();
-    onChange({ x: clamp(atX + move[0]), y: clamp(atY + move[1]) });
+    onChange({ x: clamp(atX + move[0]), y: clamp(atY + move[1]), zoom });
   };
 
-  const position = `${atX}% ${atY}%`;
+  const shown = framePiece(
+    { focalX: x, focalY: y, focalZoom: zoom, aspectRatio: piece.aspectRatio },
+    BAND_ASPECT,
+  );
+  const framing = {
+    objectFit: shown.fit,
+    objectPosition: shown.position,
+    transformOrigin: shown.position,
+    transform: `scale(${shown.scale})`,
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -96,7 +129,7 @@ export const FocalPicker = ({
         {placed && (
           <button
             type="button"
-            onClick={() => onChange({ x: null, y: null })}
+            onClick={() => onChange({ x: null, y: null, zoom })}
             className={SUBTLE_ACTION}
           >
             Centre
@@ -165,10 +198,53 @@ export const FocalPicker = ({
                 src={piece.imageUrl}
                 alt=""
                 draggable={false}
-                style={{ objectPosition: position }}
-                className="h-full w-full object-cover"
+                style={framing}
+                className="h-full w-full"
               />
             </div>
+
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <span className={LABEL}>Zoom</span>
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono text-[11px] text-faint">
+                  {atZoom}%
+                </span>
+                {zoom !== null && (
+                  <button
+                    type="button"
+                    onClick={() => onChange({ x, y, zoom: null })}
+                    className={SUBTLE_ACTION}
+                  >
+                    Fill
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/*
+              A native range input, styled in `index.css`. It brings its own
+              keyboard stepping and reports its value to a screen reader,
+              neither of which is worth rebuilding for one field.
+            */}
+            <input
+              type="range"
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              value={atZoom}
+              onChange={(event) =>
+                onChange({ x, y, zoom: Number(event.target.value) })
+              }
+              aria-label={`Zoom for ${piece.title}, ${atZoom} percent of the size that fills the band`}
+              className="sa-slider"
+            />
+
+            <span className="text-[12px] text-faint">
+              {atZoom < FILL_ZOOM
+                ? 'Smaller than its half of the band, so the hatch shows around it.'
+                : atZoom > FILL_ZOOM
+                  ? 'Fills its half, showing less of the piece.'
+                  : 'Fills its half exactly.'}
+            </span>
           </div>
         </>
       )}

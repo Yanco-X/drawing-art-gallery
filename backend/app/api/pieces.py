@@ -87,6 +87,13 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
+# Under 40 a piece is an island in the hatch; over 250 the rendition is
+# being upscaled well past what it can hold. Both ends are a long way
+# outside anything useful, and exist so the column cannot hold nonsense.
+FOCAL_ZOOM_MIN = 40
+FOCAL_ZOOM_MAX = 250
+
+
 def _parse_focal(raw, field: str):
     """
     A focal coordinate: a whole percent from 0 to 100, or null for centre.
@@ -107,6 +114,30 @@ def _parse_focal(raw, field: str):
     if not 0 <= value <= 100:
         raise ApiError(
             "A focal point is between 0 and 100.", details={field: str(raw)}
+        )
+    return value
+
+
+def _parse_focal_zoom(raw):
+    """
+    How large the piece is drawn in its frame, as a percent of fill.
+
+    Null rather than 100 for the default, for the reason the focal point
+    stores null rather than 50: a piece the owner never sized stays
+    distinguishable from one they deliberately left filling the frame.
+    """
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ApiError(
+            "A zoom is a percentage.", details={"focalZoom": str(raw)}
+        )
+    if not FOCAL_ZOOM_MIN <= value <= FOCAL_ZOOM_MAX:
+        raise ApiError(
+            f"A zoom is between {FOCAL_ZOOM_MIN} and {FOCAL_ZOOM_MAX}.",
+            details={"focalZoom": str(raw)},
         )
     return value
 
@@ -294,6 +325,9 @@ def update_piece(piece_id):
     for key, attribute in (("focalX", "focal_x"), ("focalY", "focal_y")):
         if key in data:
             setattr(piece, attribute, _parse_focal(data[key], key))
+
+    if "focalZoom" in data:
+        piece.focal_zoom = _parse_focal_zoom(data["focalZoom"])
 
     if "tags" in data:
         if not isinstance(data["tags"], list):
