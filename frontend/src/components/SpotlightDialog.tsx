@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAsync, usePieceFilter } from '../hooks';
+import { move } from '../lib/order';
 import { SPOTLIGHT_COUNT, spotlightSlots } from '../lib/spotlight';
 import { ApiError, fetchPieces, setSpotlight } from '../services';
 import type { Piece } from '../types';
@@ -12,14 +13,16 @@ import {
 } from './form-styles';
 import { PieceFilters } from './PieceFilters';
 import { PiecePickerGrid } from './PiecePickerGrid';
+import { SpotlightOrder } from './SpotlightOrder';
 import { SectionState } from './SectionState';
 
 /*
  * Curating the spotlight.
  *
  * The picking vocabulary collection creation established, with the name
- * field taken out and a cap put in: five slots, numbered, and the order they
- * are picked in is the order they are shown.
+ * field taken out and a cap put in: five slots, numbered, and the order
+ * they are picked in is the order they start in -- then dragged into the
+ * order they are shown.
  *
  * The one thing this dialog does that the collection one does not is show
  * what happens to the slots left over. Filling is the whole point of the
@@ -84,6 +87,11 @@ export const SpotlightDialog = ({
 
   // What the band will actually show, picks and fillers together.
   const slots = useMemo(() => spotlightSlots(all, picked), [all, picked]);
+
+  const reorder = useCallback(
+    (from: number, to: number) => setPicked((now) => move(now, from, to)),
+    [],
+  );
 
   const close = () => {
     if (busy) return;
@@ -166,38 +174,17 @@ export const SpotlightDialog = ({
           <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto border-t border-line p-6 md:border-t-0 md:border-l">
             <div className="flex flex-col gap-3">
               <span className={LABEL}>On the band</span>
-              {/*
-                Every slot, not just the picks. A numbered slot was chosen; a
-                quiet one is being filled by the newest work and will change
-                on its own the next time something is uploaded.
-              */}
-              <ol className="flex flex-col gap-2">
-                {slots.map((piece, at) => {
-                  const chosen = at < picked.length;
-                  return (
-                    <li
-                      key={piece.id}
-                      className="flex items-baseline gap-3 text-[13px]"
-                    >
-                      <span
-                        className={`flex size-5 shrink-0 items-center justify-center text-[11px] ${
-                          chosen
-                            ? 'bg-accent text-on-accent'
-                            : 'border border-line text-faint'
-                        }`}
-                      >
-                        {at + 1}
-                      </span>
-                      <span className="truncate text-text">{piece.title}</span>
-                      {!chosen && (
-                        <span className="ml-auto shrink-0 text-[11px] uppercase tracking-eyebrow text-faint">
-                          Latest
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
+              <SpotlightOrder
+                slots={slots}
+                pickedCount={picked.length}
+                onReorder={reorder}
+              />
+              {picked.length > 1 && (
+                <p className="text-[12px] text-faint">
+                  Drag a pick to move it, or focus one and use the up and down
+                  arrow keys.
+                </p>
+              )}
               {slots.length === 0 && (
                 <p className="text-[13px] text-faint">
                   Nothing in the gallery to show yet.

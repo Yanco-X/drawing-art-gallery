@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
+import { move } from '../lib/order';
 import { ApiError, setCollectionPieces } from '../services';
 import type { Collection, Piece } from '../types';
 import { AddWorkDialog } from './AddWorkDialog';
@@ -23,14 +24,6 @@ import { GHOST_BUTTON, ICON_BUTTON, PRIMARY_BUTTON } from './form-styles';
 
 const BADGE =
   'absolute flex size-6 items-center justify-center text-[12px] leading-none';
-
-const move = <T,>(items: T[], from: number, to: number): T[] => {
-  if (to < 0 || to >= items.length || from === to) return items;
-  const next = [...items];
-  const [lifted] = next.splice(from, 1);
-  next.splice(to, 0, lifted);
-  return next;
-};
 
 export const CollectionArrange = ({
   collection,

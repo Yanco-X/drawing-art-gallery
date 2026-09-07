@@ -23,6 +23,12 @@ a real browser as the owner.
 cover`, aimed by a focal point the owner drags onto each piece in the Edit
 details dialog. Twelve new checks.
 
+**Pass 4 done on 2026-09-06.** The five slots are dragged into order in the
+curation dialog, reusing the collection arranger's gesture. No backend
+change -- `PUT /api/spotlight` already took an ordered list. 49 browser
+checks, including a real drag driven through `Input.setInterceptDrags`
+rather than a synthesised `DragEvent`.
+
 ## Decisions
 
 **The newest five stay the default, and the default is stored nowhere.**
@@ -153,6 +159,33 @@ compute overhead.
 difference today. It costs nothing to keep and cannot be recovered once
 every row says 50.
 
+**The gesture is the collection arranger's, not a better one.** A pointer-
+capture reorder would animate the rows apart and work under touch, which
+native drag and drop does not. It would also be the second way to reorder a
+list in one application, and the owner has already learned the first. The
+arranger's HTML5 drag, its `text/plain` payload, its lifted-row opacity and
+its accent drop outline came over unchanged; only the axis differs, so the
+keys are up and down instead of left and right. If this gesture is ever
+worth replacing, both surfaces should be replaced together.
+
+**Only the picks are draggable.** A filler's place is `created_at DESC`.
+Letting one be dragged would have to mean either promoting it to a pick --
+two actions wearing one gesture -- or storing a slot with holes in it, which
+`spotlight_order` cannot express: it is a contiguous index, and picks first
+is what lets an empty spotlight mean the newest five with nothing stored
+behind it. So fillers stay listed, numbered and inert.
+
+**Below two picks the whole affordance goes.** One pick has nothing to be
+ordered against, so the grips, the grab cursor, `draggable`, the tab stop
+and the instruction line all disappear together rather than sitting there
+dead. A control that is present and does nothing is worse than one that is
+absent.
+
+**No backend change.** `PUT /api/spotlight` has always taken the whole
+ordered list and rewritten the indices in one transaction, and reordering
+the same five ids is a case its suite already covered. Dragging changes the
+array the Save button was already sending.
+
 ## Notes
 
 - Slides are `role="region"`, `aria-roledescription="carousel"`. Inactive
@@ -168,6 +201,21 @@ every row says 50.
 - Zero pieces renders nothing. One piece renders the piece with no
   chevrons, no segments and no autoplay.
 - Landing page only. Collection and filtered routes do not get a band.
+- **Drag was verified as a real drag**, not a synthesised `DragEvent`.
+  `Input.setInterceptDrags` plus `Input.dispatchDragEvent` puts the
+  browser's own drag pipeline in the loop, which is the part that could
+  fail inside a `<dialog>`; dispatching a `DragEvent` from page script
+  would only have re-tested React's handlers.
+- **Focus survives the reorder** on its own. React moves the same DOM node
+  because the row is keyed by piece id, and the browser keeps focus on it,
+  so no refocus is needed after an arrow press. Measured rather than
+  assumed -- moving a focused node is not obviously focus-preserving.
+- **`ArrowUp`/`ArrowDown` must call `preventDefault`** even when the move
+  is refused at the ends, or the press scrolls the control column instead.
+- **Frontend source is LF; the markdown in `context/` and `STATUS.md` is
+  CRLF.** There is no `.gitattributes`. `grep -c $''` reports a match on
+  every line of an LF file under MSYS, so it cannot be used to tell them
+  apart; reading the bytes in Python is what settles it.
 - **The focal picker uses pointer capture**, so the mark keeps tracking
   once the pointer leaves the frame and touch and mouse are one path.
   `touch-none` is not optional with it -- without it a drag scrolls the

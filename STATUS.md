@@ -32,14 +32,15 @@ drawing-art-gallery/
 │   ├── migrations/        alembic, 7 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
 │   └── tests/             8 suites, 306 checks
-├── frontend/              75 .ts/.tsx files
+├── frontend/              77 .ts/.tsx files
 │   └── src/
-│       ├── components/    43 (incl. icons.tsx and platform-icons.tsx)
+│       ├── components/    44 (incl. icons.tsx and platform-icons.tsx)
 │       ├── contexts/      theme, session, socials — provider + context per pair
 │       ├── hooks/         11 (incl. useAsync, useSession, useSpotlight)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
 │       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare
-│       │                  path), spotlight.ts (which five the band shows)
+│       │                  path), spotlight.ts (which five the band shows),
+│       │                  order.ts (one item moved within an array)
 │       ├── services/      pieces.ts — the API client; keyhole.ts — sign-in only
 │       └── types/         the shared shapes
 └── context/               design and specification documents
@@ -145,7 +146,9 @@ medium, year, width, height, `created_date`, `user_id`, `created_at`,
 `focal_y`.
 
 **`spotlight_order`** is the slot a piece holds in the landing page band,
-counting from zero, or null for one the owner never picked. A nullable
+counting from zero, or null for one the owner never picked. It is the
+position the owner dragged the piece to, which was the order they happened
+to pick things in only until pass 4. A nullable
 column rather than a join table: the spotlight is at most five rows and
 carries nothing of its own, so a table would be an id and a foreign key to
 say what one integer says. Deliberately not unique -- `PUT /api/spotlight`
