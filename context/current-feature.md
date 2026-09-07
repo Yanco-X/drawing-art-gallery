@@ -33,6 +33,14 @@ rather than a synthesised `DragEvent`.
 band shows, not only which part of it. 15 new API checks and 37 in a
 browser.
 
+**Pass 6 done on 2026-09-07.** The zoom became a multiple of fit rather than
+of fill, because the band and the picker were framing the same piece
+differently. One migration converts the values in place.
+
+**Pass 7 done on 2026-09-07.** The band goes back to 50/50, which brings its
+frame within a whisker of the picker's preview, and the label half -- now
+wider than its content -- names the collections the piece is in.
+
 ## Decisions
 
 **The newest five stay the default, and the default is stored nowhere.**
@@ -92,9 +100,10 @@ rejected alternative: sizing the artwork panel from each piece's
 **Full bleed, inner content capped.** The band spans the viewport, the
 artwork panel running to the left edge with no gutter, and the grid inside
 is capped at 2400px and centred -- the rule the header and footer already
-follow. Split is 66/34 in the artwork's favour -- 55/45 at first, widened on the
-owner's call -- the same reasoning that gives the upload modal's image the
-larger half: it is the subject.
+follow. Split is 50/50 -- 55/45 at first, widened to 66/34 on the owner's call, and
+back again in pass 7 once it was clear that a wider panel is a wider frame,
+and a wide frame beside a tall portrait is more empty ground rather than
+less.
 
 This is a deviation from "content regions are capped at 2400px" and is
 recorded in `DESIGN.md` rather than left to be discovered.
@@ -208,28 +217,160 @@ sixteen numbered bands settled it in one screenshot: the same bands at
 every scale. Synthetic fixtures beat real content for questions of fact.
 
 **So the zoom is spent over `contain`.** `contain` starts with the whole
-piece in frame, so a scale has something to give back. `fillRatio` is where
-`contain` and `cover` coincide -- decided entirely by the two aspect ratios
--- so a stored 100 renders exactly what the band drew before any of this
-existed, at any size the band happens to be.
+piece in frame, so a scale has something to give back. This survives pass 6
+unchanged; what did not is the unit the scale was expressed in.
+
+**A percentage of fill -- superseded in pass 6.** Pass 5 anchored the stored
+number to `fillRatio`, where `contain` and `cover` coincide, so that 100
+rendered exactly what the band drew before the column existed. That reads
+well and is wrong: `fillRatio` depends on the frame's aspect ratio, so one
+number framed a piece differently in every window and in the picker. See
+the pass 6 decisions below. It is now a multiple of fit.
 
 **Null still means `cover`, with no arithmetic at all.** Every piece the
 owner has never sized takes the old path: no measurement, no transform, an
 exact fill guaranteed at every breakpoint. That keeps the arithmetic off
 the landing page's first paint, where the band is the LCP element.
 
-**The frame has to be measured.** Where `cover` and `contain` meet depends
-on the frame's aspect ratio, and the band's is `clamp()`-sized. Pure CSS
-cannot express it: `max()` across two axes is not available, and the
-`min-width` plus `aspect-ratio` trick that looks like it should work
-distorts the box instead -- tested, 165x110 where 165x660 was wanted. So
-`useFrameAspect` puts a `ResizeObserver` on the panel. It fires once on
-`observe()` with the current size, so nothing is read synchronously and
-there is no `setState` in an effect body for the lint rule to object to.
+**The frame had to be measured -- and then did not.** While the zoom was a
+percentage of fill, the band needed its own aspect ratio to know where
+`cover` and `contain` met, and pure CSS cannot express it: `max()` across
+two axes is not available, and the `min-width` plus `aspect-ratio` trick
+that looks like it should work distorts the box instead -- tested, 165x110
+where 165x660 was wanted. So `useFrameAspect` put a `ResizeObserver` on the
+panel. Pass 6 removed the question and the hook with it. Recorded because
+the CSS finding stands whatever the unit: there is no way to size a box to
+"cover, times a factor" without knowing the frame.
 
-**A multiple of fill, not a crop rectangle.** Four numbers would describe
-the crop exactly at one viewport and wrongly at every other. A point and a
-multiple mean the same thing at any size.
+**A multiple, not a crop rectangle.** Four numbers would describe the crop
+exactly at one viewport and wrongly at every other. A point and a multiple
+mean the same thing at any size -- provided the multiple is of something
+that does not itself depend on the viewport, which took pass 6 to get right.
+
+**Fill belongs to the frame, so a percentage of it is not portable.** The
+owner reported that the picker's preview showed more of a piece than the
+band did. It was not a rounding difference: measured on one window at
+1906x885 the band's panel was 1.96:1 while the preview is 1.50:1, and
+`fillRatio` -- the scale that turns `contain` into `cover` -- is
+`max(pa/ia, ia/pa)`, so it came out 2.82 against 2.16. The same stored 86
+rendered 41.3% of the piece's height in the band and 53.9% in the preview.
+
+Fixing only the preview's constant would have made the two agree on the
+owner's window and nowhere else, since the band's frame changes shape with
+every window: its height is a `clamp()` and its width a share of the page.
+Every visitor would have seen a different crop of the same piece.
+
+**Anchoring to fit takes the frame out of the arithmetic.** `contain` fits
+the whole piece whatever the shape, so a scale over it means the same amount
+of artwork everywhere. `framePiece` no longer takes a frame at all: the
+scale is the stored number over 100. Verified across four shapes -- 1.96,
+1.45, 1.00 and the preview's 1.50 -- all rendering 54.1% of the piece.
+
+**Which invariant to hold was the real choice.** Something has to vary when
+the frame does. A percentage of fill held the horizontal constant and let
+the vertical drift; a multiple of fit does the reverse. This gallery is
+mostly tall portraits, where the height is where the faces are and the
+width is where the hatch is. Losing a face is worse than a wider strip of
+empty ground, so the vertical is the one to pin.
+
+**The measurement went away with it.** `useFrameAspect` existed only to find
+where cover and contain met for the band's particular shape. Nothing asks
+that question any more, so the hook and its `ResizeObserver` are gone -- the
+band's LCP path is back to reading a stored number and nothing else.
+
+**Existing values were converted, not reset.** One data migration multiplies
+each stored zoom by the fill ratio for the picker's 3:2 preview, which is
+the shape the owner was judging against when they chose the number. The one
+sized piece went 86 to 185, and the preview still shows it exactly as it
+did. A reset would have been easier and would have thrown away a decision
+the owner had already made.
+
+**100 became a floor rather than a middle.** Under the old unit 100 meant
+"fills" and both directions were useful. Under the new one 100 is the whole
+piece and there is nothing below it worth having -- a piece smaller than the
+frame in both directions only shrinks into the hatch. So the range is
+100-500 rather than 40-250.
+
+**A wider panel is a wider frame, which is the opposite of what 66/34 was
+for.** The split was widened in the tuning pass to give the artwork more
+room, on the reasoning that the artwork is the subject. For a tall portrait
+that is backwards: the panel's height is fixed by the band, so widening it
+only adds ground beside the piece. Measured at 1906x885 the 66/34 panel was
+1.96:1 against the picker's 1.50:1, and the piece sat in a strip with 52% of
+the frame's width as hatch. At 50/50 the panel is 1.485:1 -- 946x637 against
+the preview's 416x277 -- and the hatch matches the preview to within a point
+and a half.
+
+Pass 6 had already made the *amount* of artwork identical everywhere. This
+is about the ground around it, which is the part a fixed-shape preview
+cannot promise. It does not make the promise exact at every window; it makes
+the common window the one the preview is drawn for.
+
+**The label half was already too big for its label.** Title, year, a
+three-line description and one button do not fill half a band, and the gap
+was more obvious once the half grew. Collections are the one thing a visitor
+looking at a piece plausibly wants next that the page does not otherwise
+offer -- the piece page has them, the band did not.
+
+**Membership rides on a request the page already makes.** `pieceIds` on the
+collection summary, not `collectionIds` on the piece. Both would have worked
+and cost about the same in bytes, but `Collection.piece_links` is already
+`lazy="selectin"` and `GET /api/collections` eager-loads it besides, so those
+ids are in memory already -- `piece_count` is their length. Putting it on the
+piece would have meant touching `piece_to_dict`, which every list shares, and
+`Piece.collection_links` is lazy there: exactly the query-per-row the
+detail-shape docstring warns about.
+
+**A draft stays a draft with no new rule.** `GET /api/collections` already
+drops private collections for a visitor, so their ids never reach the band
+and there is nothing for it to filter. The visibility decision stays in the
+one place that was already making it.
+
+**`CollectionGrid`, not a bespoke row.** The first attempt was a column of
+small covers built for the band. It worked and was wrong: a collection
+already has a look, drawn by `CollectionCard` on the landing row and the
+index, and a second one would be a thing to keep in sync by hand -- it had
+already drifted to a different cover size, no Private marker, and the count
+as a bare number. Reusing the grid also settles the layout: a 260px column
+makes its `auto-fill` resolve to one track, so the row becomes a column
+with no second component.
+
+**Beside the wall label, not under it, and the axis flips exactly once.**
+The half is wider than a title and three lines need. Two columns need room
+though: a fixed 260px column at 1024px left the label 110px and broke the
+title over two lines, so the row only arrives at `2xl` and below it the two
+stack at natural height.
+
+**Both columns are bounded, and for opposite reasons.** The collections
+column is a share of the half -- 40%, floored at 220px and capped at 340 --
+because a fixed width takes the same bite out of a 576px label as out of a
+1072px one. The wall label is capped at a 26rem measure because, left to
+grow, it pushed the collections against the far gutter with a field of
+nothing between them; the owner's word for it was "isolated".
+
+**The cap is conditional and the row packs from the start.** Capping the
+label unconditionally shrank it on every slide, and centring the pair made
+the title step sideways as the band advanced from a piece in three
+collections to a piece in none. A carousel that moves its own title while
+crossfading reads as a bug, so the title begins at the same x on every
+slide and the slack falls after the pair.
+
+**Flexbox cannot cap a column; only the height can.** `align-items:
+stretch` grows a line to fill but never shrinks it below its content, so a
+wrapping row left the scroller unbounded -- measured, twelve collections at
+2492px spilling out of a 637px band. The label taking the artwork's height
+at `2xl` is what gives the column something definite to be capped against,
+which is why the height and the row arrive together: a fixed height under a
+stacked layout would cap nothing and spill over the intro instead.
+
+**Nothing at all when empty.** A piece in no collection renders no heading
+and no rule. Most pieces are in nothing, and an empty state would be five
+slides of apology.
+
+**It did not make the band taller.** Stacked slides take the height of the
+longest label, so a block added to one slide could have grown the whole
+band and changed the artwork panel's shape -- the thing pass 6 and 7 were
+about. Measured: the label is 637 against the band's 692, unchanged.
 
 ## Notes
 
@@ -272,6 +413,25 @@ multiple mean the same thing at any size.
   Comparing by id rather than by title is what settled it.
 - **`tests/smoke_uploads.py` deletes `pid` partway through**, so anything
   appended to that suite needs its own upload rather than reusing it.
+- **The preview and the band are checked against each other**, not each
+  against its own arithmetic. `check-agree.mjs` derives the share of the
+  piece in frame from the rendered CSS -- fit, scale, natural size, frame
+  size -- so it cannot agree with a bug by sharing it. It reads the band at
+  three window shapes and the picker at a fourth, and fails if they differ
+  by more than half a percent.
+- **A test that asserts "an unsized piece" ages badly.** Two checks broke
+  when the owner set a zoom on the piece holding slot 0. They now read what
+  is stored and assert the rendering matches it, which is what they meant.
+- **The collections block is checked against the API, not against itself.**
+  `check-collections.mjs` recomputes the expected names from
+  `/api/pieces` and `/api/collections` and compares them with the rendered
+  links, for all five slots, as a visitor and as the owner.
+- **It also counts requests.** The claim is that naming collections costs
+  nothing, so the check asserts `/api/collections` is fetched exactly as
+  often as `/api/pieces` and that no piece is fetched individually.
+  Counted as a ratio rather than against 1, because the dev server mounts
+  twice under StrictMode -- and snapshotted before the probe does any
+  fetching of its own, which was the first version's mistake.
 - **The band's slide 0 is not `pieces[0]`.** The list is newest-first; the
   band shows the curated order. A test that wrote to `d[0]` and then read
   the band was measuring two different pieces. Logging the `alt` is what

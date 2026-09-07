@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useFrameAspect, useSession, useSpotlight } from '../hooks';
+import { useSession, useSpotlight } from '../hooks';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
-import type { Piece } from '../types';
+import type { CollectionSummary, Piece } from '../types';
+import { CollectionGrid } from './CollectionGrid';
 import { ICON_BUTTON, ICON_BUTTON_ACCENT, SUBTLE_ACTION } from './form-styles';
 import { ChevronLeftIcon, ChevronRightIcon, GearIcon } from './icons';
 
@@ -26,11 +27,22 @@ const SpotlightDialog = lazy(() => import('./SpotlightDialog'));
  *
  * The zoom is spent over `contain` rather than over `cover`, because a
  * transform scales what `object-fit` already cropped and cannot give back
- * what cover threw away. `framePiece` says which fit and which scale; the
- * frame's own shape is measured, since where cover and contain coincide
- * depends on it.
+ * what cover threw away. It is a multiple of `contain` and not of `cover`,
+ * so the band needs to know nothing about its own shape: the same number
+ * shows the same amount of artwork in every window.
  */
 const BAND = 'h-[clamp(320px,52vh,500px)] lg:h-[clamp(440px,72vh,780px)]';
+
+/*
+ * The label takes the artwork's height once it is wide enough to put the
+ * collections beside the wall label, which is what gives that column a
+ * definite box to scroll inside rather than growing the band.
+ *
+ * Spelled out rather than derived from BAND. A Tailwind class exists only
+ * if its literal string appears in the source, so `2xl:h-[${...}]` would
+ * compile, ship, and quietly do nothing.
+ */
+const LABEL_BAND = '2xl:h-[clamp(440px,72vh,780px)]';
 
 const SpotlightArtwork = ({
   piece,
@@ -44,12 +56,10 @@ const SpotlightArtwork = ({
   priority: boolean;
 }) => {
   const [failed, setFailed] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const framing = framePiece(piece, useFrameAspect(panelRef));
+  const framing = framePiece(piece);
 
   return (
     <div
-      ref={panelRef}
       className={`hatch flex items-center justify-center overflow-hidden ${BAND}`}
     >
       {failed ? (
@@ -86,59 +96,160 @@ const SpotlightLabel = ({
   piece,
   position,
   total,
+  collections,
 }: {
   piece: Piece;
   position: number;
   total: number;
+  /** Every collection the page can see, not this piece's. */
+  collections: CollectionSummary[];
 }) => {
   const meta = [piece.medium, piece.year].filter(Boolean).join(' · ');
 
   /*
+   * Worked out here rather than fetched. `GET /api/collections` carries
+   * `pieceIds` and the landing page has already asked for it, so knowing
+   * which collections hold this piece costs a filter over a handful of
+   * rows -- and the band keeps its promise of adding no request.
+   *
+   * A draft never reaches a visitor, because that route drops private
+   * collections before they get here.
+   */
+  const holding = collections.filter((collection) =>
+    collection.pieceIds.includes(piece.id),
+  );
+
+  /*
+   * Two columns: the wall label, and the collections the piece hangs in.
+   *
    * Stacked slides make the row as tall as the longest label, so a short
    * one has slack to place. Centred beside the artwork, where the slack
    * splits evenly and is invisible; below it, hard against the top, so the
    * slack falls after the button as padding rather than opening a hole
    * between a piece and its own title.
+   *
+   * At `lg` the label takes the artwork's own height, which is what gives
+   * the collections column something definite to scroll inside. Below it
+   * the two stack and every height is natural again.
+   *
+   * The collections go beside the wall label only from `2xl`. Below it the
+   * half is not wide enough to hold both: a 260px column at 1024px left
+   * the label 110px and broke the title over two lines. So the axis flips
+   * once, and each side of the flip is simple -- stacked and natural
+   * height, or side by side and the artwork's height.
+   *
+   * The height arrives with the row, not before it. It is what caps the
+   * collections scroller, and a fixed height under a stacked layout would
+   * cap nothing and spill the overflow over the intro instead.
+   *
+   * The wall label is capped at a reading measure rather than allowed to
+   * eat the half. Left to grow it pushed the collections against the far
+   * gutter with a field of nothing between them; capped, the two read as
+   * one block and the slack falls after the pair instead of through it.
+   *
+   * Capped only when there is something to sit beside it, and the row is
+   * packed from the start rather than centred, so the title begins at the
+   * same x on every slide. Centred, it stepped sideways as the band
+   * advanced from a piece in three collections to one in none.
    */
   return (
-    <div className="flex flex-col justify-start gap-4 px-gutter py-10 lg:justify-center lg:py-12">
-      <p className="text-[12px] uppercase tracking-eyebrow text-faint">
-        Featured
-        <span className="sr-only">
-          , piece {position} of {total}
-        </span>
-      </p>
-
-      {/*
-        The piece-title step, not the display one. The intro headline sits
-        directly below this band and is the page's own voice; two headlines
-        at the same size would argue with each other.
-      */}
-      <h2 className="font-serif text-[clamp(22px,2.4vw,32px)] leading-[1.05] font-normal text-text">
-        {piece.title}
-      </h2>
-
-      {meta && <p className="text-[12px] text-faint">{meta}</p>}
-
-      {piece.description && (
-        <p className="line-clamp-3 max-w-[42em] text-[14px] text-dim">
-          {piece.description}
+    <div
+      className={`flex flex-col gap-8 px-gutter py-10 lg:py-12 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
+    >
+      <div
+        className={`flex min-w-0 flex-col justify-start gap-4 lg:justify-center 2xl:flex-1 ${
+          holding.length > 0 ? '2xl:max-w-[26rem]' : ''
+        }`}
+      >
+        <p className="text-[12px] uppercase tracking-eyebrow text-faint">
+          Featured
+          <span className="sr-only">
+            , piece {position} of {total}
+          </span>
         </p>
-      )}
+
+        {/*
+          The piece-title step, not the display one. The intro headline sits
+          directly below this band and is the page's own voice; two headlines
+          at the same size would argue with each other.
+        */}
+        <h2 className="font-serif text-[clamp(22px,2.4vw,32px)] leading-[1.05] font-normal text-text">
+          {piece.title}
+        </h2>
+
+        {meta && <p className="text-[12px] text-faint">{meta}</p>}
+
+        {piece.description && (
+          <p className="line-clamp-3 max-w-[42em] text-[14px] text-dim">
+            {piece.description}
+          </p>
+        )}
+
+        {/*
+          Outlined, not filled. The header already spends the filled accent on
+          "+ Upload" for the owner, and the rule is one per screen.
+        */}
+        <Link
+          to={`/piece/${piece.id}`}
+          className={`${ICON_BUTTON_ACCENT} w-fit`}
+        >
+          View piece
+          <ChevronRightIcon />
+        </Link>
+      </div>
 
       {/*
-        Outlined, not filled. The header already spends the filled accent on
-        "+ Upload" for the owner, and the rule is one per screen.
+        Where else this piece hangs, beside the label rather than under it:
+        the half is wider than the wall label needs, and a collection is the
+        one thing a visitor looking at a piece might want next that the page
+        cannot otherwise tell them.
+
+        `CollectionGrid`, the same component the landing row and the
+        collections index draw, in a column narrow enough that its
+        `auto-fill` resolves to a single track -- so a collection looks like
+        itself wherever it appears, and there is one place to change how.
+
+        A share of the half rather than a fixed width, bounded at both
+        ends. Fixed, it took the same 340px out of a 576px label at the
+        bottom of `2xl` as out of a 1072px one at the top, and the wall
+        label paid for it.
+
+        `justify-center` with a `min-h-0` scroller: short enough and the
+        whole thing centres beside the label, too long and the list shrinks
+        and scrolls instead of pushing the band taller. Without `min-h-0` a
+        flex child refuses to shrink and overflows the band instead --
+        measured at 2492px of cards spilling out of a 637px band.
       */}
-      <Link to={`/piece/${piece.id}`} className={`${ICON_BUTTON_ACCENT} w-fit`}>
-        View piece
-        <ChevronRightIcon />
-      </Link>
+      {holding.length > 0 && (
+        <div className="flex flex-col gap-3 2xl:w-[40%] 2xl:max-w-[340px] 2xl:min-w-[220px] 2xl:min-h-0 2xl:shrink-0 2xl:justify-center">
+          <span className="shrink-0 text-[12px] uppercase tracking-eyebrow text-faint">
+            {holding.length === 1 ? 'In a collection' : 'In collections'}
+          </span>
+          {/*
+            Three regimes, and each needs its own cap. Under `lg` the band
+            is stacked and the page scrolls, so the list may run as long as
+            it likes. From `lg` the artwork is a fixed height but the label
+            is not, so an unbounded list drags the band to 1007px beside a
+            648px piece -- hence a viewport cap. From `2xl` the label has
+            the artwork's height and the flex box does the capping, so the
+            viewport one is dropped.
+          */}
+          <div className="lg:max-h-[clamp(180px,32vh,420px)] lg:overflow-y-auto 2xl:max-h-none 2xl:min-h-0">
+            <CollectionGrid collections={holding} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export const Spotlight = ({ pieces }: { pieces: Piece[] }) => {
+export const Spotlight = ({
+  pieces,
+  collections,
+}: {
+  pieces: Piece[];
+  collections: CollectionSummary[];
+}) => {
   const { role } = useSession();
   const isOwner = role === 'owner';
 
@@ -231,7 +342,7 @@ export const Spotlight = ({ pieces }: { pieces: Piece[] }) => {
           {slides.map((piece, at) => (
             <div
               key={piece.id}
-              className={`col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-[66fr_34fr] ${
+              className={`col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-2 ${
                 at === index ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
               aria-hidden={at !== index}
@@ -246,6 +357,7 @@ export const Spotlight = ({ pieces }: { pieces: Piece[] }) => {
                 piece={piece}
                 position={at + 1}
                 total={slides.length}
+                collections={collections}
               />
             </div>
           ))}

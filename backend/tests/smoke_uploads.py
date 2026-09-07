@@ -473,29 +473,31 @@ check("a new piece has no zoom", res["focalZoom"] is None, str(res["focalZoom"])
 check("the list payload carries the key",
       "focalZoom" in client.get("/api/pieces").get_json()[0])
 
-res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalZoom": 70})
+res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalZoom": 180})
 check("the owner can size it", res.status_code == 200, str(res.status_code))
-check("and it comes back", res.get_json()["focalZoom"] == 70,
+check("and it comes back", res.get_json()["focalZoom"] == 180,
       str(res.get_json()["focalZoom"]))
 
-# The bounds exist so the column cannot hold nonsense, not to express taste.
-check("the floor is allowed",
+# 100 is the whole piece in frame. Below it a piece is smaller than the
+# frame in both directions and only shrinks into the hatch, so the floor is
+# where the control stops being about the piece at all.
+check("the floor is the whole piece",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
-                   json={"focalZoom": 40}).status_code == 200)
+                   json={"focalZoom": 100}).status_code == 200)
 check("the ceiling is allowed",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
-                   json={"focalZoom": 250}).status_code == 200)
+                   json={"focalZoom": 500}).status_code == 200)
 check("under the floor is refused",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
-                   json={"focalZoom": 39}).status_code == 400)
+                   json={"focalZoom": 99}).status_code == 400)
 check("over the ceiling is refused",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
-                   json={"focalZoom": 251}).status_code == 400)
+                   json={"focalZoom": 501}).status_code == 400)
 check("a word is refused",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
                    json={"focalZoom": "big"}).status_code == 400)
 check("a refusal left the last good value",
-      client.get(f"/api/pieces/{fid}").get_json()["focalZoom"] == 250,
+      client.get(f"/api/pieces/{fid}").get_json()["focalZoom"] == 500,
       str(client.get(f"/api/pieces/{fid}").get_json()["focalZoom"]))
 
 # Aim and size are one framing but two keys, and neither may disturb the
@@ -503,20 +505,20 @@ check("a refusal left the last good value",
 res = client.patch(f"/api/pieces/{fid}", headers=OWNER,
                    json={"focalX": 30, "focalY": 80})
 check("placing the mark leaves the zoom alone",
-      res.get_json()["focalZoom"] == 250, str(res.get_json()["focalZoom"]))
-res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalZoom": 120})
+      res.get_json()["focalZoom"] == 500, str(res.get_json()["focalZoom"]))
+res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalZoom": 220})
 check("sizing leaves the mark alone",
       (res.get_json()["focalX"], res.get_json()["focalY"]) == (30, 80),
       str((res.get_json()["focalX"], res.get_json()["focalY"])))
 check("an untouched key is left alone",
       client.patch(f"/api/pieces/{fid}", headers=OWNER,
-                   json={"title": "Zoom Test"}).get_json()["focalZoom"] == 120)
+                   json={"title": "Zoom Test"}).get_json()["focalZoom"] == 220)
 
 res = client.patch(f"/api/pieces/{fid}", headers=OWNER, json={"focalZoom": None})
 check("null clears it back to filling the frame",
       res.get_json()["focalZoom"] is None, str(res.get_json()["focalZoom"]))
 check("a visitor cannot size it",
-      client.patch(f"/api/pieces/{fid}", json={"focalZoom": 80}).status_code == 401)
+      client.patch(f"/api/pieces/{fid}", json={"focalZoom": 180}).status_code == 401)
 
 
 failed = [c for c in checks if not c[1]]

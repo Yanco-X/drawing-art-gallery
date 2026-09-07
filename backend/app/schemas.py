@@ -115,7 +115,21 @@ def piece_detail_to_dict(piece: Piece) -> dict:
 
 
 def collection_summary_to_dict(collection: Collection) -> dict:
-    """Shape for the collections row: counts and a cover, but no pieces."""
+    """
+    Shape for the collections row: counts, a cover, and who is in it.
+
+    `pieceIds` and not the pieces themselves. It is membership, not
+    content -- enough for a caller holding the piece list to work out
+    which collections a piece belongs to without asking again, which is
+    what lets the spotlight name them without a request of its own.
+
+    Free to send: `piece_links` is `lazy="selectin"` and the list route
+    eager-loads it besides, so these ids are already in memory -- the same
+    rows `piece_count` is the length of.
+
+    Membership stays as private as the collection: a draft is filtered out
+    of this route entirely for a visitor, so its ids never reach one.
+    """
     cover = collection.resolved_cover
     return {
         "id": str(collection.id),
@@ -123,6 +137,7 @@ def collection_summary_to_dict(collection: Collection) -> dict:
         "slug": collection.slug,
         "description": collection.description or "",
         "pieceCount": collection.piece_count,
+        "pieceIds": [str(link.piece_id) for link in collection.piece_links],
         "coverImageUrl": (
             _storage().url_for(cover.key("thumb")) if cover else None
         ),

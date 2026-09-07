@@ -32,11 +32,11 @@ drawing-art-gallery/
 │   ├── migrations/        alembic, 7 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
 │   └── tests/             8 suites, 321 checks
-├── frontend/              78 .ts/.tsx files
+├── frontend/              77 .ts/.tsx files
 │   └── src/
 │       ├── components/    44 (incl. icons.tsx and platform-icons.tsx)
 │       ├── contexts/      theme, session, socials — provider + context per pair
-│       ├── hooks/         12 (incl. useAsync, useSession, useSpotlight)
+│       ├── hooks/         11 (incl. useAsync, useSession, useSpotlight)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
 │       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare
 │       │                  path), spotlight.ts (which five the band shows),
@@ -68,7 +68,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report c5d93e2f8a41
+alembic upgrade head          # should report d1f4a7b93c26
 flask --app app run --port 5000
 ```
 
@@ -165,17 +165,25 @@ of every image and a backfill, where this costs about thirty bytes in a
 payload the page already fetches and is spent by the browser at paint time.
 Set through `PATCH /api/pieces/<id>` like any other label field.
 
-**`focal_zoom`** is how large the piece is drawn inside that frame, as a
-percent of the size that just fills it, or null for 100. Under 100 the
-piece stops filling its half and the hatch shows around it -- taken
-deliberately and per piece: `cover` throws most of a tall portrait away,
-and the focal point could only choose which part of the loss to keep.
+**`focal_zoom`** is how close the crop is, as a percent of the size at
+which the whole piece fits: 100 is all of it, 200 twice as close. Null
+fills the frame outright, which is what `object-fit: cover` does unasked
+and what every piece kept before the column existed.
 
-Stored as a multiple of fill rather than as a crop rectangle because the
-band is `clamp()`-sized: a rectangle would be right at one viewport and
-wrong at every other. Spent over `object-fit: contain` rather than `cover`,
-because a transform scales what `object-fit` already cropped and cannot
-give back what cover discarded.
+A multiple of **fit**, not of fill. Fill belongs to the frame, and the
+band's frame changes shape with the window -- its height is a `clamp()`
+and its width a share of the page. Anchored to fill, one stored number
+framed a piece differently in every window: measured at 1906x885 the band
+was 1.96:1 against the picker's 1.50:1, and the same 86 rendered 41.3% of
+the piece's height in the band against 53.9% in the preview. Anchored to
+fit it means one amount of artwork everywhere, and only the hatch beside
+it varies. For a wall of tall portraits that is the invariant worth
+holding: the height is where the faces are.
+
+Not a crop rectangle, for the same reason -- four numbers would be right
+at one viewport and wrong at every other. Spent over `object-fit: contain`
+rather than `cover`, because a transform scales what `object-fit` already
+cropped and cannot give back what cover discarded.
 
 **A piece has no slug.** It is addressed by id everywhere — the route is
 `/piece/:id`, and object keys derive from the id. Worth stating because
@@ -203,7 +211,7 @@ never the point of the table.
 
 ### Migrations
 
-Eight revisions, head `c5d93e2f8a41`. History is immutable — add a
+Nine revisions, head `d1f4a7b93c26`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -215,6 +223,7 @@ e5b71c94f0a2  add socials
 f3a17c0d5b92  add pieces.spotlight_order
 b8e42d1a6c37  add pieces.focal_x and pieces.focal_y
 c5d93e2f8a41  add pieces.focal_zoom
+d1f4a7b93c26  focal_zoom becomes a multiple of fit
 ```
 
 ### Two model notes worth carrying
@@ -307,7 +316,7 @@ credential is still configured — see §7.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/collections` | Public only. `?includePrivate=1` `[owner]` for all |
+| `GET` | `/api/collections` | Public only. `?includePrivate=1` `[owner]` for all. Each row carries `pieceIds`, the membership the spotlight reads to name a piece's collections without a second request |
 | `GET` | `/api/collections/<slug>` | Detail with pieces in `display_order`. 404 for a private collection unless owner |
 | `POST` | `/api/collections` `[owner]` | Optional `pieceIds` in pick order, `coverPieceId` |
 | `PATCH` | `/api/collections/<id>` `[owner]` | `name`, `slug`, `description`, `isPublic`, `coverPieceId`. The UI never sends `slug`, so a rename keeps the URL |

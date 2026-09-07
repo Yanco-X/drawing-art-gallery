@@ -2,9 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import {
   CENTRE_FOCAL,
-  FILL_ZOOM,
   ZOOM_MAX,
   ZOOM_MIN,
+  fillRatio,
   framePiece,
 } from '../lib/spotlight';
 import type { Piece } from '../types';
@@ -20,18 +20,23 @@ import { LABEL, SUBTLE_ACTION } from './form-styles';
  * what they picked.
  *
  * The zoom sits under the preview rather than beside the mark, because the
- * preview is the only thing it visibly changes. Under 100% the piece stops
- * filling its half and the hatch shows around it -- said in a line beneath
- * the slider rather than left to be discovered on the live page.
+ * preview is the only thing it visibly changes. It is a percent of the size
+ * at which the whole piece fits, so the line beneath the slider can say how
+ * much of the piece is in frame and be telling the truth about the band as
+ * well -- that number does not depend on the frame's shape. How much hatch
+ * ends up beside it does, so the preview does not promise anything about
+ * that.
  *
  * The band is 66/34 of a 2400px measure at up to 780px tall, so its artwork
  * half is roughly 3:2. The preview uses that rather than a round number,
  * because a preview at the wrong shape lies about what will be cut.
  */
 const BAND_RATIO = '3 / 2';
-/* The same shape as a number, for working out where cover and contain
-   meet. Taken from the constant rather than measured: the preview is that
-   ratio by construction, so measuring it could only agree. */
+/* The same shape as a number. Only used to park the slider where an
+   unsized piece already sits, so that first drag does not jump. Nothing
+   stored depends on it: the band is this shape at some window sizes and
+   not at others, which is exactly why the zoom stopped being a percentage
+   of it. */
 const BAND_ASPECT = 3 / 2;
 
 const clamp = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
@@ -61,7 +66,11 @@ export const FocalPicker = ({
 
   const atX = x ?? CENTRE_FOCAL;
   const atY = y ?? CENTRE_FOCAL;
-  const atZoom = zoom ?? FILL_ZOOM;
+  /* An unsized piece fills the frame, so the slider starts where filling
+     this preview lands. Anywhere else and the first touch would jump. */
+  const atZoom =
+    zoom ??
+    Math.round(fillRatio(piece.aspectRatio, BAND_ASPECT) * 100);
   const placed = x !== null || y !== null;
 
   const place = useCallback(
@@ -111,10 +120,7 @@ export const FocalPicker = ({
     onChange({ x: clamp(atX + move[0]), y: clamp(atY + move[1]), zoom });
   };
 
-  const shown = framePiece(
-    { focalX: x, focalY: y, focalZoom: zoom, aspectRatio: piece.aspectRatio },
-    BAND_ASPECT,
-  );
+  const shown = framePiece({ focalX: x, focalY: y, focalZoom: zoom });
   const framing = {
     objectFit: shown.fit,
     objectPosition: shown.position,
@@ -234,16 +240,15 @@ export const FocalPicker = ({
               onChange={(event) =>
                 onChange({ x, y, zoom: Number(event.target.value) })
               }
-              aria-label={`Zoom for ${piece.title}, ${atZoom} percent of the size that fills the band`}
+              aria-label={`Zoom for ${piece.title}, ${atZoom} percent — about ${Math.round(10000 / atZoom)} percent of the piece in frame`}
               className="sa-slider"
             />
 
             <span className="text-[12px] text-faint">
-              {atZoom < FILL_ZOOM
-                ? 'Smaller than its half of the band, so the hatch shows around it.'
-                : atZoom > FILL_ZOOM
-                  ? 'Fills its half, showing less of the piece.'
-                  : 'Fills its half exactly.'}
+              {zoom === null
+                ? 'Fills its half of the band, whatever shape that is.'
+                : `About ${Math.round(100 / (atZoom / 100))}% of the piece in` +
+                  ' frame, on every screen.'}
             </span>
           </div>
         </>

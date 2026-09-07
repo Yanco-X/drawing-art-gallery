@@ -60,24 +60,29 @@ export const focalPosition = (
 ): string =>
   `${piece.focalX ?? CENTRE_FOCAL}% ${piece.focalY ?? CENTRE_FOCAL}%`;
 
-/** Filling the frame exactly: what `object-fit: cover` does unasked. */
-export const FILL_ZOOM = 100;
+/** The whole piece in frame. Every zoom is a percent of this. */
+export const FIT_ZOOM = 100;
 
 /**
- * The bounds the API will accept. Below the floor a piece is an island in
- * the hatch; above the ceiling the rendition is being upscaled past what
- * it can hold.
+ * The bounds the API will accept. There is nothing below 100: a piece
+ * smaller than the frame in both directions only shrinks into the hatch.
+ * At 500 a fifth of the piece is in frame.
  */
-export const ZOOM_MIN = 40;
-export const ZOOM_MAX = 250;
+export const ZOOM_MIN = 100;
+export const ZOOM_MAX = 500;
 
 /**
  * The scale that turns `contain` into `cover` for one piece in one frame.
  *
  * `cover` and `contain` pick the largest and the smallest scale that touch
  * the frame, so the ratio between them is decided entirely by the two
- * aspect ratios. It is what lets a stored number mean `fill` at any size
- * the band happens to be.
+ * aspect ratios.
+ *
+ * Nothing stored depends on this any more -- it is what a zoom used to be
+ * a percentage of, and anchoring to it made one number frame a piece
+ * differently in every window. The picker still asks for it to place the
+ * slider where an unsized piece already sits, which is a question about
+ * one frame and has an honest answer.
  */
 export const fillRatio = (imageAspect: number, frameAspect: number): number =>
   Math.max(frameAspect / imageAspect, imageAspect / frameAspect);
@@ -89,7 +94,7 @@ export interface Framing {
 }
 
 /**
- * How to draw one piece in a frame of a given shape.
+ * How to draw one piece, in any frame.
  *
  * `object-fit` crops at layout time and `transform` only scales what came
  * out, so a scale over `cover` cannot reveal anything `cover` had already
@@ -98,25 +103,21 @@ export interface Framing {
  * scale. So the zoom is spent over `contain`, which starts with the whole
  * piece in frame and has something left to give back.
  *
- * `fillRatio` is where `contain` and `cover` coincide, so a stored 100
- * renders exactly what the band did before any of this existed.
+ * The frame is not an argument, and that is the point. `contain` fits the
+ * whole piece whatever the shape, so a scale over it means the same amount
+ * of artwork in every window -- only the hatch beside it varies. Anchoring
+ * to `fill` instead made the band and the picker disagree by a third on
+ * the same piece, because they are not the same shape.
  *
- * A piece with no zoom, or a frame not yet measured, takes plain `cover`.
- * That needs no arithmetic and is exactly right for every piece the owner
- * has never sized, which is the landing page's first paint.
+ * A piece with no zoom takes plain `cover`: no arithmetic, and an exact
+ * fill at every breakpoint. That is every piece the owner has never sized,
+ * which is the landing page's first paint.
  */
 export const framePiece = (
-  piece: Pick<Piece, 'focalX' | 'focalY' | 'focalZoom' | 'aspectRatio'>,
-  frameAspect: number,
+  piece: Pick<Piece, 'focalX' | 'focalY' | 'focalZoom'>,
 ): Framing => {
   const position = focalPosition(piece);
-  if (piece.focalZoom === null || !frameAspect || !piece.aspectRatio) {
-    return { fit: 'cover', scale: 1, position };
-  }
-  return {
-    fit: 'contain',
-    scale:
-      fillRatio(piece.aspectRatio, frameAspect) * (piece.focalZoom / 100),
-    position,
-  };
+  return piece.focalZoom === null
+    ? { fit: 'cover', scale: 1, position }
+    : { fit: 'contain', scale: piece.focalZoom / 100, position };
 };

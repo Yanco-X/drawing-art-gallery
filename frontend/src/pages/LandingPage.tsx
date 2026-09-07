@@ -53,7 +53,7 @@ const LandingPage = () => {
         so the band costs no second request, and a piece uploaded in this
         session enters it at the front along with everything else.
       */}
-      <Spotlight pieces={allPieces} />
+      <Spotlight pieces={allPieces} collections={allCollections} />
 
       {SHOW_INTRO && <IntroSection />}
 

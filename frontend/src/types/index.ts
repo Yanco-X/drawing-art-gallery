@@ -156,6 +156,12 @@ export interface CollectionSummary extends CollectionRef {
   description: string;
   /** Authoritative count from the backend; may exceed `pieces.length`. */
   pieceCount: number;
+  /**
+   * Who is in it, in curated order. Membership rather than content, so a
+   * caller that already holds the pieces can work out which collections
+   * one belongs to without a second request.
+   */
+  pieceIds: string[];
   /** Falls back to a gradient swatch when absent. */
   coverImageUrl: string | null;
   /**

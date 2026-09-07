@@ -87,11 +87,12 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
-# Under 40 a piece is an island in the hatch; over 250 the rendition is
-# being upscaled well past what it can hold. Both ends are a long way
-# outside anything useful, and exist so the column cannot hold nonsense.
-FOCAL_ZOOM_MIN = 40
-FOCAL_ZOOM_MAX = 250
+# 100 is the whole piece in frame, so there is nothing below it worth
+# having: a piece smaller than the frame in both directions only shrinks
+# into the hatch. At 500 a fifth of the piece is in frame and the rendition
+# is being upscaled past what it can hold.
+FOCAL_ZOOM_MIN = 100
+FOCAL_ZOOM_MAX = 500
 
 
 def _parse_focal(raw, field: str):
@@ -120,11 +121,18 @@ def _parse_focal(raw, field: str):
 
 def _parse_focal_zoom(raw):
     """
-    How large the piece is drawn in its frame, as a percent of fill.
+    How close the crop is, as a percent of the size at which the whole
+    piece fits. 100 is all of it; 200 is twice as close.
+
+    A multiple of fit rather than of fill, because fill is a property of
+    the frame and the band's frame changes shape with the window. Anchored
+    to fit, one number means the same amount of artwork to every visitor
+    and only the hatch beside it varies.
 
     Null rather than 100 for the default, for the reason the focal point
     stores null rather than 50: a piece the owner never sized stays
-    distinguishable from one they deliberately left filling the frame.
+    distinguishable from one they sized deliberately. Null still fills the
+    frame outright, which is the one framing that needs no frame to know.
     """
     if raw is None or raw == "":
         return None
