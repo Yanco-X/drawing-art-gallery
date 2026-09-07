@@ -1,65 +1,94 @@
 # Current Feature
 
-Socials: a menu of where the artist can be found, curated by the owner.
+Spotlight: a carousel band at the top of the landing page, showing one piece
+almost whole beside its label.
 
-Asked for on 2026-09-02: a SOCIALS dropdown in the header, each option
-carrying the platform's icon and a redirect icon, with the owner able to add
-and edit the links.
+Asked for on 2026-09-03, modelled on the hero band at artsy.net -- the piece
+displayed nearly entire on the left, its title and an action on the right,
+segmented rules beneath marking position.
 
 ## Status
 
-**Done, in two passes on 2026-09-02.** Pass 1 put the dropdown on screen
-against a hard-coded array. Pass 2 replaced it with a `socials` table, two
-routes, and a manage dialog -- 287 checks across seven suites, and the
-dialog driven in a real browser over CDP.
-
-Next feature is tags as a filter over the gallery -- see `STATUS.md`
-section 10. The header still scrolls sideways between 640 and ~860px for
-the owner; deferred on the owner's call.
+**Specified, not built.** Pass 1 is the band against the pieces the landing
+page already fetches. Curation is pass 2 and is deliberately not designed
+yet.
 
 ## Decisions
 
-**Two routes, not five.** `GET /api/socials` and `PUT /api/socials`. The
-dialog edits a list and saves it once, so the API takes a list and writes it
-once. Reordering comes free, a half-finished edit cannot half-apply, and
-rows are matched by id so an edit keeps its row.
+**The newest five, not a curated set.** `GET /api/pieces` already orders
+`created_at DESC, title`, so the spotlight is `allPieces.slice(0, 5)` -- no
+migration, no route, no owner surface. Socials went the same way: a
+hard-coded array on screen first, a table once the shape was proven. A
+freshly uploaded piece is prepended by the landing page, so it enters slot
+one without a refetch.
 
-**No visibility flag.** A link the owner is not ready to share is simply not
-added, and deleting one is a click. A flag would have bought a second
-visitor rule to write down and test for a case that has never come up.
+Curation is the known pass 2, and there are two candidates already argued:
+a `spotlight` flag on a collection, which inherits arrange mode and the
+picker whole, or a nullable `pieces.featured_order`. Neither is chosen.
 
-**Marks are code, not data.** The table stores a key; the drawing lives in
-`components/platform-icons.tsx`. An uploaded SVG would mean accepting a
-format that can carry script, then sanitising, storing and serving it, to
-avoid a one-line addition to that file. An unknown platform gets a generic
-link mark and still works.
+**Contained, not cropped.** The band shows the piece nearly entire, which
+means `object-contain` over the `hatch` ground, exactly as the piece page
+treats artwork. Artsy crops to fill; that reads as editorial photography
+and beheads a portrait. A tall piece therefore sits centred with hatch
+either side, and that is correct -- the alternative, sizing the artwork
+panel from each piece's `aspectRatio`, makes the text panel change width on
+every advance.
 
-**One registry, three jobs.** The same list gives the menu its mark, the
-dialog its picker, and a pasted url its platform. Keeping them together is
-what stops the picker offering something the menu cannot draw.
+**Full bleed, inner content capped.** The band spans the viewport, the
+artwork panel running to the left edge with no gutter, and the grid inside
+is capped at 2400px and centred -- the rule the header and footer already
+follow. Split is 55/45 in the artwork's favour, the same reasoning that
+gives the upload modal's image the larger half: it is the subject.
 
-**Platform marks live apart from `icons.tsx`.** They copy someone else's
-shape and keep rounded corners the house set forbids. Separate file,
-separate rule, stated once.
+This is a deviation from "content regions are capped at 2400px" and is
+recorded in `DESIGN.md` rather than left to be discovered.
+
+**Outlined accent, not filled.** "View piece" is `ICON_BUTTON_ACCENT`. The
+header's "+ Upload" is already the filled action on this page for the
+owner, and the rule is at most one per screen. Artsy's own button is
+outlined, so nothing is lost.
+
+**No caption over the artwork.** Artsy needs one because its headline is
+editorial copy rather than the work's name. The title is already in the
+right panel here; an overlay would say it twice.
+
+**Crossfade only.** 200ms on opacity, on the existing hover budget. No
+slide and no scale -- there is no horizontal translate anywhere in the
+motion table, and inventing one for a carousel is the drift that section
+exists to prevent.
+
+**Autoplay at eight seconds, on the owner's call**, against the quieter
+instinct. It pauses on hover and on focus within the band, stops for good
+on any manual advance, and does not start at all under
+`prefers-reduced-motion` -- skipped, not shortened, per the standing rule.
+
+**The pause control is a word, not a glyph.** WCAG 2.2.2 requires a
+mechanism to pause anything moving for more than five seconds, and it wants
+an explicit one. A pause mark at 16px is two 1.5-unit bars almost touching
+-- the same mud that forced the density icons to be the set's one filled
+exception. That exception was granted for columns, not extended. `PAUSE` /
+`PLAY` at 12px uppercase `0.08em` in `faint` costs no new glyph and no new
+rule. It is hidden under reduced motion, where there is nothing to pause.
+
+**Segments are static.** Filling the active rule left to right over eight
+seconds would make the timer legible, and it would also put continuous
+motion on screen for as long as the page is open. Position, not progress.
 
 ## Notes
 
-- **Run it**: see `STATUS.md` section 2. New migration `e5b71c94f0a2`.
-- **A `javascript:` url was accepted at first.** The check tested for `://`
-  before prepending `https://`, so `javascript:alert(1)` was rewritten into a
-  valid https url with an odd host. Found by the suite, not by review.
-- **The pass-1 Instagram link was carried into the database** so nothing was
-  lost when the hard-coded array was deleted.
-- **Some marks are impressionistic at 16px**, DeviantArt most of all. Each is
-  one path string; a better drawing is a one-line swap.
-- **`+ Add` was dead, and the browser check had said it worked.** The
-  platform picker's panel carried Tailwind's `grid` alongside `.menu-panel`;
-  utilities cascade after components, so `display: grid` beat
-  `display: none` and left an invisible 176x134 sheet of buttons over the
-  Add button. The check missed it because it called `.click()` on the
-  element, which bypasses hit testing entirely -- a real mouse event at the
-  button's coordinates landed on the panel instead. Verify clickability with
-  `elementFromPoint` or a dispatched mouse event, not with `.click()`.
+- Slides are `role="region"`, `aria-roledescription="carousel"`. Inactive
+  slides take `inert` so their button leaves the tab order. Left and right
+  arrows advance when focus is inside. The live region is `off` while
+  playing and `polite` once stopped, per the APG pattern.
+- The active slide is the LCP element: `fetchpriority="high"`, not lazy.
+  The rest take `src` only once adjacent or visited, so five full-size
+  renditions do not download on load. `imageUrl`, not `thumbnailUrl` --
+  the 600px grid rendition will not hold at this size.
+- Load failure reuses the piece card's fallback: hatch behind, the
+  `[ artwork ]` monospace label on error.
+- Zero pieces renders nothing. One piece renders the piece with no
+  chevrons, no segments and no autoplay.
+- Landing page only. Collection and filtered routes do not get a band.
 
 ## History
 
