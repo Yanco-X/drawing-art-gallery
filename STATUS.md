@@ -4,7 +4,7 @@ A personal art gallery. The owner uploads drawings, the gallery exhibits
 them, and collections group them into sets. Built to be lived in rather
 than shipped to a market.
 
-**Last updated:** 2026-09-03
+**Last updated:** 2026-09-06
 **Purpose of this file:** a handoff. It is the current state of the project,
 what has been built, and what comes next.
 
@@ -23,21 +23,23 @@ what has been built, and what comes next.
 drawing-art-gallery/
 ├── AGENTS.md              working agreement — read this first
 ├── STATUS.md              this file
-├── backend/               36 .py files
+├── backend/               39 .py files
 │   ├── docker-compose.yml postgres + minio — note: not at the root
 │   ├── app/               config, models, schemas, auth, cli, ratelimit, errors, db
-│   │   ├── api/           pieces.py, collections.py, session.py, socials.py, helpers.py
+│   │   ├── api/           pieces.py, collections.py, session.py, socials.py,
+│   │   │                  spotlight.py, helpers.py
 │   │   └── services/      storage adapters, images, tiles, slugs
-│   ├── migrations/        alembic, 5 revisions
+│   ├── migrations/        alembic, 6 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
-│   └── tests/             7 suites, 287 checks
-├── frontend/              71 .ts/.tsx files
+│   └── tests/             8 suites, 322 checks
+├── frontend/              75 .ts/.tsx files
 │   └── src/
-│       ├── components/    40 (incl. icons.tsx and platform-icons.tsx)
+│       ├── components/    42 (incl. icons.tsx and platform-icons.tsx)
 │       ├── contexts/      theme, session, socials — provider + context per pair
-│       ├── hooks/         10 (incl. useAsync, useSession, useSocials)
+│       ├── hooks/         11 (incl. useAsync, useSession, useSpotlight)
 │       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
-│       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare path)
+│       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare
+│       │                  path), spotlight.ts (which five the band shows)
 │       ├── services/      pieces.ts — the API client; keyhole.ts — sign-in only
 │       └── types/         the shared shapes
 └── context/               design and specification documents
@@ -65,7 +67,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report e5b71c94f0a2
+alembic upgrade head          # should report f3a17c0d5b92
 flask --app app run --port 5000
 ```
 
@@ -139,7 +141,16 @@ Eight tables: `pieces`, `collections`, `collection_pieces`, `tags`,
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
-`updated_at`, `waived_at`, `tiles_ready`.
+`updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`.
+
+**`spotlight_order`** is the slot a piece holds in the landing page band,
+counting from zero, or null for one the owner never picked. A nullable
+column rather than a join table: the spotlight is at most five rows and
+carries nothing of its own, so a table would be an id and a foreign key to
+say what one integer says. Deliberately not unique -- `PUT /api/spotlight`
+rewrites the whole list in one transaction, and a unique index would make an
+ordinary reorder collide with itself partway through. Waiving a piece clears
+it, for the reason waiving already drops collection membership.
 
 **A piece has no slug.** It is addressed by id everywhere — the route is
 `/piece/:id`, and object keys derive from the id. Worth stating because
@@ -167,7 +178,7 @@ never the point of the table.
 
 ### Migrations
 
-Five revisions, head `e5b71c94f0a2`. History is immutable — add a
+Six revisions, head `f3a17c0d5b92`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -176,6 +187,7 @@ revision, never edit one.
 c2574bd3ea94  add pieces.waived_at
 a7f4d91c3b28  add pieces.tiles_ready
 e5b71c94f0a2  add socials
+f3a17c0d5b92  add pieces.spotlight_order
 ```
 
 ### Two model notes worth carrying
@@ -247,7 +259,7 @@ Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ## 5. API
 
-20 routes. Everything under `/api`. `[owner]` means the route requires the
+21 routes. Everything under `/api`. `[owner]` means the route requires the
 owner: a session cookie, or `X-Owner-Token` while the development
 credential is still configured — see §7.
 
@@ -289,6 +301,12 @@ credential is still configured — see §7.
 |---|---|---|
 | `GET` | `/api/socials` | Public. Ordered by `display_order` |
 | `PUT` | `/api/socials` `[owner]` | The whole list, replaced. Array position is the order, so nothing sends `displayOrder`. http and https only |
+
+### Spotlight
+
+| Method | Path | Notes |
+|---|---|---|
+| `PUT` | `/api/spotlight` `[owner]` | The whole ordered list of piece ids, replaced. At most five, no duplicates, and 409 for a waived one. An empty list restores the default. **There is no GET** — `spotlightOrder` rides along on every piece in `GET /api/pieces`, so the band needs no request of its own |
 
 ### Other
 
@@ -368,8 +386,8 @@ already produced one silent bug: `grid` alongside `.menu-panel` beat its
 `display: none`, leaving an invisible sheet of buttons over the control
 beneath it. Put layout on a child, not on the element carrying the class.
 
-**Two things are lazily loaded, and both are owner-facing.** `Keyhole`
-(sign-in) and `SocialsDialog`. OpenSeadragon is the third lazy chunk.
+**Three things are lazily loaded, and all are owner-facing.** `Keyhole`
+(sign-in), `SocialsDialog` and `SpotlightDialog`. OpenSeadragon is the third lazy chunk.
 Everything else — the upload modal, arrange mode, every other dialog — is
 statically imported and ships to visitors; see §11.
 
@@ -425,7 +443,7 @@ and `tests/smoke_visitor.py` is named after it.
 
 ## 8. Verification
 
-Seven suites, 287 checks, no test framework — each is a script that prints
+Eight suites, 322 checks, no test framework — each is a script that prints
 its results and exits non-zero on failure.
 
 ```bash
@@ -746,13 +764,24 @@ Carried forward deliberately.
   `sm` to `lg`, which is three class changes and also changes the visitor's
   header between 640 and 1024, so it was left as the owner's call rather
   than done quietly. Raised three times; deferred each time, deliberately.
+- **`PieceTile` does not crop to 4:3, and never has.** `DESIGN.md` says the
+  picker tiles are uniform and that this is the point of not using the
+  masonry there. Measured in the browser they come out 155x155, 155x257,
+  155x205 — the image's own ratio, not 4:3. `aspect-[4/3]` is set and does
+  compute, but the box is a flex item whose `h-full` image resolves against
+  an indefinite height, falls back to its intrinsic size, and pushes the box
+  open. Found while building the spotlight dialog; **pre-existing**, and the
+  "New collection" picker measures identically. Left alone because the fix
+  changes the look of three existing dialogs and that is the owner's call,
+  not a side effect of an unrelated feature. Likely a one-line fix —
+  `min-h-0` on the box, or absolutely positioning the image inside it.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
-- **No suite looks at the UI.** The 287 checks cover the API, storage and
+- **No suite looks at the UI.** The 322 checks cover the API, storage and
   the image pipeline; nothing asserts that a page renders. Detailed View was
   verified by geometry, network and build, and its blank minimap was then
   found by the owner in use. Authentication was the first feature driven

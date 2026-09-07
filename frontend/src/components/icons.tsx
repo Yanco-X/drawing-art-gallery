@@ -233,3 +233,11 @@ export const ChevronRightIcon = () => (
     <path d="M9 6l6 6-6 6" />
   </Glyph>
 );
+
+/** Settings for the thing it sits beside: here, who is in the spotlight. */
+export const GearIcon = () => (
+  <Glyph>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3l1.4 2.6 2.9-.4 1 2.8 2.4 1.7-1.3 2.6 1.3 2.6-2.4 1.7-1 2.8-2.9-.4L12 21l-1.4-2.6-2.9.4-1-2.8L4.3 14l1.3-2.6L4.3 8.8l2.4-1.7 1-2.8 2.9.4L12 3Z" />
+  </Glyph>
+);

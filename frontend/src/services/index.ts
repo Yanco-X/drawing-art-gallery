@@ -20,6 +20,7 @@ export {
   fetchRole,
   fetchSocials,
   saveSocials,
+  setSpotlight,
   whenSessionLapses,
   ApiError,
 } from './pieces';

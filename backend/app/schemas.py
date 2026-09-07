@@ -45,6 +45,11 @@ def piece_to_dict(piece: Piece) -> dict:
         # Null for an exhibited piece. Drives which actions the owner is
         # offered, and is harmless to a visitor, who never sees a waived one.
         "waivedAt": piece.waived_at.isoformat() if piece.waived_at else None,
+        # The slot the owner gave this piece in the spotlight, or null. Sent
+        # to everyone: it costs one integer and saves the landing page a
+        # second request, since the band can then work out its own five from
+        # the list it already has.
+        "spotlightOrder": piece.spotlight_order,
         "tags": [tag_to_dict(tag) for tag in piece.tags],
     }
 

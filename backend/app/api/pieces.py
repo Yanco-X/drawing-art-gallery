@@ -341,6 +341,11 @@ def waive_piece(piece_id):
 
     # delete-orphan on the relationship removes the join rows.
     piece.collection_links.clear()
+    # Same invariant, one step louder: the spotlight is the most prominent
+    # part of the gallery, so a piece withdrawn from the gallery cannot keep
+    # a slot in it. The band fills the gap from the newest work on the next
+    # read, and restoring does not take the slot back.
+    piece.spotlight_order = None
     piece.waived_at = _utcnow()
     session.commit()
 

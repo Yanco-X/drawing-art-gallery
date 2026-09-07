@@ -367,6 +367,27 @@ export const fetchSocials = async (): Promise<Social[]> => {
 };
 
 /**
+ * The spotlight, replaced whole.
+ *
+ * Takes a bare list of piece ids because there is nothing else to send: the
+ * array position is the slot. The same replace-once shape as the socials
+ * list and collection membership -- reordering needs no endpoint of its
+ * own, and a half-finished edit cannot half-apply.
+ *
+ * An empty list is how the owner goes back to the default, which is the
+ * newest five and is stored nowhere.
+ */
+export const setSpotlight = async (pieceIds: string[]): Promise<Piece[]> => {
+  const response = await fetch('/api/spotlight', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pieceIds),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+/**
  * The whole list, in the order it should appear.
  *
  * A replace rather than per-row writes: the dialog edits a list and saves

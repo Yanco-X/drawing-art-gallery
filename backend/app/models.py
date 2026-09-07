@@ -96,6 +96,16 @@ class Piece(Base):
     # the reserve has a sort order and "waived three days ago" is free.
     waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Null is not hand-picked for the spotlight; an integer is the slot it
+    # holds, counting from zero. A column rather than a join table because
+    # the spotlight is at most five rows and carries nothing of its own --
+    # a table would be an id and a foreign key to say what one integer says.
+    #
+    # Cleared when a piece is waived, for the reason waive already drops
+    # collection membership: it keeps "set means exhibited" an invariant the
+    # schema holds rather than a filter every future query must remember.
+    spotlight_order: Mapped[int | None] = mapped_column(Integer)
+
     created_date: Mapped[date | None] = mapped_column(Date)  # when the art was made
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), index=True

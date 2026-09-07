@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 
-/** How many of the newest pieces the band cycles through. */
-export const SPOTLIGHT_COUNT = 5;
-
 const INTERVAL_MS = 8000;
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -32,8 +29,13 @@ const useReducedMotion = () => {
  * the band; `playing` is the visitor's own answer, given through the pause
  * control. They are separate because releasing a hover must not restart a
  * band someone deliberately stopped.
+ *
+ * `suspended` is a third and blunter stop, for while something covers the
+ * band entirely. A hover cannot serve here: opening a dialog takes the
+ * pointer off the band, which fires the mouse-leave that would release the
+ * hold and set the thing advancing behind the cover.
  */
-export const useSpotlight = (count: number) => {
+export const useSpotlight = (count: number, suspended = false) => {
   const reducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -43,7 +45,7 @@ export const useSpotlight = (count: number) => {
   // -- the owner waives the piece being shown, and the band is looking at
   // nothing.
   const safeIndex = index < count ? index : 0;
-  const running = playing && !held && !reducedMotion && count > 1;
+  const running = playing && !held && !suspended && !reducedMotion && count > 1;
 
   useEffect(() => {
     if (!running) return;

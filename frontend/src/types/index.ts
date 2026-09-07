@@ -74,6 +74,15 @@ export interface Piece {
    * while it is exhibited. Drives which owner actions the piece page offers.
    */
   waivedAt: string | null;
+  /**
+   * The slot the owner gave this piece in the landing page spotlight,
+   * counting from zero, or null for a piece that was never picked.
+   *
+   * Carried on every piece rather than fetched as a list of its own: the
+   * band works its five out from the payload the page already has, which is
+   * what keeps it free of a second request.
+   */
+  spotlightOrder: number | null;
   /** Present on GET /api/pieces/<id> only, not in the list payload. */
   collections?: CollectionRef[];
   /**

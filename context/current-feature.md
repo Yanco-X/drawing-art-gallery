@@ -14,20 +14,59 @@ segmented rules beneath marking position.
 breakpoint. Driven in a real browser over CDP: hit testing, the tab order,
 both themes, and the stacked layout at 420px.
 
-Curation is pass 2 and is deliberately not designed yet.
+**Pass 2 done on 2026-09-06.** Curation: `pieces.spotlight_order`, one
+route, a gear in the control row, and a lazy dialog reusing the collection
+picker. 35 new checks, and the whole loop -- pick, save, reload -- driven in
+a real browser as the owner.
 
 ## Decisions
 
-**The newest five, not a curated set.** `GET /api/pieces` already orders
-`created_at DESC, title`, so the spotlight is `allPieces.slice(0, 5)` -- no
-migration, no route, no owner surface. Socials went the same way: a
-hard-coded array on screen first, a table once the shape was proven. A
-freshly uploaded piece is prepended by the landing page, so it enters slot
-one without a refetch.
+**The newest five stay the default, and the default is stored nowhere.**
+Nothing picked means no rows carry a slot, which is exactly the state the
+feature shipped in. An empty `PUT` is the way back to it.
 
-Curation is the known pass 2, and there are two candidates already argued:
-a `spotlight` flag on a collection, which inherits arrange mode and the
-picker whole, or a nullable `pieces.featured_order`. Neither is chosen.
+**Hand-picked first, then filled from the newest unpicked.** The owner picks
+up to five; whatever is short is made up from the top of `GET /api/pieces`,
+which is already newest-first. So the fill rule is a slice, not a query.
+
+**One route, and no GET.** `spotlightOrder` rides along on every piece in the
+pieces payload, so the band works out its own five from the list the landing
+page already fetches. A `GET /api/spotlight` would have spent the one
+property pass 1 was built around -- that the band costs no request.
+
+**A column, not a join table.** `pieces.spotlight_order`, nullable. The
+spotlight is at most five rows and carries nothing of its own; a table would
+be an id and a foreign key to say what one integer says. Not unique, because
+`PUT` rewrites the list in one transaction and a unique index would make an
+ordinary reorder collide with itself partway through.
+
+**Waiving clears the slot.** The alternative -- keeping it so a restore puts
+the piece back where it was -- means the dialog shows four picks while five
+are stored, because the picker only lists exhibited work. An invisible slot
+that cannot be seen or cleared is worse than re-picking after a restore.
+This is the rule waive already follows for collection membership, one step
+louder because the spotlight is the most prominent part of the gallery.
+
+**The dialog shows the filled slots, not just the picks.** Filling is the
+feature. A rule you can only verify by closing the dialog and looking at the
+page is a rule that will be reported as a bug.
+
+**The sixth pick is refused rather than swapping out the first.** Quietly
+evicting something the owner chose is worse than declining to add one more.
+
+**Pass 1 shipped with no curation at all**, deliberately: `GET /api/pieces`
+already orders `created_at DESC, title`, so the band was `slice(0, 5)` and
+cost no migration, no route and no owner surface. Socials went the same way
+-- a hard-coded array on screen first, a table once the shape was proven.
+Pass 2 kept every line of that as the default and added picking on top of
+it, which is why the empty case still stores nothing.
+
+The two candidates weighed for pass 2 were a `spotlight` flag on a
+collection, which would have inherited arrange mode and the picker whole,
+and a nullable column on the piece. The column won: a collection carries a
+name, a slug, a description and a visibility rule, none of which the
+spotlight has any use for, and one marked collection would have shown up in
+the collections grid needing to be hidden.
 
 **Contained, not cropped.** The band shows the piece nearly entire, which
 means `object-contain` over the `hatch` ground, exactly as the piece page
@@ -112,6 +151,28 @@ cycle.
   error**, not a comment -- it makes the return two children. It belongs
   above the `return`, or inside the element. Cost one broken dev-server
   render mid-session.
+- **A `<dialog>` rendered inside the band was a real bug, caught by
+  reasoning rather than by clicking.** The top layer paints it out of flow,
+  but it is still a DOM descendant, so its events bubble into the band's
+  handlers -- an arrow key in the dialog's search field advanced the
+  carousel behind it. It is a sibling now.
+- **Hover cannot pause a band behind a modal.** Opening the dialog moves the
+  pointer off the section, firing the mouse-leave that releases the hold.
+  The hook takes a separate `suspended` flag for the case where something
+  covers the band entirely.
+- **The owner UI cannot be driven headlessly without the local marker.**
+  `SessionProvider` only calls `/api/session/me` when `sketchyart-owner` is
+  in localStorage -- a visitor makes no auth request at all. Setting the
+  marker plus an `X-Owner-Token` header over CDP is how a headless session
+  becomes the owner; the token alone does nothing, because the app never
+  asks.
+- **`PieceTile` does not crop to 4:3, and never has.** `DESIGN.md` says the
+  picker tiles are uniform; measured, they come out 155x155, 155x257,
+  155x205. `aspect-[4/3]` is set and computed, but the tile is a flex item
+  whose `h-full` image resolves against an indefinite height and falls back
+  to its intrinsic size. Pre-existing -- the "New collection" picker
+  measures identically -- so it is recorded here rather than fixed inside
+  this feature. See `STATUS.md` §11.
 
 ## History
 
