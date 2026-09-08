@@ -475,13 +475,15 @@ about. Measured: the label is 637 against the band's 692, unchanged.
   marker plus an `X-Owner-Token` header over CDP is how a headless session
   becomes the owner; the token alone does nothing, because the app never
   asks.
-- **`PieceTile` does not crop to 4:3, and never has.** `DESIGN.md` says the
-  picker tiles are uniform; measured, they come out 155x155, 155x257,
-  155x205. `aspect-[4/3]` is set and computed, but the tile is a flex item
-  whose `h-full` image resolves against an indefinite height and falls back
-  to its intrinsic size. Pre-existing -- the "New collection" picker
-  measures identically -- so it is recorded here rather than fixed inside
-  this feature. See `STATUS.md` §11.
+- **`PieceTile` tiles follow each piece's own ratio, not the `aspect-[4/3]`
+  the box sets.** The box is a flex item, so `min-height: auto` floors it at
+  the image's intrinsic height and outranks the aspect ratio, which computes
+  correctly and loses. Measured at 144px wide: 144x201, 144x144, 144x240,
+  against the 144x108 a 4:3 box would give. Raised with the owner and
+  **settled 2026-09-07** as the look to keep -- the gallery has no landscape
+  work, so cropping to 4:3 cost every piece and bought nothing the picker
+  needed. See `DESIGN.md`, "Picking pieces". The class is inert; nothing
+  depends on it.
 
 ## History
 

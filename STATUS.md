@@ -800,17 +800,6 @@ Carried forward deliberately.
   `sm` to `lg`, which is three class changes and also changes the visitor's
   header between 640 and 1024, so it was left as the owner's call rather
   than done quietly. Raised three times; deferred each time, deliberately.
-- **`PieceTile` does not crop to 4:3, and never has.** `DESIGN.md` says the
-  picker tiles are uniform and that this is the point of not using the
-  masonry there. Measured in the browser they come out 155x155, 155x257,
-  155x205 — the image's own ratio, not 4:3. `aspect-[4/3]` is set and does
-  compute, but the box is a flex item whose `h-full` image resolves against
-  an indefinite height, falls back to its intrinsic size, and pushes the box
-  open. Found while building the spotlight dialog; **pre-existing**, and the
-  "New collection" picker measures identically. Left alone because the fix
-  changes the look of three existing dialogs and that is the owner's call,
-  not a side effect of an unrelated feature. Likely a one-line fix —
-  `min-h-0` on the box, or absolutely positioning the image inside it.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill
