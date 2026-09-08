@@ -21,18 +21,23 @@ export const PieceWallLabel = ({
   piece,
   collections,
   actions,
+  className = '',
 }: {
   piece: Piece;
   collections: CollectionRef[];
   /** Owner only. Omitted for visitors, so the block does not render at all. */
   actions?: ReactNode;
+  /** Grid placement, which belongs to the page rather than to the label. */
+  className?: string;
 }) => {
   // Nullable on an uploaded piece: only draw the separator between values
   // that are actually there.
   const meta = [piece.medium, piece.year].filter(Boolean).join(' · ');
 
   return (
-    <aside className="flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+    <aside
+      className={`flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8 ${className}`}
+    >
       <div className="flex flex-col gap-2">
         {piece.waivedAt && (
           <p className="text-[12px] uppercase tracking-eyebrow text-faint">

@@ -1,79 +1,40 @@
 # Project Structure
 
-This project follows a modularized monolith architecture. The frontend and backend codebases are separated into their own respective directories within the root.
+Why the codebase is shaped the way it is. **For where a given feature lives,
+read `context/MAP.md`** -- it carries the file-by-file index, and its route
+table and import graph are generated, so it does not go stale the way a tree
+drawn by hand does.
 
-## Root Directory
+A modularized monolith. `frontend/` and `backend/` are separate codebases in
+one repository, deployed together.
 
-```text
-/
-├── frontend/       # React + TypeScript frontend application
-├── backend/        # Python + Flask + PostgreSQL backend API
-├── README.md       # Project overview and roadmap
-├── AGENTS.md       # Agentic workflow rules
-└── PROJECT.md      # This file, outlining the project structure
-```
+## Frontend (`/frontend`)
 
-## Frontend Structure (`/frontend`)
+React + TypeScript, with components written here rather than pulled from a
+component library. The design is simple enough that a library would cost more
+in weight and override-fighting than it saves.
 
-The frontend is a React + TypeScript application built with custom components rather than relying on a complex component library, ensuring a simple, clean design and interface. Major entities are grouped into their own dedicated folders.
-
-```text
-/frontend/src/
-├── components/     # Reusable UI components (e.g., buttons, inputs, cards)
-├── pages/          # Page-level components representing routes (e.g., Home, Gallery, Upload)
-├── hooks/          # Custom React hooks containing reusable logic
-├── contexts/       # React Context API files for global state management
-├── lib/            # Local data and standalone modules (e.g., mock-data.ts)
-├── services/       # API interaction logic and network requests to the backend
-├── utils/          # Helper functions and utility scripts
-├── assets/         # Static assets like images, icons, and global CSS
-├── types/          # TypeScript interface and type definition files
-└── index.css       # Tailwind entry point and the design system token layer
-```
-
-### Component Guidelines
-- We create our own UI components to keep the application lightweight.
-- Components should be modular, isolated, and highly reusable.
+- Components are modular, isolated and reusable. Pages stay thin: they compose
+  sections, they do not lay out.
 - Styling follows `context/DESIGN.md`. Colours, spacing and tracking come from
-  tokens defined in `index.css` -- components should not carry raw hex values.
+  tokens defined in `index.css`; a component should never carry a raw hex value.
+- Types are real. `frontend/src/types` is the contract with the backend, and it
+  is written to match what the API sends rather than what a component wants.
 
-### Context Split
-A React context is defined across two files so that fast refresh keeps working:
-the context object and its types in a plain `.ts` file (e.g. `theme-context.ts`),
-the provider component in a `.tsx` file (e.g. `ThemeProvider.tsx`), and the
-consumer hook in `hooks/`. A file that exports both a component and a
-non-component breaks fast refresh.
-
-## Backend Structure (`/backend`)
+## Backend (`/backend`)
 
 Flask REST API over PostgreSQL, using plain SQLAlchemy 2.0 rather than
-Flask-SQLAlchemy -- fewer moving parts, and the models stay importable
-outside a Flask app context (which is what lets the smoke test run them
-against SQLite).
+Flask-SQLAlchemy -- fewer moving parts, and the models stay importable outside
+a Flask app context, which is what lets the smoke tests run them against
+SQLite.
 
-```text
-/backend/
-├── app/
-│   ├── __init__.py     # create_app factory, session teardown
-│   ├── config.py       # environment-backed settings
-│   ├── db.py           # engine, Base, scoped session
-│   ├── models.py       # SQLAlchemy models
-│   ├── schemas.py      # hand-written camelCase serializers
-│   ├── errors.py       # ApiError and JSON error handlers
-│   ├── auth.py         # placeholder owner guard (X-Owner-Token)
-│   ├── api/            # one blueprint per resource
-│   └── services/       # domain helpers (slug generation)
-├── migrations/         # Alembic; versions/ holds the revisions
-├── tests/              # runnable smoke scripts
-├── uploads/            # artwork on disk (phase 1 storage)
-├── docker-compose.yml  # local PostgreSQL and MinIO
-├── requirements.txt
-└── run.py              # entrypoint
-```
+One blueprint per resource under `app/api/`, registered in `app/api/__init__.py`.
+Domain helpers that are not HTTP go in `app/services/`.
 
-### API Conventions
+### API conventions
+
 - JSON keys are **camelCase**, matching the TypeScript interfaces in
   `frontend/src/types` so payloads need no translation layer.
 - Errors return `{ "error": "message" }` with an appropriate status.
-- Endpoints that change data are owner-only and **fail closed** when no
-  owner token is configured.
+- Endpoints that change data are owner-only and **fail closed** when no owner
+  token is configured.

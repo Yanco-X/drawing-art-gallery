@@ -55,10 +55,30 @@ const Message = ({
   </section>
 );
 
-/**
- * Capped at 78vh so a tall portrait still fits on screen beside its label
- * rather than pushing the metadata below the fold. The hatch sits behind
- * the image, so a slow load shows the placeholder instead of a hole.
+/*
+ * The cap is on the artwork *and* its button together, not on the image
+ * alone.
+ *
+ * It was 78vh, set when nothing sat underneath. A percentage cannot hold
+ * that promise once something does: the chrome around the image is a fixed
+ * 226px -- header, top padding, the button with its dimensions line, and a
+ * little air -- while 78vh grows with the window. The two happened to agree
+ * at about a 900px viewport and disagreed everywhere else, which is why the
+ * button sat five pixels below the fold on a 1080p laptop and further down
+ * on anything shorter.
+ *
+ * Subtracting the chrome instead means the artwork takes whatever the page
+ * does not need: larger on a big monitor than 78vh ever gave it, smaller on
+ * a short one, and the button always in view. The 320px floor stops a
+ * landscape phone from reducing the drawing to a stamp.
+ *
+ * Two numbers because the chrome is two heights. From lg the links live in
+ * the rail and nothing sits above the artwork but the header and the page
+ * padding. Below it the layout stacks, the links go back over the drawing
+ * to stay reachable, and their row costs another 67px.
+ *
+ * The hatch sits behind the image, so a slow load shows the placeholder
+ * instead of a hole.
  */
 const PieceImage = ({ piece }: { piece: Piece }) => {
   const [failed, setFailed] = useState(false);
@@ -82,7 +102,7 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
       alt={piece.title}
       onError={() => setFailed(true)}
       style={{ aspectRatio: piece.aspectRatio }}
-      className="hatch max-h-[78vh] w-auto max-w-full border border-line object-contain"
+      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain lg:max-h-[max(320px,calc(100vh_-_226px))]"
     />
   );
 };
@@ -252,16 +272,36 @@ const PiecePage = () => {
   return (
     <PageShell>
       <article className="mx-auto w-full max-w-content px-gutter pt-8 pb-section-lg">
-        {/* Back and neighbours share one row above the artwork, so moving
-            between pieces never requires scrolling past it. */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <BackLink waived={Boolean(piece.waivedAt)} />
-          <PieceNav previous={previous} next={next} />
-        </div>
-
         {/* The artwork keeps the room; the label sits beside it, divided by
-            a hairline that turns horizontal when the two stack. */}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            a hairline that turns horizontal when the two stack.
+
+            No row gap from lg, so the rail's two children meet and their
+            left borders read as one unbroken rule beside the artwork.
+
+            The rows are explicit because the artwork spans both of them.
+            Left to `auto`, grid hands a spanning item's height to every
+            row it crosses, which inflated the first one to 400-odd pixels
+            of nothing and tore a hole in that rule. `1fr` on the second
+            takes the slack instead, so the first stays the height of the
+            links in it. */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_1fr] lg:gap-y-0">
+          {/*
+            Back and neighbours sit at the top of the rail rather than in a
+            row above the artwork. That row cost 68px off the top of every
+            piece page and put the artwork's own action below the fold,
+            while the rail beside it ran half empty. Here they cost the
+            drawing nothing and are still the first thing above the fold.
+
+            Ordered first so the stacked layout keeps them above the
+            artwork: below lg the rail falls underneath it, and reaching
+            Next by scrolling past the whole drawing is worse than the row
+            ever was.
+          */}
+          <div className="flex flex-wrap items-center justify-between gap-4 lg:col-start-2 lg:row-start-1 lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:border-l lg:border-line lg:pb-6 lg:pl-8">
+            <BackLink waived={Boolean(piece.waivedAt)} />
+            <PieceNav previous={previous} next={next} />
+          </div>
+
           {/* Centred rather than left-aligned: the 78vh cap often leaves the
               image narrower than its column, and hugging the left would
               strand the dividing rule out on its own. */}
@@ -269,7 +309,7 @@ const PiecePage = () => {
               about the work itself, and this column is where the eye
               already is. Shown to everyone -- for a visitor it is the only
               action the page offers. */}
-          <figure className="flex justify-center">
+          <figure className="flex justify-center lg:col-start-1 lg:row-start-1 lg:row-span-2">
             {/* `w-fit` so the column shrinks to the artwork: the button then
                 spans the drawing exactly rather than the whole grid cell,
                 which is often much wider because of the 78vh cap. It should
@@ -280,6 +320,7 @@ const PiecePage = () => {
             </div>
           </figure>
           <PieceWallLabel
+            className="lg:col-start-2 lg:row-start-2"
             piece={piece}
             collections={piece.collections ?? []}
             actions={

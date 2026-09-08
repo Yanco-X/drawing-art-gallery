@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "Bash(rg *)",
+      "Bash(python scripts/build_map.py)",
+      "Bash(git ls-files *)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git status *)"
     ]
   }
 }

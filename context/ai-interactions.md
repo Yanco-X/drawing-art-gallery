@@ -23,7 +23,7 @@ This is the common workflow that we will use for every feature/fix:
 9. **Review** - Review AI-generated code periodically and on demand.
 10. Mark as completed in @context/current-feature.md and add to history
 
-Do NOT commit without permission and until the build passes. If build fails, fix the issues first.
+The commit is the owner's step, not the agent's. Do not reach it until the build passes -- if it fails, fix the issues first.
 
 ## Branching
 
@@ -31,8 +31,9 @@ We will create a new branch for every feature/fix. Name branch **feature/[featur
 
 ## Commits
 
-- Ask before committing (don't auto-commit)
-- Use conventional commit messages (feat:, fix:, chore:, etc.)
+- The owner commits. Never run `git commit`.
+- Do not write a commit message unless the owner asks for one.
+- When asked, use conventional commit messages (feat:, fix:, chore:, etc.)
 - Keep commits focused (one feature/fix per commit)
 - Never put "Generated With Claude" in the commit messages
 

@@ -33,6 +33,10 @@ This document establishes the basic rules and guidelines for AI agents working o
 ## 6. Clear Communication
 - Keep the user updated on what steps are being taken and why.
 - Provide clear summaries of the changes made during a session.
+- The owner makes every commit. Never run `git commit`, and do not write a
+  commit message unless they ask for one. Finish the work, say what changed,
+  and stop -- an unasked-for message is noise at the end of every report, and
+  the owner writes their own history.
 - If the live gallery data changes underneath you mid-session -- the
   spotlight order, a piece's details, anything in the running app -- stop
   and ask whether the owner made the change and what they did. Do not
@@ -41,6 +45,10 @@ This document establishes the basic rules and guidelines for AI agents working o
   before it is a bug for you, and one question is cheaper than a hunt.
 
 ## 7. Context & References
+- @context/MAP.md is the index: the project's vocabulary, every feature and the
+  files that hold it, the fixed points, and where new code goes. Answer any
+  "where is X" from it before searching. Run `python scripts/build_map.py`
+  after adding, moving or deleting a file so its generated half stays true.
 - Take into account md files for context, these files are meant to be read.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
 - @context/project-overview.md contains full in depth description of the project, its goals, and context.

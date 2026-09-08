@@ -830,6 +830,7 @@ Read in this order:
 | File | What it holds |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | The working agreement. **Read first.** |
+| [`context/MAP.md`](context/MAP.md) | Where every feature lives. **Read before searching.** |
 | [`context/project-overview.md`](context/project-overview.md) | The product and its data model |
 | [`context/DESIGN.md`](context/DESIGN.md) | Tokens, type, spacing, component patterns |
 | [`context/STORAGE.md`](context/STORAGE.md) | Keys, buckets, adapters, derivatives |
@@ -851,6 +852,6 @@ verified, then marked implemented in the document that specified them.
 The owner tests by hand and likes doing it. Build the thing, prove it with
 the suites, and hand it over for the owner to try.
 
-**The owner makes every commit.** Do not run `git commit`. Finish the work
-and hand over a message they can paste — a subject line and a few lines on
-what changed and why.
+**The owner makes every commit.** Do not run `git commit`, and do not offer
+a commit message unless the owner asks for one. Finish the work, report what
+changed, and stop there.
