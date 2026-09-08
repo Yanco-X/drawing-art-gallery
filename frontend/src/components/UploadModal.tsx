@@ -1,10 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DragEvent, FormEvent } from 'react';
 import { useAsync } from '../hooks';
+import { effectiveYear } from '../lib/year';
 import { ApiError, createPiece, fetchAllCollections } from '../services';
 import type { CollectionSummary, NewPiece, Piece } from '../types';
 import { CollectionPicker } from './CollectionPicker';
 import { TagInput } from './TagInput';
+import { YearField } from './YearField';
 
 /*
  * Add work.
@@ -187,7 +189,13 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     setBusy(true);
     setError(null);
     try {
-      const payload: NewPiece = { ...fields, file, tags, collectionIds };
+      const payload: NewPiece = {
+        ...fields,
+        year: effectiveYear(fields.year, fields.createdDate),
+        file,
+        tags,
+        collectionIds,
+      };
       const piece = await createPiece(payload);
       onUploaded?.(piece);
       reset();
@@ -366,21 +374,12 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
                   className={FIELD}
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor={fieldId + '-year'} className={LABEL}>
-                  Year
-                </label>
-                <input
-                  id={fieldId + '-year'}
-                  type="number"
-                  value={fields.year}
-                  onChange={(event) => setField('year', event.target.value)}
-                  min={1}
-                  max={9999}
-                  placeholder="2026"
-                  className={FIELD}
-                />
-              </div>
+              <YearField
+                id={fieldId + '-year'}
+                year={fields.year}
+                createdDate={fields.createdDate}
+                onChange={(value) => setField('year', value)}
+              />
             </div>
 
             <div className="flex flex-col gap-2">

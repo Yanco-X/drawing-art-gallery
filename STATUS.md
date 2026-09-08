@@ -811,10 +811,14 @@ Carried forward deliberately.
   verified by geometry, network and build, and its blank minimap was then
   found by the owner in use. Authentication was the first feature driven
   through Chrome over CDP before being handed over — by hand, not by a
-  suite, so it is a habit rather than a guarantee. Use it before saying a
-  visual change works.
+  suite, so it is a habit rather than a guarantee.
 
-  **And drive it with real input events.** A check that called
+  **The owner does that testing.** An agent stops at the typecheck and the
+  build and hands the change over; `AGENTS.md` §5 carries the rule and the
+  reason. This bullet used to say "use it before saying a visual change
+  works", which had agents building browser harnesses for one-line changes.
+
+  **When the owner does ask for it, drive it with real input events.** A check that called
   `element.click()` reported the socials dialog's Add button working while
   it was in fact covered by an invisible panel: `.click()` dispatches
   straight to the node and skips hit testing entirely. Use

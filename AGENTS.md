@@ -12,6 +12,9 @@ This document establishes the basic rules and guidelines for AI agents working o
 - Avoid introducing unnecessary third-party libraries without explicit approval.
 
 ## 3. Step-by-Step Implementation
+- You are probably not the only agent in this repository. Touch only the files
+  your task needs, and run `git status` before you start rather than assuming
+  a clean tree is yours to interpret. See section 7.
 - Implement and verify one feature or component at a time.
 - Do not make sweeping changes across the entire codebase at once unless absolutely necessary.
 
@@ -29,6 +32,24 @@ This document establishes the basic rules and guidelines for AI agents working o
 ## 5. Incremental Progress & Testing
 - Whenever possible, validate that the local changes work before moving on to the next step.
 - Ensure that both the frontend and backend can run without errors after each significant update.
+- For an agent that means the typecheck and `npm run build`, not the browser.
+- **The owner does the UI testing.** Do not drive a browser to check that a
+  visual change works unless the owner asks for it. Finish the change, prove
+  it builds, say what changed, and hand it over. The scaffolding costs more
+  than most changes are worth: a one-line change to a form field once cost a
+  dozen tool calls of stubbing sessions and fighting hit testing to verify
+  something the owner checked himself in seconds.
+- **When the owner does ask, go ahead and use it properly.** Launch Chrome
+  over CDP with whatever it needs, and drive it with real input events --
+  `document.elementFromPoint` or `Input.dispatchMouseEvent`, never
+  `element.click()`, which dispatches straight to the node and skips hit
+  testing. That mistake once reported a button working while an invisible
+  panel covered it.
+- **Expect not to have the owner's session.** The owner tests in Brave and
+  an agent opens its own Chrome, so the agent lands as a visitor: no Upload
+  button, no owner controls, and the owner surface simply absent. Say so and
+  ask rather than working around it -- the owner can intervene and enable
+  what is needed. Do not treat a missing owner control as a bug in the code.
 
 ## 6. Clear Communication
 - Keep the user updated on what steps are being taken and why.
@@ -37,32 +58,100 @@ This document establishes the basic rules and guidelines for AI agents working o
   commit message unless they ask for one. Finish the work, say what changed,
   and stop -- an unasked-for message is noise at the end of every report, and
   the owner writes their own history.
-- If the live gallery data changes underneath you mid-session -- the
-  spotlight order, a piece's details, anything in the running app -- stop
-  and ask whether the owner made the change and what they did. Do not
-  investigate and do not restore anything until they answer. They are using
-  the app while you work, so a surprising state is a question for them
-  before it is a bug for you, and one question is cheaper than a hunt.
 
-## 7. Context & References
-- @context/MAP.md is the index: the project's vocabulary, every feature and the
+## 7. When Something Changed That You Did Not Change
+
+**Ask first. Do not look.** This rule overrides the instinct to investigate,
+and it applies the moment you notice, not after you have formed a theory.
+
+### What triggers it
+
+Anything that is not how you left it, whether it moved mid-task or between
+one prompt and the next:
+
+- Live gallery data -- the spotlight order, a piece's details, a collection's
+  contents, anything in the running app.
+- Files modified in the working tree that you did not touch.
+- A file, route or component that is there now and was not before, or gone now
+  and was there before.
+- Behaviour that contradicts what you established earlier in the session.
+
+This fires when you happen to notice something. It is not an instruction to
+poll `git status` while you work.
+
+### What to do
+
+1. **Do not look.** Do not open the changed file, do not read the diff, do not
+   run `git log`, do not grep for a cause, do not reload the app to confirm,
+   and do not build a hypothesis. Reading the code *is* investigating.
+2. **Say exactly what you noticed, straight away.** Name the file, the value,
+   the field -- "`PiecePage.tsx` and `PieceWallLabel.tsx` are modified and I
+   did not touch them", not "something seems to have changed". Report only
+   what you already saw in passing; do not go looking in order to describe it
+   better. Raising it is cheap, so it is never deferred to the end.
+3. **Ask whether the owner made the change, and what they did.** Both halves.
+   Knowing it was them is not enough to continue safely -- what they changed
+   decides whether your work still stands.
+4. **Then decide whether to wait**, by the test below.
+5. **Never restore, revert or "tidy" it.** Not even if it looks like a mistake.
+
+Only investigate if they tell you it was not them.
+
+### Does it block you?
+
+Raising it is always immediate. *Waiting* is not: the owner runs other agents
+here, so most foreign changes have nothing to do with your task, and blocking
+on each one would stall work for no reason.
+
+Decide from **file paths and `context/MAP.md` alone**. You know which files
+your task touches; `git status` told you which changed. Comparing the two is
+not investigating -- opening them is.
+
+**Stop and wait** when the change is:
+
+- a file your task is going to edit, or has already edited;
+- a file your current step read or depends on;
+- in the same `MAP.md` feature row as your task;
+- the live data your current step is working against.
+
+**Keep going** otherwise -- on the parts that do not depend on the answer.
+Do not touch the changed files meanwhile, even in passing. If you run out of
+independent work before they reply, stop there rather than starting the part
+that depends on it, and say what you are holding.
+
+**If you cannot tell which case it is without opening the file, treat it as
+blocking.** Waiting costs a round trip; guessing wrong costs their work.
+
+### Why
+
+The owner uses the gallery while you work and often runs a second agent in
+this repository at the same time, so a surprising state is nearly always
+theirs and deliberate. Investigating first has already cost a long hunt that
+proved something they knew instantly, and a "restore" that silently undid a
+change they meant to make. One question is cheaper than either.
+
+## 8. Context & References
+
+Open these on demand. Only `CLAUDE.md`, this file and `context/MAP.md` are
+loaded automatically; everything below is a menu, not a reading list.
+- [`context/MAP.md`](context/MAP.md) is loaded for you already. It is the index: the project's vocabulary, every feature and the
   files that hold it, the fixed points, and where new code goes. Answer any
   "where is X" from it before searching. Run `python scripts/build_map.py`
   after adding, moving or deleting a file so its generated half stays true.
 - Take into account md files for context, these files are meant to be read.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
-- @context/project-overview.md contains full in depth description of the project, its goals, and context.
-- @context/DESIGN.md contains the design guidelines and rules.
-- @context/STORAGE.md contains how data and image files are stored, the upload pipeline, and the storage adapter.
-- @context/WAIVED-PIECES.md contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
-- @context/AUTH.md contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
-- @context/gallery-admin-access-handoff.md contains the admin-access strategies that AUTH.md was decided against.
-- @context/PROJECT.md contains the project pillars, goals.
-- @context/STRUCTURE.md contains the project structure.
-- @README.md contains the overall project context and roadmap.
-- @context/ai-interactions.md contains the AI interaction guidelines.
-- @context/coding-preferences.md contains in depth coding preferences and rules.
-- @context/current-feature.md contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
+- [`context/project-overview.md`](context/project-overview.md) contains full in depth description of the project, its goals, and context.
+- [`context/DESIGN.md`](context/DESIGN.md) contains the design guidelines and rules.
+- [`context/STORAGE.md`](context/STORAGE.md) contains how data and image files are stored, the upload pipeline, and the storage adapter.
+- [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
+- [`context/AUTH.md`](context/AUTH.md) contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
+- [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md) contains the admin-access strategies that AUTH.md was decided against.
+- [`context/PROJECT.md`](context/PROJECT.md) contains the project pillars, goals.
+- [`context/STRUCTURE.md`](context/STRUCTURE.md) contains the project structure.
+- [`README.md`](README.md) contains the overall project context and roadmap.
+- [`context/ai-interactions.md`](context/ai-interactions.md) contains the AI interaction guidelines.
+- [`context/coding-preferences.md`](context/coding-preferences.md) contains in depth coding preferences and rules.
+- [`context/current-feature.md`](context/current-feature.md) contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
 
 # Commands
 

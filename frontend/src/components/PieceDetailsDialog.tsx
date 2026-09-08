@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { effectiveYear } from '../lib/year';
 import { ApiError, updatePiece } from '../services';
 import type { Piece } from '../types';
 import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
 import { FocalPicker } from './FocalPicker';
 import { TagInput } from './TagInput';
+import { YearField } from './YearField';
 
 /*
  * Correcting a piece's wall label.
@@ -80,7 +82,9 @@ export const PieceDetailsDialog = ({
         medium: medium.trim(),
         // Sent as typed. Number('soon') is NaN, which JSON turns into null,
         // and a mistyped year would silently vanish instead of being refused.
-        year: year.trim() || null,
+        // A date made outranks it, so correcting the date corrects the year
+        // rather than leaving the two to disagree.
+        year: effectiveYear(year.trim(), createdDate) || null,
         createdDate: createdDate || null,
         focalX: focal.x,
         focalY: focal.y,
@@ -201,22 +205,15 @@ export const PieceDetailsDialog = ({
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor={fieldId + '-year'} className={LABEL}>
-                  Year
-                </label>
-                <input
-                  id={fieldId + '-year'}
-                  inputMode="numeric"
-                  value={year}
-                  onChange={(event) => {
-                    setError(null);
-                    setYear(event.target.value);
-                  }}
-                  placeholder="2026"
-                  className={FIELD}
-                />
-              </div>
+              <YearField
+                id={fieldId + '-year'}
+                year={year}
+                createdDate={createdDate}
+                onChange={(value) => {
+                  setError(null);
+                  setYear(value);
+                }}
+              />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -227,7 +224,10 @@ export const PieceDetailsDialog = ({
                 id={fieldId + '-created'}
                 type="date"
                 value={createdDate}
-                onChange={(event) => setCreatedDate(event.target.value)}
+                onChange={(event) => {
+                  setError(null);
+                  setCreatedDate(event.target.value);
+                }}
                 className={FIELD}
               />
             </div>
