@@ -180,6 +180,7 @@ const CollectionPage = () => {
           title="In this collection"
           pieces={collection.pieces}
           emptyMessage="Nothing hangs here yet."
+          sortable
           origin={serialiseTrail([...trail, collection.slug])}
         />
       )}

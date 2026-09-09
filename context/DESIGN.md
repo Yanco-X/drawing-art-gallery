@@ -216,7 +216,7 @@ The motion budget is deliberately small.
 | 200ms | Hover transitions -- border colour and text colour |
 | 300ms | Theme swap (background and colour) |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
-| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band opening and closing -- its height, nothing else |
+| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band and the sort options opening and closing -- one axis, nothing else |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A menu panel opening and closing -- opacity, and an 8px drop |
 | 200ms | One spotlight slide crossfading into the next -- opacity, nothing else |
@@ -227,7 +227,7 @@ No stagger and no scale. Motion acknowledges an action and gets out of the way.
 
 **Opening in the page is a reflow, not an entrance.** The filter band takes the masonry's 300ms rather than the dialog's 200ms and 8px, because nothing is arriving over anything -- the page makes room and the content below moves down. That is the same act as a density change, and it should cost the same. The 8px rise is reserved for a surface that covers what was under it; spend it on something that pushes instead and the two stop meaning different things.
 
-Height cannot be transitioned from `auto`, so the band is a grid going `grid-template-rows: 0fr` to `1fr`. That is machinery rather than design, and it is recorded because the obvious `height` transition does not work and the next person will reach for it.
+Height cannot be transitioned from `auto`, so the band is a grid going `grid-template-rows: 0fr` to `1fr`. That is machinery rather than design, and it is recorded because the obvious `height` transition does not work and the next person will reach for it. The sort options are the same trick turned on its side, `grid-template-columns`, for the same reason.
 
 **A surface arriving over the page is the sanctioned entrance**, added 2026-09-01 for dialogs and extended to menu panels on 2026-09-02. Something that covers what was under it and appears in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
 
@@ -389,7 +389,24 @@ Narrowing the wall, added 2026-09-08. A `Filter` button in the "All work" header
 * **Shut, the band is `inert`.** Collapsed content is still focusable and still hit-tested. This is the trap the spotlight's inactive slides had to close, and the same answer.
 * **It stays mounted while shut**, so a typed query survives being hidden. Unmounting would clear the filter every time the band was closed, which is not what closing a band means.
 * **Narrowed to nothing is not an empty gallery**, and says so: "No work matches these filters", with a `Clear filters` action beside it. The way out is named rather than left to be worked out. This is the one `SectionState` that carries an action.
+* **A narrowed list stays narrowed.** Opening a piece and coming back used to reset the filter and the sort, because the section remounts on every navigation and both were component state. They are now kept in the same store that remembers the scroll and the marker, keyed by pathname, and handed to the hooks as their *initial* state -- so a return renders the narrowed, sorted list in one pass rather than showing the whole gallery for a frame and correcting itself.
+* **And open, if it was open.** The bar itself keeps the position it was left in, not just its values -- a bar that shuts while the reader is looking at a piece has tidied up after them. It costs no animation: the row renders at full size on the first frame, and a transition only runs on a change. The sort options do the same, which is why that control's open flag is owned by the section rather than by itself.
+* **And stays narrowed beyond the round trip.** Unlike the scroll, which is spent on the way back, this does not expire: leave the gallery, come back later in the session, and the filter is still on. That is safe because it is visible -- both buttons wear the accent while they hold something, and the filter's carries the count of what is being hidden -- where a remembered scroll offset would be invisible and disorienting. It is the same split as the marker, which also outlives the trip that recorded it.
 * **The element carrying `.filter-row` takes no display utility**, for the reason `.menu-panel` does not: utilities cascade after components and a `flex` there beats the `grid` the class needs. Layout goes on a child.
+
+### Gallery sort
+
+Ordering the wall, added 2026-09-08. A `Sort` button in the "All work" header, and three options that open sideways from it into the row. On the gallery and inside a collection both.
+
+* **It opens sideways, into the row, not down or over.** The header is mostly empty -- a heading at one end and three controls at the other -- so the options grow leftwards into space that was already there. Nothing is covered and nothing is pushed down. This works because the control cluster is the far item of a `space-between` row and so is pinned to the right edge: widening it moves its left edge and nothing else.
+* **Which is a third answer to the same question.** A dialog covers, the filter band pushes, this one fills. All three exist because the gallery beneath is the one thing that may not be covered, and the right answer depends on how much room the control needs -- three buttons fit in a row that a search field, two dropdowns and a count do not.
+* **Three keys: Year, A-Z, Last upload.** Picking the active one again turns it round; picking another starts it at the direction people mean first -- newest year, A first, newest upload.
+* **Title flips its own label rather than wearing an arrow.** "Z-A" is the plainest way to say a reversed alphabet, and "A-Z up" is not a phrase anybody uses. Year and Last upload keep their noun and take the arrow, since Year reversed is still Year.
+* **No key is the default, and the default is not "newest".** It is whatever order the list arrived in: newest first on the gallery, because the API already does that, and the owner's curated order inside a collection. Sorting is an override, and `Reset` puts the curation back -- a sort that silently discarded an arrangement somebody dragged into place would be the feature destroying the more expensive one.
+* **Pieces that cannot answer go last in both directions.** A piece with no year is not a piece from year zero. Reversing them along with everything else would park the unknowns at the top half the time, which reads as broken rather than as sorted.
+* **Sorting needed a field the payload did not carry.** `createdDate` is when the work was drawn; "Last upload" wants when it arrived, which is `created_at` on the row and was not being serialised. The list order could not stand in for it, because a collection arrives in curated order and its array positions say nothing about when anything was uploaded. One additive field, no migration.
+* **Shut, the options are `inert`**, so three buttons at zero width leave the tab order and hit testing rather than sitting there invisible.
+* **The sort survives leaving the page**, in the same store and on the same terms as the filter -- see Gallery filter. A collection remembers its own, so sorting the gallery leaves a collection's curated default alone.
 
 ### Piece page
 

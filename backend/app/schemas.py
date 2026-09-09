@@ -42,6 +42,11 @@ def piece_to_dict(piece: Piece) -> dict:
         "height": piece.height,
         "aspectRatio": piece.aspect_ratio,
         "createdDate": piece.created_date.isoformat() if piece.created_date else None,
+        # When the piece was uploaded, as distinct from when it was drawn.
+        # The gallery's sort offers both, and the list order alone cannot
+        # stand in for this one: a collection arrives in curated order, so
+        # its array position says nothing about when anything arrived.
+        "createdAt": piece.created_at.isoformat() if piece.created_at else None,
         # Null for an exhibited piece. Drives which actions the owner is
         # offered, and is harmless to a visitor, who never sees a waived one.
         "waivedAt": piece.waived_at.isoformat() if piece.waived_at else None,

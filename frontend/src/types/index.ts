@@ -50,6 +50,12 @@ export interface Piece {
   medium: string | null;
   year: number | null;
   /**
+   * When the piece was uploaded, as distinct from `createdDate`, which is
+   * when it was drawn. The sort offers both. Nullable only because a row
+   * written before the column existed could be.
+   */
+  createdAt: string | null;
+  /**
    * The original's pixel dimensions. Quoted to the visitor beneath the
    * Detailed View button -- "4999 x 5001" is a more honest invitation to
    * open it than any amount of button styling.

@@ -1,3 +1,5 @@
+import type { SortDirection, SortKey } from './sortPieces';
+
 /**
  * Where the reader was when they opened a piece, so going back returns them
  * to it rather than to the top.
@@ -48,6 +50,55 @@ export const readVisit = (key: string): Visit | undefined => visits.get(key);
 export const consumeScroll = (key: string) => {
   const held = visits.get(key);
   if (held) held.pendingScroll = null;
+};
+
+/*
+ * How the list was left: what it was narrowed to and what it was ordered by.
+ *
+ * Kept apart from the visit above because it is written by a different hand
+ * at a different time -- the visit by the card as a piece is opened, this by
+ * the section whenever a control moves -- and because it does not expire.
+ * The scroll is spent on the way back; this is not, for the same reason the
+ * marker is not: it describes the list rather than one trip to it.
+ *
+ * So a filter survives leaving the page and coming back later, not only the
+ * round trip through a piece. That is deliberate and it is safe because it
+ * is visible: both buttons wear the accent while they hold something, and
+ * the filter's carries the count of what is being hidden. A remembered
+ * scroll offset would be invisible and disorienting, which is exactly why
+ * that one is spent and this one is not.
+ *
+ * Keyed by pathname like the visit, so the gallery and each collection
+ * remember their own. A collection's curated order is its default, and
+ * nothing here leaks across to it.
+ */
+export type ListState = {
+  query: string;
+  years: number[];
+  collectionIds: string[];
+  sortKey: SortKey | null;
+  sortDirection: SortDirection;
+  /*
+   * Whether each bar was left standing open.
+   *
+   * Held here with what the controls contain, because to the reader they
+   * are one thing: a bar that shuts itself while they were looking at a
+   * piece has tidied up after them. Restoring it open costs no animation --
+   * the row renders at its full size on the first frame, and a transition
+   * only runs on a change.
+   */
+  filterOpen: boolean;
+  sortOpen: boolean;
+};
+
+const lists = new Map<string, ListState>();
+
+/** A pure read, safe to call while rendering. */
+export const readListState = (key: string): ListState | undefined =>
+  lists.get(key);
+
+export const rememberListState = (key: string, state: ListState) => {
+  lists.set(key, state);
 };
 
 /*

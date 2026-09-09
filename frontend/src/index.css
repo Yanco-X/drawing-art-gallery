@@ -359,6 +359,49 @@
   }
 
   /*
+   * The sort options, which open sideways into the header row.
+   *
+   * The same reflow as `.filter-row` turned on its side: `0fr -> 1fr`,
+   * 300ms on the masonry's curve, because width cannot be transitioned from
+   * `auto` any more than height can. Nothing arrives over anything, so it
+   * takes the reflow budget rather than the dialog's rise.
+   *
+   * Sideways rather than down because the row it lives in is mostly empty
+   * -- a heading at one end and three controls at the other -- and the
+   * gallery beneath is the one thing this design will not cover or push
+   * about. The panel grows leftwards into space that was already there,
+   * because the control cluster is the far item of a `space-between` row
+   * and so is pinned to the right edge: widening it moves its left edge,
+   * not its right.
+   *
+   * Unlike the filter band this needs no escape from its own clip: there is
+   * no dropdown inside, only buttons, so `overflow: hidden` can stay put.
+   *
+   * As with the others, the element carrying this class must not also carry
+   * a display utility -- utilities cascade after components and a `flex`
+   * here would beat the `grid` it needs. Layout goes on a child.
+   */
+  .sort-row {
+    display: grid;
+    grid-template-columns: 0fr;
+    transition: grid-template-columns 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .sort-row[data-open='true'] {
+    grid-template-columns: 1fr;
+  }
+
+  .sort-row > * {
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sort-row {
+      transition: none;
+    }
+  }
+
+  /*
    * OpenSeadragon's navigator, dressed for this gallery.
    *
    * Mounted into our own element via `navigatorId`, which is what makes this

@@ -248,3 +248,10 @@ export const FilterIcon = () => (
     <path d="M3 4h18l-7 8v7l-4-2v-5L3 4Z" />
   </Glyph>
 );
+
+/** Three rules of falling length: a list put in an order. */
+export const SortIcon = () => (
+  <Glyph>
+    <path d="M4 6h16M4 12h10M4 18h5" />
+  </Glyph>
+);

@@ -4,10 +4,18 @@ import type { CollectionSummary, Piece } from '../types';
 export const useGalleryFilter = (
   pieces: Piece[],
   collections: CollectionSummary[],
+  /**
+   * What the reader last left this list narrowed to. Passed as the initial
+   * state rather than applied by an effect, so a return renders once,
+   * already narrowed, instead of showing the whole gallery for a frame.
+   */
+  initial?: { query: string; years: number[]; collectionIds: string[] },
 ) => {
-  const [query, setQuery] = useState('');
-  const [years, setYears] = useState<number[]>([]);
-  const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [query, setQuery] = useState(initial?.query ?? '');
+  const [years, setYears] = useState<number[]>(initial?.years ?? []);
+  const [collectionIds, setCollectionIds] = useState<string[]>(
+    initial?.collectionIds ?? [],
+  );
 
   /* Only the years actually present, so the control never offers one with
      nothing behind it. */

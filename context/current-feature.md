@@ -105,6 +105,50 @@ picker to serve the gallery. Worth revisiting once this one settles.
 and the reserve; passing `collections` is what turns the control on, so
 those two are untouched by this pass.
 
+## Sorting, added 2026-09-08
+
+Three keys -- Year, A-Z, Last upload -- on the gallery and inside a
+collection. A `Sort` button in the same header row, whose options open
+**sideways** into the row rather than down or over: the header is mostly
+empty, and the control cluster is the far item of a `space-between` row, so
+widening it moves its left edge and leaves the gallery alone.
+
+* **The default is the order the list arrived in**, not a sort. Newest first
+  on the gallery, the owner's curated order inside a collection. Sorting is
+  an override and `Reset` puts the curation back -- a sort that silently
+  discarded an arrangement somebody dragged into place would be one feature
+  destroying a more expensive one.
+* **Unknowns go last in both directions.** A piece with no year is not a
+  piece from year zero.
+* **One backend field.** `createdDate` is when the work was drawn; "Last
+  upload" wants when it arrived. `created_at` was on the row and not in the
+  payload, and list order could not stand in for it, because a collection
+  arrives curated and its array positions say nothing about upload time.
+  Additive, no migration.
+* **`sortPieces` is exported as a pure function** and was checked against the
+  live gallery: both directions of all three keys, unknowns last either way,
+  input not mutated, nothing lost.
+
+## Keeping the list as you left it, 2026-09-08
+
+The filter and the sort are component state, and `AllWorkSection` remounts
+on every navigation -- so opening a piece and coming back reset both. They
+now live in the same store that already held the scroll and the marker,
+keyed by pathname.
+
+* **Handed to the hooks as initial state**, not applied by an effect, so a
+  return renders narrowed and sorted in one pass instead of flashing the
+  whole gallery first.
+* **They do not expire.** The scroll is spent on the way back; this is not,
+  for the reason the marker is not -- it describes the list rather than one
+  trip to it. Safe because it is visible: both buttons wear the accent while
+  they hold something, and the filter's carries a count.
+* **`sortPieces` moved to `lib/`** so the store could name its types without
+  a lib-to-hooks dependency. The hook is now state only.
+* **The bars keep their position too**, open or shut, not only their values.
+  The sort's open flag moved out of `GallerySort` and up to the section so it
+  could be remembered with the rest; the filter's already lived there.
+
 ## Open questions
 
 **Whether the filter belongs in the URL.** Local state for now, which is
