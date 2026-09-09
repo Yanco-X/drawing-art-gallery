@@ -29,6 +29,15 @@ texture.
 
 So pass 1 is entirely about having something to zoom into.
 
+> **The `78vh` above is what the page did in September 2026, and is left as
+> written.** The cap became `max(320px, 100vh - 226px)` on 2026-09-07, so
+> that the Detailed view button beneath the artwork is on screen with it.
+> The argument is unaffected, and in fact stronger: on the same 3840 × 2160
+> monitor the box is now roughly 1934 device pixels rather than 1685, so the
+> 1600px rendition is scaled up further still. Corrected here rather than in
+> the paragraph, which is a record of why pass 1 happened and should keep
+> the numbers it was decided on.
+
 ## Decisions
 
 **Full original resolution, delivered as tiles.** The owner asked for "the
