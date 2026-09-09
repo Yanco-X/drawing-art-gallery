@@ -9,6 +9,7 @@ export const CollectionsSection = ({
   loading = false,
   error,
   action,
+  origin,
 }: {
   collections: CollectionSummary[];
   loading?: boolean;
@@ -16,6 +17,8 @@ export const CollectionsSection = ({
   error?: string;
   /** Owner-only affordance, e.g. starting a new collection. */
   action?: ReactNode;
+  /** Where this row is being shown; carried into each collection. */
+  origin?: string;
 }) => (
   <section
     id="collections"
@@ -33,7 +36,7 @@ export const CollectionsSection = ({
     ) : collections.length === 0 ? (
       <SectionState message="No collections yet." />
     ) : (
-      <CollectionGrid collections={collections} />
+      <CollectionGrid collections={collections} origin={origin} />
     )}
   </section>
 );

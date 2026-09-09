@@ -5,16 +5,16 @@ accent:
   on-accent: '#0e0e10'
 themes:
   dark:
-    bg: '#0e0e10'
-    bg-translucent: 'rgba(14,14,16,0.92)'
-    surface: '#131316'
-    line: '#1e1e22'
+    bg: '#202021'
+    bg-translucent: 'rgba(32,32,33,0.92)'
+    surface: '#232326'
+    line: '#2b2b2f'
     text: '#e8e6e1'
     dim: '#b7b4ac'
-    muted: '#8a8880'
-    faint: '#57554f'
-    danger: '#c96a5a'
-    hatch: 'repeating-linear-gradient(45deg, #17171a 0px, #17171a 10px, #131316 10px, #131316 20px)'
+    muted: '#97958d'
+    faint: '#62605a'
+    danger: '#d77868'
+    hatch: 'repeating-linear-gradient(45deg, #262629 0px, #262629 10px, #232326 10px, #232326 20px)'
   light:
     bg: '#f6f4ef'
     bg-translucent: 'rgba(246,244,239,0.92)'
@@ -27,7 +27,7 @@ themes:
     danger: '#a33f2f'
     hatch: 'repeating-linear-gradient(45deg, #ece8e0 0px, #ece8e0 10px, #f4f1ea 10px, #f4f1ea 20px)'
 swatches:
-  dark: ['#2b2620 to #4a3d2a', '#1f2428 to #2e3a40', '#26202b to #3d2e44', '#202822 to #2c4033']
+  dark: ['#37322c to #554835', '#2c3135 to #39454b', '#332d38 to #48394f', '#2c342e to #374b3e']
   light: ['#e8dcc6 to #cbb68c', '#d9e2e6 to #adc0c8', '#e2d7e6 to #c2aecb', '#d9e3da to #aec4b3']
 typography:
   display:
@@ -96,6 +96,14 @@ The personality is quiet and editorial: a serif display face, sharp corners, hai
 
 The system ships two full themes of equal standing. Dark reads as a dim private viewing room; light reads as warm gallery paper, not as a white screen.
 
+**The dark ground was lifted from `#0e0e10` to `#202021` on 2026-09-08**, and the rest of the dark palette was re-derived from it. The reason is the work: every piece here is graphite on white or pale grey paper, so a near-black page put a bright rectangle on a near-black field, and reading a wall of them was tiring. A gallery dims the room, it does not black it out.
+
+The method is worth keeping, because "lighten the background" is not one change. Every dark token was positioned against the old ground, so raising it broke three things at once: `line` fell to 1.02:1 and borders became invisible, while `surface` and `hatch` ended up *darker* than the page they sit on -- cards and placeholders reading as holes rather than as raised things.
+
+So the tokens at or below `muted` were re-derived to hold the exact contrast ratio they had against the old ground, and the loud end -- `text` and `dim` -- was left alone and allowed to soften. That split is the whole idea: the quiet end carries structure and legibility and must not degrade, while the loud end is precisely what was too loud. `text` fell from 15.5:1 to 13.1:1 and `dim` from 9.3:1 to 7.9:1, which is the change working rather than something to correct.
+
+`danger` was re-derived too, to `#d77868`. Left alone it fell to 4.4:1 and quietly stopped clearing AA, which is not a thing to discover later on the one control that cannot be undone.
+
 ## Themes & Color
 
 Every colour is a semantic token, defined once per theme. Components never reference a hex directly -- the only literal in component code is the accent, which is shared by both themes.
@@ -108,18 +116,18 @@ Four steps, from loudest to quietest. Picking the right step is most of the work
 |---|---|---|---|
 | `text` | Primary -- headline, piece titles, wordmark, active nav | `#e8e6e1` | `#1c1b18` |
 | `dim` | Section headings ("Collections", "All work") | `#b7b4ac` | `#4a4842` |
-| `muted` | Nav links, control labels | `#8a8880` | `#6f6c63` |
-| `faint` | Meta, counts, eyebrow, footer, "View all" | `#57554f` | `#9a968b` |
+| `muted` | Nav links, control labels | `#97958d` | `#6f6c63` |
+| `faint` | Meta, counts, eyebrow, footer, "View all" | `#62605a` | `#9a968b` |
 
 ### Surface and structure
 
 | Token | Role | Dark | Light |
 |---|---|---|---|
-| `bg` | Page background | `#0e0e10` | `#f6f4ef` |
-| `bg-translucent` | Sticky header behind a 12px blur | `rgba(14,14,16,0.92)` | `rgba(246,244,239,0.92)` |
-| `surface` | Raised panels (collection cards) | `#131316` | `#fffdf8` |
-| `line` | Every border and divider in the UI | `#1e1e22` | `#e0dcd2` |
-| `danger` | Irreversible actions, and only those | `#c96a5a` | `#a33f2f` |
+| `bg` | Page background | `#202021` | `#f6f4ef` |
+| `bg-translucent` | Sticky header behind a 12px blur | `rgba(32,32,33,0.92)` | `rgba(246,244,239,0.92)` |
+| `surface` | Raised panels (collection cards) | `#232326` | `#fffdf8` |
+| `line` | Every border and divider in the UI | `#2b2b2f` | `#e0dcd2` |
+| `danger` | Irreversible actions, and only those | `#d77868` | `#a33f2f` |
 | `hatch` | Diagonal placeholder for missing artwork | see frontmatter | see frontmatter |
 
 In the light theme `surface` and `bg` are nearly identical. The 1px `line` border is doing almost all of the work of defining a card -- get it wrong and the light theme collapses into a flat sheet.
@@ -144,7 +152,7 @@ Two kinds of use, and they behave differently:
 
 The one sanctioned exception to "no second colour", and it is a semantic token rather than an accent: it names a consequence, appears only where an action cannot be undone, and is never decorative. At the time of writing that is exactly two places -- the "Delete piece" hover state and the confirming button in a destructive dialog.
 
-Unlike the accent, it is defined per theme: `#c96a5a` on the dark ground, `#a33f2f` on the light one. A single red cannot carry on both. Both clear WCAG AA against their own background (5.2:1 and 5.8:1).
+Unlike the accent, it is defined per theme: `#d77868` on the dark ground, `#a33f2f` on the light one. A single red cannot carry on both. Both clear WCAG AA against their own background (5.3:1 and 5.8:1).
 
 The reasoning is worth keeping. Reusing the gold would have made "Delete permanently" look identical to "Add to gallery", and the muscle memory that gold means *proceed* is exactly what a destructive step needs to interrupt.
 
@@ -208,6 +216,7 @@ The motion budget is deliberately small.
 | 200ms | Hover transitions -- border colour and text colour |
 | 300ms | Theme swap (background and colour) |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when grid density changes |
+| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band opening and closing -- its height, nothing else |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A menu panel opening and closing -- opacity, and an 8px drop |
 | 200ms | One spotlight slide crossfading into the next -- opacity, nothing else |
@@ -215,6 +224,10 @@ The motion budget is deliberately small.
 No stagger and no scale. Motion acknowledges an action and gets out of the way.
 
 **A carousel does not license a slide.** The spotlight crossfades because there is no horizontal translate anywhere in this table, and adding one for the sake of a familiar pattern is exactly the drift this section exists to prevent. Opacity was already the sanctioned way for one surface to replace another.
+
+**Opening in the page is a reflow, not an entrance.** The filter band takes the masonry's 300ms rather than the dialog's 200ms and 8px, because nothing is arriving over anything -- the page makes room and the content below moves down. That is the same act as a density change, and it should cost the same. The 8px rise is reserved for a surface that covers what was under it; spend it on something that pushes instead and the two stop meaning different things.
+
+Height cannot be transitioned from `auto`, so the band is a grid going `grid-template-rows: 0fr` to `1fr`. That is machinery rather than design, and it is recorded because the obvious `height` transition does not work and the next person will reach for it.
 
 **A surface arriving over the page is the sanctioned entrance**, added 2026-09-01 for dialogs and extended to menu panels on 2026-09-02. Something that covers what was under it and appears in a single frame reads as a jump cut rather than as a thing opening. It is 8px and an opacity, on the same budget as a hover -- deliberately below the threshold where it would feel like an effect.
 
@@ -329,6 +342,12 @@ The thumbnail carries a 1px `line` border that goes accent on hover, and its `as
 
 **Aspect ratios must be persisted at upload time, never measured in the browser.** The masonry reserves each card's height from that value; deriving it after load would reflow the entire grid as images arrive.
 
+* **The card the reader last opened is marked on their return**, added 2026-09-08, by a 1px `accent` outline set 2px outside the thumbnail's frame. An outline rather than a border, because the border is already spoken for -- it goes `accent` on hover, and a marked card wearing the same accent border would read as permanently hovered. The offset ring is the focus ring's vocabulary, which is this set's existing way of pointing at one thing among many without touching the artwork.
+* **And named, not only drawn.** A ring is colour alone, so the marked card carries a `sr-only` "(last viewed)" after its title. The `faint` token is already documented as failing AA; a marker that exists only as a hairline of gold would be worse.
+* **Coming back returns the reader to where they were.** Opening a piece records the scroll position against the list's pathname, and arriving back spends it. Recorded on the act of opening a piece rather than on every scroll, which is what lets arriving from the header start at the top while arriving back from a piece does not -- a position stored continuously cannot tell those two apart.
+* **The position is spent once; the marker is not.** A second return starts where the reader chose to be, while "which one was I looking at" stays answerable for as long as the list is on screen.
+* **The restore re-asserts for up to half a second**, because the page is not its final height when the grid first paints -- on the landing page the collections row arrives on its own request and adds a band above the grid. It gives up the instant the reader scrolls, wheels or types: someone who has started reading has said where they want to be, and outranks a remembered position.
+
 ### Masonry grid
 
 CSS multi-column. Children use `break-inside: avoid` and a 20px bottom margin.
@@ -355,6 +374,23 @@ A single group with one 1px `line` border and hairline dividers between options 
 
 Each option carries an icon drawn as the columns it produces -- two wide, three, then four narrow -- so the control shows its own effect. These are the one *filled* icon in the set: a 3-unit column drawn as an outline is two hairlines almost touching, which at 16px is mud. Below 640px the labels drop and the icons carry it alone, so the buttons take an explicit `aria-label` -- `display: none` takes a label away from a screen reader as well as from the screen.
 
+### Gallery filter
+
+Narrowing the wall, added 2026-09-08. A `Filter` button in the "All work" header beside the density control, and a band of criteria that opens beneath the whole header and above the grid.
+
+* **It opens in the page, not over it.** Built first as a panel floating under its button, and changed the same day. The panel worked and covered the drawings, and on a gallery the work is the one thing the interface may not sit on top of. In flow it pushes the grid down, which costs a scroll and nothing else. The button still hides the whole thing when it is not wanted, which was the point of a panel in the first place.
+* **A band, not a permanent row.** The criteria are three controls and will be more. Left on screen they would push the gallery down the page for everyone, forever, to serve something used occasionally.
+* **The button takes outlined accent while something is filtered**, and carries the count of what is showing. The interface pointing at itself, which may repeat; filled would claim to be the action the page exists for. The count rather than a dot, because how much is being hidden is worth knowing without reopening the band to find out.
+* **Year and Collections are multi-select dropdowns.** Flat checkbox lists made the band taller every year the gallery gains; three compact controls hold it to one line whatever the data does. A native `<select multiple>` is the obvious reach and the wrong one -- it renders as a permanently open scrolling box rather than a dropdown, wants ctrl-click for a second value, and cannot be styled to this set. So the trigger is a button dressed as a field and the menu is real checkboxes, which is also what a screen reader reads without every state being maintained by hand.
+* **A closed trigger names its single pick.** "2021" rather than "1 selected": shorter, and it says *which*, which is what a closed control is there to answer. Beyond one it counts -- "2 years".
+* **`.menu-panel` is now a control's menu as well as the nav's.** Those dropdowns use the socials surface unchanged. A menu floating over the grid is fine where the band was not: it is small, transient, and opened deliberately, where the band was large and covered work for as long as it stood.
+* **Which cost the band's clip a condition.** `overflow: hidden` is what makes the collapse look like a collapse, and it clips a menu opening out of the band -- the menu is simply not there. The clip lifts 300ms after the row opens, on a discrete transition, and returns in the same frame on close. Where `allow-discrete` is unsupported the clip lifts at once and content spills for 300ms while the row grows: a cosmetic fault on the way in, chosen over a dropdown nobody can see.
+* **Clear is an icon button, not a text action.** It began as `SUBTLE_ACTION`, the 12px `faint` text button, and sat immediately beside the 12px `faint` count -- two quiet strings, one of them secretly clickable and neither looking like a control. Given the same bordered box every other control in the band wears, with the close glyph, it reads as the thing it is. `SUBTLE_ACTION` is still right where it sits under the label of what it undoes, which is why the constant was left alone and only this use changed.
+* **Shut, the band is `inert`.** Collapsed content is still focusable and still hit-tested. This is the trap the spotlight's inactive slides had to close, and the same answer.
+* **It stays mounted while shut**, so a typed query survives being hidden. Unmounting would clear the filter every time the band was closed, which is not what closing a band means.
+* **Narrowed to nothing is not an empty gallery**, and says so: "No work matches these filters", with a `Clear filters` action beside it. The way out is named rather than left to be worked out. This is the one `SectionState` that carries an action.
+* **The element carrying `.filter-row` takes no display utility**, for the reason `.menu-panel` does not: utilities cascade after components and a `flex` there beats the `grid` the class needs. Layout goes on a child.
+
 ### Piece page
 
 Not present in the original handoff -- designed against this system as a **gallery wall label**. The artwork keeps the room; the metadata sits beside it, small and quiet, separated by a hairline rather than boxed in a panel. No new visual vocabulary was introduced.
@@ -372,14 +408,28 @@ Not present in the original handoff -- designed against this system as a **galle
 * **Platform marks are the one place this set copies someone else's shape.** They live in `components/platform-icons.tsx`, apart from `icons.tsx`, because they break the house rules on purpose -- Instagram keeps its rounded corners, YouTube its pill. A brand is recognised or it is nothing. Everything else in `icons.tsx` is still square-cornered, unfilled and drawn to this design.
 
 * **Tags render as static bordered chips, not links** -- there is nowhere for a chip to point. Tags are planned as a filter over the gallery rather than as pages of their own, so a chip becomes a control that narrows the grid, not a link that navigates. A chip that looks clickable but is not is worse than a plain one.
-* **Back and prev/next sit at the top of the rail**, above the wall label, not in a row above the artwork. **Moved 2026-09-07**, with the cap above and for the same reason: that row cost 68px off the top of every piece page and helped push the artwork's own action below the fold, while the rail beside it ran half empty. Here they cost the drawing nothing and are still the first thing above the fold. Reclaiming the row alone would not have been enough -- it buys 68px against a 69px overrun, which lands the caption exactly on the fold and only looks fixed on a taller window.
-* **Below `lg` they go back above the artwork**, because the rail falls underneath it there and reaching Next by scrolling past the whole drawing is worse than the row ever was. One copy of the controls, ordered first in the DOM and placed into the rail by grid from `lg`; they are not rendered twice.
-* **Prev/next** -- neighbours in gallery order, and the same treatment as the back link beside them: `ICON_BUTTON`, the bordered 12px uppercase box at `0.08em` in `muted`, going accent on hover. So the pair reads as one set of quiet actions, and as the same kind of thing as the owner's actions further down the rail.
+* **Back sits at the top left of the artwork, and prev/next at the top of the rail.** Not in a row above the artwork. **Moved 2026-09-07**, with the cap above and for the same reason: that row cost 68px off the top of every piece page and helped push the artwork's own action below the fold, while the rail beside it ran half empty. Here they cost the drawing nothing and are still the first thing above the fold. Reclaiming the row alone would not have been enough -- it buys 68px against a 69px overrun, which lands the caption exactly on the fold and only looks fixed on a taller window.
+* **Back is in the artwork's left gutter from `lg`, which costs nothing.** It was in the rail with prev/next for a day, and that put it at the far right of the page -- against the one convention nobody thinks about, which is that back is top left and a cursor goes there by reflex. **Corrected 2026-09-08.** The height cap leaves the artwork much narrower than its column, so the gutter either side of it was already empty; the link sits in it and takes no height at all.
+* **The artwork column is `1fr auto 1fr` from `lg`**, rather than padding wide enough for the link. There is no width to guess at, the outer tracks share the slack evenly so the artwork stays centred on the page instead of being pushed off by whatever the label measures, and a track cannot overlap its neighbour -- a wide piece squeezes the gutters rather than running under the link, which is what absolute positioning would have allowed the first landscape upload to do.
+* **Below `lg` back and prev/next share a row above the artwork**, because the rail falls underneath it there and reaching Next by scrolling past the whole drawing is worse than the row ever was. Back is rendered in both places and hidden in one: the two sit in different columns at `lg` and in one row below it, which no single grid placement expresses. `hidden` rather than opacity, so the unused copy leaves the tab order with the screen.
+* **Prev/next** -- neighbours in whichever list the reader is actually in, and the same treatment as the back link beside them: `ICON_BUTTON`, the bordered 12px uppercase box at `0.08em` in `muted`, going accent on hover. So the pair reads as one set of quiet actions, and as the same kind of thing as the owner's actions further down the rail.
 
   This bullet described them as bare 13px `faint` text until 2026-09-07. They have been bordered boxes for considerably longer, and the boxes are what is kept -- the text was the specification, the boxes were the build, and the build won on use. Recorded rather than quietly corrected, because the two had disagreed long enough that the document was the unreliable one.
 
   Piece titles move to the tooltip and the accessible name; at this size the labels alone carry the action, and keeping them short is what fits both controls inside the 288px the rail has once its padding is taken. Ends are open rather than wrapping, and the unavailable side takes `ICON_BUTTON_INERT` -- the same box at 40% opacity and without a pointer cursor -- rather than being omitted, so the pair does not reflow between pieces.
+
+* **A piece opened from a collection walks that collection**, in its curated order, and the back link is named for it -- "← Night Calls", not "← All work". **Added 2026-09-08.** Prev/next used to walk the whole gallery whatever list you had come from, so stepping through a set you had deliberately entered dropped you out of it at the first click, and Back then claimed to return you somewhere you had never been.
+* **Where you came from rides in the URL, as `?from=`, and it is a trail rather than a step.** `from=home/night-calls` is "the gallery, then Night Calls": the nearest step is the list a page walks, and the rest is what its own back link inherits, so each page hands on exactly the trail behind it. A second parameter naming the origin's origin was the alternative, and that is one parameter per level of depth. Steps are collection slugs, plus `home` for the gallery, which is the one origin with no slug of its own. Router state was the alternative and is worse in the way that matters: it does not survive a reload and cannot be sent to anyone, so a shared link would quietly put the reader in gallery order while the sender was in a set. The same argument `?view=1` already makes. A slug rather than the ids themselves, because the collection route returns members in `display_order` already, and an id list in a query string would be both enormous and stale the moment the set was rearranged. Steps are not percent-encoded and are filtered to slug shape instead: encoding a `/` gives `%2F`, which the query parser decodes back to `/` on the way in, destroying the separator it was meant to protect. Filtering also keeps the trail away from `decodeURIComponent`, so a crafted `?from=100%` renders a page rather than throwing a `URIError`. The trail is capped at four steps, which is past anything this site can produce.
+* **A stale origin degrades rather than breaks.** The set is fetched alongside the gallery list, not instead of it, so a `from` naming a deleted collection, one private to this reader, or one that no longer holds this piece falls back to gallery order and an "← All work" link. It costs one request on a piece opened from a collection, which is the price of a wrong link being worth less than a right one instead of being worth nothing.
+* **A waived piece ignores it.** Waiving drops collection membership, so the reserve is the only list left to walk however the piece was reached.
 * **Not found** -- an unknown id gets the eyebrow-plus-headline treatment from the intro, at a reduced size, with a link back.
+
+### Collection page
+
+* **Back offers the gallery as well as the index, when the gallery is where the reader came from.** A collection is reachable two ways -- the row on the landing page and the header's Collections item -- and "back" means a different place for each. Arriving from the landing page and being returned to the collections index is the small displacement that makes a site feel like it moved while you were reading. **Added 2026-09-08.**
+* **And only then.** Someone who came through the header has no gallery to return to, and a second button would be inventing a history they do not have. The index is always offered, because a set always belongs to the list of sets.
+* **The gallery sits first.** It is the truer "back" when it is there at all; the index is the step up rather than the step back.
+* **The trail survives a trip through a piece.** Gallery, collection, piece, back returns the reader to the collection with the gallery still offered. It did not at first -- the origin held one step, so the piece never knew where the collection had come from and the gallery button vanished on the way back. Recorded because it was shipped that way for an afternoon and reported as a bug within the hour, which is the correct verdict: a back row that changes depending on how you got to the same page reads as broken, not as economical.
 
 ### Upload modal
 
@@ -451,8 +501,8 @@ The Tailwind rule behind all four is worth restating, because it is the trap: a 
 
 ## Accessibility
 
-* The `faint` token does not meet WCAG AA for normal text in either theme -- roughly 2.6:1 dark and 2.7:1 light, against a 4.5:1 bar. It carries meta, counts, the eyebrow and the footer, all at 12px. This is a deliberate aesthetic choice and is documented here so it is a decision rather than an accident. Raising it to `#807d75` (dark) and `#6e6a60` (light) would clear 4.5:1 and is a two-line change.
-* Accent gold on the light background is roughly 1.9:1, which matters where it is used as light-theme nav hover text.
+* The `faint` token does not meet WCAG AA for normal text in either theme -- roughly 2.6:1 dark and 2.7:1 light, against a 4.5:1 bar. It carries meta, counts, the eyebrow and the footer, all at 12px. This is a deliberate aesthetic choice and is documented here so it is a decision rather than an accident. Raising it to `#898781` (dark) and `#6e6a60` (light) would clear 4.5:1 and is a two-line change.
+* Accent gold on the light background is roughly 1.9:1, which matters where it is used as light-theme nav hover text. On the dark ground it is 7.2:1.
 * Controls that toggle carry `aria-pressed`; the density group carries `role="group"` and a label; the menu button carries `aria-expanded` and `aria-controls`.
 * All motion is skipped under `prefers-reduced-motion: reduce`, including the dialog transition -- skipped, not shortened.
 

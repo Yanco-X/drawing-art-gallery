@@ -9,8 +9,11 @@ import { CollectionCard } from './CollectionCard';
  */
 export const CollectionGrid = ({
   collections,
+  origin,
 }: {
   collections: CollectionSummary[];
+  /** Threaded to each card; see `lib/origin.ts`. */
+  origin?: string;
 }) => (
   <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
     {collections.map((collection, index) => (
@@ -18,6 +21,7 @@ export const CollectionGrid = ({
         key={collection.id}
         collection={collection}
         index={index}
+        origin={origin}
       />
     ))}
   </div>

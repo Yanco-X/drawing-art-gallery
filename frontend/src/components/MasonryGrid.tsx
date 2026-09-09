@@ -18,9 +18,15 @@ import { PieceCard } from './PieceCard';
 export const MasonryGrid = ({
   pieces,
   density,
+  origin,
+  marked,
 }: {
   pieces: Piece[];
   density: GridDensity;
+  /** Passed to each card, so a piece opened here knows where from. */
+  origin?: string;
+  /** The piece the reader last opened from this list, if they came back. */
+  marked?: string | null;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useFlipReflow(containerRef, density);
@@ -38,7 +44,11 @@ export const MasonryGrid = ({
           data-flip-id={piece.id}
           className="mb-5 break-inside-avoid"
         >
-          <PieceCard piece={piece} />
+          <PieceCard
+            piece={piece}
+            origin={origin}
+            marked={piece.id === marked}
+          />
         </div>
       ))}
     </div>

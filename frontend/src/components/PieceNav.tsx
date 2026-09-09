@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { pieceHref } from '../lib/origin';
 import type { Piece } from '../types';
 import { ICON_BUTTON, ICON_BUTTON_INERT } from './form-styles';
 
@@ -6,10 +7,12 @@ const Step = ({
   piece,
   display,
   name,
+  origin,
 }: {
   piece?: Piece;
   display: string;
   name: string;
+  origin?: string;
 }) => {
   // Rendered disabled rather than omitted so the row does not reflow at
   // the first and last piece.
@@ -23,7 +26,7 @@ const Step = ({
 
   return (
     <Link
-      to={`/piece/${piece.id}`}
+      to={pieceHref(piece.id, origin)}
       title={piece.title}
       aria-label={`${name}: ${piece.title}`}
       className={ICON_BUTTON}
@@ -42,12 +45,23 @@ const Step = ({
 export const PieceNav = ({
   previous,
   next,
+  origin,
 }: {
   previous?: Piece;
   next?: Piece;
+  /**
+   * Carried on to the neighbour, so walking a collection stays in it. Left
+   * off and the second step would fall back to gallery order.
+   */
+  origin?: string;
 }) => (
   <nav aria-label="Piece navigation" className="flex items-center gap-2">
-    <Step piece={previous} display="← Previous" name="Previous piece" />
-    <Step piece={next} display="Next →" name="Next piece" />
+    <Step
+      piece={previous}
+      display="← Previous"
+      name="Previous piece"
+      origin={origin}
+    />
+    <Step piece={next} display="Next →" name="Next piece" origin={origin} />
   </nav>
 );

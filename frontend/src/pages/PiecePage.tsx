@@ -13,17 +13,52 @@ import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
 import { useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
-import { fetchPiece, fetchPieces, fetchWaivedPieces } from '../services';
-import type { Piece } from '../types';
+import {
+  HOME_ORIGIN,
+  ORIGIN_PARAM,
+  behind,
+  collectionHref,
+  nearestStep,
+  readTrail,
+  serialiseTrail,
+} from '../lib/origin';
+import {
+  fetchCollection,
+  fetchPiece,
+  fetchPieces,
+  fetchWaivedPieces,
+} from '../services';
+import type { Collection, Piece } from '../types';
 
-const BackLink = ({ waived = false }: { waived?: boolean }) => (
-  <Link
-    to={waived ? '/waived' : '/home'}
-    className={`${ICON_BUTTON} w-fit`}
-  >
-    {waived ? '← Waived' : '← All work'}
-  </Link>
-);
+/**
+ * Back to wherever this piece was opened from.
+ *
+ * Named, when that is a collection: "← All work" from inside a set is a
+ * lie about where Back goes, and the set is the thing the reader chose to
+ * be in.
+ */
+const BackLink = ({
+  waived = false,
+  from,
+  trail = [],
+}: {
+  waived?: boolean;
+  from?: Collection | null;
+  /** What sits behind the collection, so its own back row survives the trip. */
+  trail?: string[];
+}) => {
+  const to = from
+    ? collectionHref(from.slug, serialiseTrail(trail) || undefined)
+    : waived
+      ? '/waived'
+      : '/home';
+  const label = from ? from.name : waived ? 'Waived' : 'All work';
+  return (
+    <Link to={to} className={`${ICON_BUTTON} w-fit`}>
+      ← {label}
+    </Link>
+  );
+};
 
 const Message = ({
   eyebrow,
@@ -120,6 +155,9 @@ const adjacent = (pieces: Piece[], id: string) => {
 /** Stable placeholder loader while the piece itself is still resolving. */
 const NO_SIBLINGS = async (): Promise<Piece[]> => [];
 
+/** Likewise, for a page that was not opened from a collection. */
+const NO_ORIGIN = async (): Promise<Collection | null> => null;
+
 /*
  * The detail view lives in the URL, as `?view=1`.
  *
@@ -170,7 +208,52 @@ const PiecePage = () => {
   }, [state]);
   const siblings = useAsync(loadSiblings);
 
+  /*
+   * The set this piece was opened from, if it was opened from one.
+   *
+   * Fetched alongside the gallery list rather than instead of it, so that a
+   * `from` naming a collection that no longer exists, or is private to
+   * someone else, or no longer holds this piece, falls back to gallery
+   * order rather than to no neighbours at all. A stale link should be worth
+   * less than a fresh one, not broken.
+   */
+  const rawTrail = params.get(ORIGIN_PARAM);
+  const trail = useMemo(() => readTrail(rawTrail), [rawTrail]);
+  // The nearest step is the list this piece belongs to. `home` is a place,
+  // not a set, so it names no collection to walk.
+  const openedFrom = nearestStep(trail);
+  const setSlug = openedFrom === HOME_ORIGIN ? undefined : openedFrom;
+  const loadOrigin = useMemo(
+    () => (setSlug ? () => fetchCollection(setSlug) : NO_ORIGIN),
+    [setSlug],
+  );
+  const origin = useAsync(loadOrigin);
+  const fromSet = origin.status === 'ready' ? origin.data : null;
+  // Only honoured while the piece is actually a member. Waiving drops
+  // membership, so a waived piece walks the reserve however it was reached.
+  const inSet = Boolean(
+    piece &&
+      !piece.waivedAt &&
+      fromSet?.pieces.some((member) => member.id === piece.id),
+  );
+  const carried = inSet ? (rawTrail ?? undefined) : undefined;
+
   const viewing = params.get(VIEW_PARAM) === '1';
+
+  /*
+   * The search string, rebuilt rather than replaced. `setParams` writes the
+   * whole query, so opening or closing the viewer with an object literal
+   * would drop the origin and quietly return the reader to gallery order.
+   */
+  const queryWith = useCallback(
+    (view: boolean) => {
+      const next = new URLSearchParams();
+      if (rawTrail) next.set(ORIGIN_PARAM, rawTrail);
+      if (view) next.set(VIEW_PARAM, '1');
+      return next;
+    },
+    [rawTrail],
+  );
 
   // Whether *this* page pushed the history entry the viewer sits on. Closing
   // has to go back when it did, so the entry is consumed rather than left
@@ -180,8 +263,8 @@ const PiecePage = () => {
 
   const openViewer = useCallback(() => {
     pushedView.current = true;
-    setParams({ [VIEW_PARAM]: '1' });
-  }, [setParams]);
+    setParams(queryWith(true));
+  }, [setParams, queryWith]);
 
   const closeViewer = useCallback(() => {
     if (pushedView.current) {
@@ -189,16 +272,20 @@ const PiecePage = () => {
       navigate(-1);
       return;
     }
-    setParams({}, { replace: true });
-  }, [navigate, setParams]);
+    setParams(queryWith(false), { replace: true });
+  }, [navigate, setParams, queryWith]);
 
   // Moving between pieces inside the viewer replaces rather than pushes, so
   // a browsing session does not bury the page the viewer was opened from
   // under one entry per piece looked at.
   const viewNeighbour = useCallback(
-    (neighbour: Piece) =>
-      navigate(`/piece/${neighbour.id}?${VIEW_PARAM}=1`, { replace: true }),
-    [navigate],
+    (neighbour: Piece) => {
+      const query = new URLSearchParams();
+      if (carried) query.set(ORIGIN_PARAM, carried);
+      query.set(VIEW_PARAM, '1');
+      navigate(`/piece/${neighbour.id}?${query}`, { replace: true });
+    },
+    [navigate, carried],
   );
 
   const refresh = useCallback((updated: Piece) => setEdited(updated), []);
@@ -213,8 +300,8 @@ const PiecePage = () => {
   // behind would put the page one refresh away from opening an empty viewer.
   const missing = load.status === 'ready' && piece === null;
   useEffect(() => {
-    if (missing && viewing) setParams({}, { replace: true });
-  }, [missing, viewing, setParams]);
+    if (missing && viewing) setParams(queryWith(false), { replace: true });
+  }, [missing, viewing, setParams, queryWith]);
 
   if (load.status === 'loading') {
     return (
@@ -266,12 +353,35 @@ const PiecePage = () => {
     );
   }
 
-  const { previous, next } =
-    siblings.status === 'ready' ? adjacent(siblings.data, piece.id) : {};
+  /*
+   * Neighbours come from the set when there is one, and from the gallery
+   * otherwise. Stepping out of a collection you deliberately opened is the
+   * bug this closes: prev/next used to walk every piece in the gallery
+   * whatever list you had come from.
+   */
+  const walk = inSet
+    ? (fromSet?.pieces ?? [])
+    : siblings.status === 'ready'
+      ? siblings.data
+      : [];
+  const { previous, next } = adjacent(walk, piece.id);
+
+  // One element, two homes: the stacked row below lg and the artwork's left
+  // gutter from lg. Built once so the props cannot drift between them.
+  const backLink = (
+    <BackLink
+      waived={Boolean(piece.waivedAt)}
+      from={inSet ? fromSet : null}
+      trail={behind(trail)}
+    />
+  );
 
   return (
     <PageShell>
-      <article className="mx-auto w-full max-w-content px-gutter pt-8 pb-section-lg">
+      {/* The smaller fluid step, not `section-lg`. This page ends on a 12px
+          caption rather than on a grid, and 96px of air under one quiet line
+          reads as a gap the page forgot to fill. */}
+      <article className="mx-auto w-full max-w-content px-gutter pt-8 pb-intro-bottom">
         {/* The artwork keeps the room; the label sits beside it, divided by
             a hairline that turns horizontal when the two stack.
 
@@ -298,8 +408,14 @@ const PiecePage = () => {
             ever was.
           */}
           <div className="flex flex-wrap items-center justify-between gap-4 lg:col-start-2 lg:row-start-1 lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:border-l lg:border-line lg:pb-6 lg:pl-8">
-            <BackLink waived={Boolean(piece.waivedAt)} />
-            <PieceNav previous={previous} next={next} />
+            {/* Stacked: back sits at the top left of the page already, which
+                is where it is looked for. From lg it moves beside the
+                artwork and this copy goes away. Rendered twice rather than
+                placed by grid, because the two live in different columns at
+                lg and in one row below it, and `hidden` keeps the unused
+                copy out of the tab order as well as off the screen. */}
+            <span className="lg:hidden">{backLink}</span>
+            <PieceNav previous={previous} next={next} origin={carried} />
           </div>
 
           {/* Centred rather than left-aligned: the 78vh cap often leaves the
@@ -309,7 +425,26 @@ const PiecePage = () => {
               about the work itself, and this column is where the eye
               already is. Shown to everyone -- for a visitor it is the only
               action the page offers. */}
-          <figure className="flex justify-center lg:col-start-1 lg:row-start-1 lg:row-span-2">
+          {/*
+            Three columns from lg, and the artwork is the middle one.
+
+            Back belongs at the top left -- that is where a cursor goes by
+            reflex, and it had ended up on the far right of the page when
+            the controls moved into the rail. It costs nothing to put it
+            back: the height cap leaves the artwork much narrower than its
+            column, so there is a wide empty gutter either side of it that
+            was doing nothing.
+
+            `1fr auto 1fr` rather than padding, so there is no width to
+            guess at. The outer tracks share the slack evenly, which keeps
+            the artwork centred on the page rather than pushed off by
+            whatever the link happens to measure, and a track cannot
+            overlap its neighbour -- a wide piece squeezes the gutters
+            instead of running under the link, which absolute positioning
+            would have allowed.
+          */}
+          <figure className="flex justify-center lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-start lg:gap-4">
+            <div className="hidden lg:block">{backLink}</div>
             {/* `w-fit` so the column shrinks to the artwork: the button then
                 spans the drawing exactly rather than the whole grid cell,
                 which is often much wider because of the 78vh cap. It should

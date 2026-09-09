@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AllWorkSection } from '../components/AllWorkSection';
 import { CollectionArrange } from '../components/CollectionArrange';
 import { CollectionOwnerActions } from '../components/CollectionOwnerActions';
@@ -7,6 +7,13 @@ import { PageMessage } from '../components/PageMessage';
 import { PageShell } from '../components/PageShell';
 import { useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
+import {
+  HOME_ORIGIN,
+  ORIGIN_PARAM,
+  nearestStep,
+  readTrail,
+  serialiseTrail,
+} from '../lib/origin';
 import { fetchCollection } from '../services';
 import type { Collection } from '../types';
 
@@ -14,6 +21,33 @@ const BackLink = () => (
   <Link to="/collections" className={`${ICON_BUTTON} w-fit`}>
     ← Collections
   </Link>
+);
+
+/**
+ * Where back goes, when a collection can be reached two ways.
+ *
+ * The index is always offered, because a set always belongs to the list of
+ * sets. The gallery is offered as well when that is where the reader came
+ * from -- landing on the collections index after arriving from the landing
+ * page is the kind of small displacement that makes a site feel like it
+ * moved under you.
+ *
+ * It is not offered otherwise. Someone who came through the header's
+ * Collections item has no gallery to go back to, and a button claiming
+ * otherwise would be inventing a history they do not have.
+ *
+ * Gallery sits first because it is the truer "back" when it is there at
+ * all; the index is the step up rather than the step back.
+ */
+const BackRow = ({ fromHome }: { fromHome: boolean }) => (
+  <div className="flex flex-wrap items-center gap-2">
+    {fromHome && (
+      <Link to="/home" className={`${ICON_BUTTON} w-fit`}>
+        ← Gallery
+      </Link>
+    )}
+    <BackLink />
+  </div>
 );
 
 /**
@@ -27,6 +61,15 @@ const BackLink = () => (
 const CollectionPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Where this page was reached from, and what it hands on. A piece opened
+  // here inherits this trail with this collection appended, so its own back
+  // link can return the reader here with the gallery still behind it.
+  const trail = useMemo(
+    () => readTrail(params.get(ORIGIN_PARAM)),
+    [params],
+  );
+  const fromHome = nearestStep(trail) === HOME_ORIGIN;
 
   const { role } = useSession();
 
@@ -91,7 +134,7 @@ const CollectionPage = () => {
         {/* Back and the owner's actions share one row above the label, the
             same shape the piece page uses for back and neighbours. */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <BackLink />
+          <BackRow fromHome={fromHome} />
           {isOwner && !arranging && (
             <CollectionOwnerActions
               collection={collection}
@@ -137,6 +180,7 @@ const CollectionPage = () => {
           title="In this collection"
           pieces={collection.pieces}
           emptyMessage="Nothing hangs here yet."
+          origin={serialiseTrail([...trail, collection.slug])}
         />
       )}
     </PageShell>

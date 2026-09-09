@@ -241,3 +241,10 @@ export const GearIcon = () => (
     <path d="M12 3l1.4 2.6 2.9-.4 1 2.8 2.4 1.7-1.3 2.6 1.3 2.6-2.4 1.7-1 2.8-2.9-.4L12 21l-1.4-2.6-2.9.4-1-2.8L4.3 14l1.3-2.6L4.3 8.8l2.4-1.7 1-2.8 2.9.4L12 3Z" />
   </Glyph>
 );
+
+/** A funnel: the pieces going in, fewer coming out. */
+export const FilterIcon = () => (
+  <Glyph>
+    <path d="M3 4h18l-7 8v7l-4-2v-5L3 4Z" />
+  </Glyph>
+);

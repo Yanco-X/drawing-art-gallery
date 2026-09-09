@@ -1,15 +1,22 @@
 import { Link } from 'react-router-dom';
+import { collectionHref } from '../lib/origin';
 import type { CollectionSummary } from '../types';
 
 interface CollectionCardProps {
   collection: CollectionSummary;
   /** Position in the row; picks one of the four gradient swatches. */
   index: number;
+  /** Where this card is being shown, so the collection knows where back is. */
+  origin?: string;
 }
 
-export const CollectionCard = ({ collection, index }: CollectionCardProps) => (
+export const CollectionCard = ({
+  collection,
+  index,
+  origin,
+}: CollectionCardProps) => (
   <Link
-    to={`/collections/${collection.slug}`}
+    to={collectionHref(collection.slug, origin)}
     className="flex flex-col gap-3 border border-line bg-surface p-5 transition-colors duration-200 hover:border-accent"
   >
     {collection.coverImageUrl ? (

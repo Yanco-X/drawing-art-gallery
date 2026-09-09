@@ -7,6 +7,7 @@ import { PageShell } from '../components/PageShell';
 import { Spotlight } from '../components/Spotlight';
 import { ICON_BUTTON_ACCENT } from '../components/form-styles';
 import { useAsync, useSession } from '../hooks';
+import { HOME_ORIGIN } from '../lib/origin';
 import { collectionsFor, fetchPieces } from '../services';
 import type { CollectionSummary, Piece } from '../types';
 
@@ -59,6 +60,7 @@ const LandingPage = () => {
 
       <CollectionsSection
         collections={allCollections}
+        origin={HOME_ORIGIN}
         loading={collections.status === 'loading'}
         error={collections.status === 'error' ? collections.message : undefined}
         action={
@@ -78,6 +80,7 @@ const LandingPage = () => {
         pieces={allPieces}
         loading={pieces.status === 'loading'}
         error={pieces.status === 'error' ? pieces.message : undefined}
+        collections={allCollections}
       />
 
       {isOwner && (
