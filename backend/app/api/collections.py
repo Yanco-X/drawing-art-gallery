@@ -32,10 +32,8 @@ def _set_membership(session, collection: Collection, piece_ids: list) -> None:
     """
     Replace the whole membership list, in the given order.
 
-    Curation is 'pick the pieces, arrange them, save', so the write is one
-    idempotent replacement rather than a sequence of add/remove calls that
-    could half-apply. Positions are rewritten contiguously from 0, which
-    keeps display_order readable and avoids gap-juggling.
+    One idempotent replacement rather than a sequence of add/remove calls that
+    could half-apply. Positions are rewritten contiguously from 0.
     """
     if not isinstance(piece_ids, list):
         raise ApiError("pieceIds must be an array.")
@@ -89,10 +87,8 @@ def _apply_cover(session, collection: Collection, raw_cover) -> None:
 def list_collections():
     session = SessionLocal()
     stmt = select(Collection).order_by(Collection.created_at.desc(), Collection.name)
-    # Visitors never see unpublished collections. Owners pass
-    # ?includePrivate=1, and asking without credentials is refused rather
-    # than quietly downgraded -- a draft's name and cover are as private as
-    # its contents.
+    # Visitors never see unpublished collections. Owners pass ?includePrivate=1,
+    # and asking without credentials is refused rather than quietly downgraded.
     if request.args.get("includePrivate") == "1":
         if not is_owner():
             raise ApiError("Owner credentials required.", status=401)

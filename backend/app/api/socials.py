@@ -1,10 +1,8 @@
 """
 Where the artist can be found.
 
-Two routes, not five. The owner edits a list and saves it once, so the API
-takes a list and writes it once -- the same call that sets membership on a
-collection. Reordering comes free with it, and a half-finished edit cannot
-half-apply.
+Two routes, not five: the owner edits a list and saves it once, so the API
+takes a list and writes it once.
 """
 
 import re
@@ -87,10 +85,9 @@ def replace_socials():
     """
     The whole list, in the order it should appear.
 
-    Rows are matched by id so an existing link keeps its row rather than
-    being deleted and recreated; anything absent from the body is gone. The
-    position in the array is the order, which is why nothing sends
-    displayOrder.
+    Rows are matched by id so an existing link keeps its row rather than being
+    deleted and recreated; anything absent from the body is gone. The array
+    position is the order, which is why nothing sends displayOrder.
     """
     body = request.get_json(silent=True)
     if not isinstance(body, list):

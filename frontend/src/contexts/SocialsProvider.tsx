@@ -5,12 +5,9 @@ import type { Social } from '../types';
 import { SocialsContext } from './socials-context';
 
 /*
- * Fetched once, above the router.
- *
- * The menu lives in the header, and PageShell remounts on every
- * navigation -- a `useAsync` in there would refetch the same short list on
- * every click. A failure is silent: an empty list hides the menu, which is
- * the right answer for a header that is not the reason anyone came.
+ * Fetched once, above the router: `PageShell` remounts on every navigation, so
+ * a `useAsync` in there would refetch the same short list on every click. A
+ * failure is silent -- an empty list hides the menu.
  */
 export const SocialsProvider = ({ children }: { children: ReactNode }) => {
   const [socials, setSocials] = useState<Social[]>([]);

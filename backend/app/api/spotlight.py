@@ -1,14 +1,10 @@
 """
 Which pieces the landing page band shows first.
 
-One route, not two. There is no GET: `spotlightOrder` rides along on every
-piece in `GET /api/pieces`, so the band works out its own five from the list
-the landing page already fetches rather than paying for a second request.
-
-The write takes the whole ordered list and replaces it, which is the shape
-`PUT /api/socials` and `PUT /api/collections/<id>/pieces` already use. The
-dialog edits a list and saves it once, so the API takes a list and writes it
-once: reordering comes free, and a half-finished edit cannot half-apply.
+No GET: `spotlightOrder` rides along on every piece in `GET /api/pieces`, so
+the band works out its own five from the list the landing page already has.
+The write takes the whole ordered list and replaces it, the shape
+`PUT /api/socials` and `PUT /api/collections/<id>/pieces` already use.
 """
 
 import uuid
@@ -30,13 +26,7 @@ MAX_SPOTLIGHT = 5
 
 
 def _piece_ids(body) -> list[uuid.UUID]:
-    """
-    A bare list of piece ids, in the order they should appear.
-
-    A list rather than an object because there is nothing else to send. The
-    position in the array is the slot, which is why no entry carries an index
-    -- the same reasoning that keeps `displayOrder` out of the socials body.
-    """
+    """A bare list of piece ids: the position in the array is the slot."""
     if not isinstance(body, list):
         raise ApiError(
             "Send a list of piece ids.", details={"spotlight": "list required"}
@@ -72,9 +62,8 @@ def replace_spotlight():
     """
     The whole list, in the order the band should show it.
 
-    Set semantics: a piece absent from the body loses its slot. Sending an
-    empty list is how the owner goes back to the default, which is the newest
-    five and needs no stored state at all.
+    Set semantics: a piece absent from the body loses its slot. An empty list
+    is how the owner goes back to the default, the newest five.
     """
     ids = _piece_ids(request.get_json(silent=True))
 

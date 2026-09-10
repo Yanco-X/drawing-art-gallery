@@ -32,12 +32,6 @@ const LandingPage = () => {
   // Collections created since this page loaded, likewise.
   const [made, setMade] = useState<CollectionSummary[]>([]);
 
-  /*
-   * Picking happens inside the dialog now, so this page holds nothing but
-   * the flag that opens it. It used to carry the whole selection: the
-   * gallery went into a picking mode, which meant scrolling the length of
-   * the gallery to choose and scrolling back up to name or cancel.
-   */
   const [making, setMaking] = useState(false);
 
   const loaded = pieces.status === 'ready' ? pieces.data : [];
@@ -49,11 +43,6 @@ const LandingPage = () => {
 
   return (
     <PageShell onPieceUploaded={(piece) => setAdded((now) => [piece, ...now])}>
-      {/*
-        The newest few, which is what `GET /api/pieces` already orders by --
-        so the band costs no second request, and a piece uploaded in this
-        session enters it at the front along with everything else.
-      */}
       <Spotlight pieces={allPieces} collections={allCollections} />
 
       {SHOW_INTRO && <IntroSection />}

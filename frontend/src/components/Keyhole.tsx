@@ -6,16 +6,11 @@ import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
 import { EyeHiddenIcon, EyeIcon } from './icons';
 
 /*
- * The way in.
+ * Loaded on demand, so the one field on the site that asks for a secret is not
+ * in the bundle every visitor downloads.
  *
- * Loaded on demand, so the one field on the site that asks for a secret is
- * not in the bundle every visitor downloads. Nothing links here: it opens
- * on five clicks of the footer mark, on the spare path, or when a session
- * lapses mid-action.
- *
- * Dismissing is always allowed. A session that lapsed while something was
- * being edited leaves the page exactly as it was, so whatever was typed
- * survives being sent away.
+ * Dismissing is always allowed: a session that lapsed mid-edit leaves the page
+ * exactly as it was, so whatever was typed survives being sent away.
  */
 const Keyhole = () => {
   const { keyholeOpen, closeKeyhole, signedIn } = useSession();
@@ -85,10 +80,6 @@ const Keyhole = () => {
           Key
         </label>
 
-        {/* The toggle sits inside the field rather than beside it, so the
-            control and the thing it controls are one object. The input keeps
-            room for it on the right; the button is the field's own height,
-            which makes it a comfortable target on a phone. */}
         <div className="relative">
           <input
             ref={fieldRef}

@@ -1,10 +1,8 @@
 """
 Writing a piece's Deep Zoom pyramid to storage.
 
-Split from `images.py`, which is deliberately pure -- it knows about pixels
-and nothing else. This is the seam where tiles meet a storage backend, and
-it is shared by the upload route and the backfill script so the two cannot
-drift apart about where a tile goes.
+The seam where tiles meet a storage backend, shared by the upload route and
+the backfill script so the two cannot drift about where a tile goes.
 """
 
 import itertools
@@ -16,16 +14,13 @@ from .images import tile_pyramid
 
 logger = logging.getLogger(__name__)
 
-# Tiles are written in parallel because the bottleneck is the round trip,
-# not the bytes. Generating the pyramid for a 25-megapixel piece costs about
-# 6s of CPU; storing its 547 tiles one at a time cost another 12s of waiting
-# on MinIO. Eight is enough to hide almost all of that without opening so
-# many connections that the object store starts queueing them anyway.
+# Written in parallel because the bottleneck is the round trip, not the bytes:
+# storing a 25-megapixel piece's 547 tiles one at a time cost 12s of waiting on
+# MinIO. Eight is enough without the object store queueing them.
 WRITE_WORKERS = 8
 
-# How many tiles are held in memory at once. Batching keeps a large pyramid
-# from being fully materialised before the first write goes out; at a few
-# tens of kilobytes each this is well under a megabyte.
+# How many tiles are held in memory at once, so a large pyramid is not fully
+# materialised before the first write goes out.
 WRITE_BATCH = 64
 
 
@@ -63,8 +58,7 @@ def clear_tiles(storage, piece: Piece) -> None:
     """
     Remove a piece's pyramid, leaving its renditions alone.
 
-    Used before regenerating, so a half-written pyramid from an interrupted
-    run cannot leave stale tiles mixed in with fresh ones at levels the new
-    image does not reach.
+    Used before regenerating, so stale tiles from an interrupted run cannot
+    mix in with fresh ones at levels the new image does not reach.
     """
     storage.delete_prefix(piece.tile_prefix + "/")

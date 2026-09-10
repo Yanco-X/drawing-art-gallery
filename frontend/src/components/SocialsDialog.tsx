@@ -11,18 +11,6 @@ import {
 } from './platform-icons';
 import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
 
-/*
- * Editing the socials list.
- *
- * One list, one Save, nothing written until then -- the rule arrange mode
- * set for the same reason: this is one ordered list, not five independent
- * records, and a drop that wrote immediately would make an accidental drag
- * permanent.
- *
- * Pasting a url usually fills the rest in. The platform is what picks the
- * mark, and asking someone to type `artstation` correctly to get an icon is
- * a spelling test with a silent penalty.
- */
 
 const move = <T,>(items: T[], from: number, to: number): T[] => {
   if (to < 0 || to >= items.length || from === to) return items;
@@ -70,13 +58,6 @@ const PlatformPicker = ({
         <Mark />
       </button>
 
-      {/* A grid of the marks themselves. A native select cannot show one,
-          and the mark is the thing being chosen.
-
-          The grid is on the inner element, not on .menu-panel. A display
-          utility there would outrank the class -- utilities cascade after
-          components -- leaving the panel laid out and clickable while it
-          reads as closed. */}
       <div
         data-open={open}
         className="menu-panel absolute top-full left-0 z-30 mt-2 w-44 border border-line bg-surface p-2"
@@ -143,10 +124,9 @@ export const SocialsDialog = ({
     );
 
   /*
-   * A pasted url names its own platform, and fills the label if it is still
-   * empty. It never overwrites a label already typed: the whole point of
-   * label being separate from platform is that two accounts on one site can
-   * be told apart.
+   * A pasted url names its own platform and fills an empty label. It never
+   * overwrites a label already typed: that is what lets two accounts on one
+   * site be told apart.
    */
   const onUrl = (index: number, url: string) => {
     const detected = platformFromUrl(url);
@@ -258,9 +238,6 @@ export const SocialsDialog = ({
                 onPick={(platform) => update(index, { platform })}
               />
 
-              {/* Wrapped rather than sized directly: FIELD carries w-full,
-                  so a width on the input itself is a coin toss over which
-                  utility the stylesheet emits last. */}
               <div className="w-[110px] shrink-0">
                 <input
                   value={row.label}

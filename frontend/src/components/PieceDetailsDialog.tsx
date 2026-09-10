@@ -8,20 +8,6 @@ import { FocalPicker } from './FocalPicker';
 import { TagInput } from './TagInput';
 import { YearField } from './YearField';
 
-/*
- * Correcting a piece's wall label.
- *
- * The same shape as the upload modal — artwork on the left, the fields it
- * describes on the right — because they are the same act at different
- * times. A piece uploaded in a hurry and corrected later should not have to
- * be described twice in two different layouts.
- *
- * The image is shown but not editable. Replacing the bytes behind an id
- * would mean re-deriving both renditions and invalidating every URL already
- * handed out, which is a different act from fixing a title. Showing it
- * still earns its place: these fields describe a drawing, and choosing a
- * medium or a year from memory is guesswork.
- */
 export const PieceDetailsDialog = ({
   piece,
   onClose,
@@ -53,9 +39,9 @@ export const PieceDetailsDialog = ({
   const [error, setError] = useState<string | null>(null);
 
   /*
-   * Mounted only while open, so the fields above initialise from the piece
-   * as it stands. Syncing them from a prop in an effect would be the same
-   * thing done twice, one render later.
+   * Mounted only while open, so the fields initialise from the piece as it
+   * stands. Syncing from a prop in an effect would be the same thing done
+   * twice, one render later.
    */
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -139,13 +125,6 @@ export const PieceDetailsDialog = ({
 
         <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto p-6 sm:grid-cols-2">
           <div className="flex flex-col gap-4">
-            {/*
-              The preview earns its place by being editable. It used to be
-              the artwork and a line saying the artwork does not change --
-              true, and nothing to do. The focal point is the one thing about
-              the image itself this dialog can set, and it is still not a
-              change to the file.
-            */}
             <FocalPicker
               piece={piece}
               x={focal.x}

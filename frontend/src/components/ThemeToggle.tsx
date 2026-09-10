@@ -1,10 +1,5 @@
 import { useTheme } from '../hooks/useTheme';
 
-/**
- * Labels the theme that is currently active, not the one it switches to
- * — matching the design. The accessible name states the action, since a
- * screen reader user needs to know what the button does.
- */
 export const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
@@ -20,7 +15,6 @@ export const ThemeToggle = () => {
       <span aria-hidden="true" className="text-[14px] leading-none">
         {isDark ? '☾' : '☀'}
       </span>
-      {/* Glyph alone below 640px — the header row runs out of room. */}
       <span className="hidden sm:inline">{isDark ? 'Dark' : 'Light'}</span>
     </button>
   );

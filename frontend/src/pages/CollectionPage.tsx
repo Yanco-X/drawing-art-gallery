@@ -23,22 +23,6 @@ const BackLink = () => (
   </Link>
 );
 
-/**
- * Where back goes, when a collection can be reached two ways.
- *
- * The index is always offered, because a set always belongs to the list of
- * sets. The gallery is offered as well when that is where the reader came
- * from -- landing on the collections index after arriving from the landing
- * page is the kind of small displacement that makes a site feel like it
- * moved under you.
- *
- * It is not offered otherwise. Someone who came through the header's
- * Collections item has no gallery to go back to, and a button claiming
- * otherwise would be inventing a history they do not have.
- *
- * Gallery sits first because it is the truer "back" when it is there at
- * all; the index is the step up rather than the step back.
- */
 const BackRow = ({ fromHome }: { fromHome: boolean }) => (
   <div className="flex flex-wrap items-center gap-2">
     {fromHome && (
@@ -50,14 +34,6 @@ const BackRow = ({ fromHome }: { fromHome: boolean }) => (
   </div>
 );
 
-/**
- * One collection: a wall label for the set, then the work it holds.
- *
- * Pieces come back in `display_order` and are rendered in it. Note the
- * caveat in `MasonryGrid` — CSS multi-column fills top-to-bottom, so a
- * curated order reads down each column rather than across each row. Arrange
- * mode uses a plain ordered grid for exactly that reason.
- */
 const CollectionPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -81,10 +57,8 @@ const CollectionPage = () => {
   const load = useAsync(loadCollection);
 
   /*
-   * Every owner write returns the updated collection, so `edited` holds it
-   * and no refetch is needed. Trusted only while it matches the route, which
-   * keeps a stale one from surviving a move to another collection. A rename
-   * does not change the slug, so this survives one.
+   * Every owner write returns the updated collection, so `edited` holds it and
+   * no refetch is needed. Trusted only while it matches the route.
    */
   const [edited, setEdited] = useState<Collection | null>(null);
   const [arranging, setArranging] = useState(false);
@@ -131,8 +105,6 @@ const CollectionPage = () => {
   return (
     <PageShell>
       <section className="mx-auto w-full max-w-content px-gutter pt-8 pb-intro-bottom">
-        {/* Back and the owner's actions share one row above the label, the
-            same shape the piece page uses for back and neighbours. */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <BackRow fromHome={fromHome} />
           {isOwner && !arranging && (

@@ -9,10 +9,8 @@ import { SessionContext } from './session-context';
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
   /*
    * The marker is trusted on first paint and corrected a moment later.
-   * Waiting for the API instead would blank every owner control on every
-   * load; trusting it early costs nothing, because the marker is on the
-   * owner's own machine and the backend refuses regardless of what is
-   * drawn here.
+   * Waiting for the API instead would blank every owner control on every load,
+   * and the backend refuses regardless of what is drawn here.
    */
   const [role, setRole] = useState<Role>(() =>
     hasOwnerMarker() ? 'owner' : 'visitor',

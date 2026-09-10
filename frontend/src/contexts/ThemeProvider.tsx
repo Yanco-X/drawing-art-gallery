@@ -7,10 +7,8 @@ const isTheme = (value: unknown): value is Theme =>
   value === 'dark' || value === 'light';
 
 /*
- * The inline script in index.html has already resolved the theme and
- * stamped it on <html> before React mounts, so read it back from there
- * rather than re-deriving it — that keeps the first render in step with
- * what the user is already looking at.
+ * The inline script in index.html has already resolved the theme and stamped it
+ * on <html> before React mounts, so read it back rather than re-deriving it.
  */
 const readStampedTheme = (): Theme => {
   const stamped = document.documentElement.getAttribute('data-theme');

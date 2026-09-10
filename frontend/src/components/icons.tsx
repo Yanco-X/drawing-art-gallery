@@ -1,18 +1,10 @@
 import type { ReactNode } from 'react';
 
 /*
- * Line icons, drawn rather than imported.
- *
  * A 24-unit grid rendered at 16px puts a 1.5-unit stroke at exactly one
- * device pixel, which is the whole design language — hairlines, square
- * corners, no fill. `currentColor` means they inherit every hover and
- * disabled state already on the button, so an icon never has to be styled
- * twice.
- *
- * Not a dependency: an icon set would be several hundred kilobytes to use
- * a handful of glyphs, and AGENTS.md rules out new packages without asking.
- * Not Unicode dingbats either — ✎ and friends render as colour emoji on
- * Windows, and this project has no emoji in it.
+ * device pixel, which is what makes an icon the same hairline as every border
+ * in the system. `currentColor` inherits the button's hover and disabled
+ * states, so an icon never needs styling twice.
  */
 export const Glyph = ({
   children,
@@ -20,9 +12,8 @@ export const Glyph = ({
 }: {
   children: ReactNode;
   /**
-   * Solid shapes instead of outlines. For the density bars: a 3-unit column
-   * drawn as an outline is two hairlines almost touching, which at 16px is
-   * mud. Filled, it stays a column.
+   * Solid instead of outlined. A 3-unit column drawn as an outline is two
+   * hairlines almost touching, which at 16px is mud.
    */
   filled?: boolean;
 }) => (
@@ -41,7 +32,6 @@ export const Glyph = ({
   </svg>
 );
 
-/** A pencil, for correcting a wall label. */
 export const EditIcon = () => (
   <Glyph>
     <path d="M4 20v-4L16 4l4 4L8 20H4Z" />
@@ -49,7 +39,6 @@ export const EditIcon = () => (
   </Glyph>
 );
 
-/** Two stacked frames, for the sets a piece belongs to. */
 export const CollectionsIcon = () => (
   <Glyph>
     <path d="M3 8h13v13H3z" />
@@ -57,7 +46,6 @@ export const CollectionsIcon = () => (
   </Glyph>
 );
 
-/** A box with the work going into it: withdrawn from the wall, kept. */
 export const WaiveIcon = () => (
   <Glyph>
     <path d="M3 7h18v4H3z" />
@@ -66,7 +54,6 @@ export const WaiveIcon = () => (
   </Glyph>
 );
 
-/** The same box, the other way: back onto the wall. */
 export const RestoreIcon = () => (
   <Glyph>
     <path d="M3 7h18v4H3z" />
@@ -75,7 +62,6 @@ export const RestoreIcon = () => (
   </Glyph>
 );
 
-/** Lines with a handle beside them: reordering, which is what Arrange does. */
 export const ArrangeIcon = () => (
   <Glyph>
     <path d="M10 6h11M10 12h11M10 18h11" />
@@ -83,11 +69,6 @@ export const ArrangeIcon = () => (
   </Glyph>
 );
 
-/*
- * Grid density, drawn as the columns it produces — two wide, three, then
- * four narrow. The control is about how much room each piece gets, and
- * columns say that faster than any label does.
- */
 
 export const DensityAiryIcon = () => (
   <Glyph filled>
@@ -107,7 +88,6 @@ export const DensityDenseIcon = () => (
   </Glyph>
 );
 
-/** A bin. Only ever paired with the danger token. */
 export const DeleteIcon = () => (
   <Glyph>
     <path d="M4 6h16" />
@@ -117,13 +97,6 @@ export const DeleteIcon = () => (
   </Glyph>
 );
 
-/*
- * The detail view's glyphs.
- *
- * Arrows to the corners rather than a magnifier: the button opens a window,
- * and the zooming only starts once you are inside it. A magnifier would
- * promise the wrong verb.
- */
 export const ExpandIcon = () => (
   <Glyph>
     <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />
@@ -144,7 +117,6 @@ export const ZoomOutIcon = () => (
   </Glyph>
 );
 
-/** A frame with the work sized to fit it: back to the whole piece. */
 export const FitIcon = () => (
   <Glyph>
     <path d="M3 3h18v18H3z" />
@@ -152,7 +124,6 @@ export const FitIcon = () => (
   </Glyph>
 );
 
-/** Corners only — the browser chrome goes away, the frame stays. */
 export const FullscreenIcon = () => (
   <Glyph>
     <path d="M3 8V3h5M21 16v5h-5M16 3h5v5M8 21H3v-5" />
@@ -165,20 +136,14 @@ export const ExitFullscreenIcon = () => (
   </Glyph>
 );
 
-/** Dismiss. A drawn glyph rather than a &times;, so it lines up with the rest. */
 export const CloseIcon = () => (
   <Glyph>
     <path d="M5 5l14 14M19 5L5 19" />
   </Glyph>
 );
 
-/**
- * An eye, for revealing what a password field is hiding.
- *
- * The one curved glyph in the set. A lens drawn from straight segments
- * reads as a diamond rather than an eye, and this icon has to be
- * recognised at a glance or it is just a shape in a text field.
- */
+/** The one curved glyph in the set: drawn from straight segments an eye
+    reads as a diamond. */
 export const EyeIcon = () => (
   <Glyph>
     <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
@@ -186,7 +151,6 @@ export const EyeIcon = () => (
   </Glyph>
 );
 
-/** The same eye, struck through: what is shown goes back to being hidden. */
 export const EyeHiddenIcon = () => (
   <Glyph>
     <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
@@ -195,7 +159,6 @@ export const EyeHiddenIcon = () => (
   </Glyph>
 );
 
-/** A frame with the arrow leaving it: ending the session. */
 export const SignOutIcon = () => (
   <Glyph>
     <path d="M13 4H4v16h9" />
@@ -204,14 +167,12 @@ export const SignOutIcon = () => (
   </Glyph>
 );
 
-/** Points at a menu that opens below. */
 export const ChevronDownIcon = () => (
   <Glyph>
     <path d="M6 9l6 6 6-6" />
   </Glyph>
 );
 
-/** An arrow leaving its frame: this link goes off the site. */
 export const ExternalIcon = () => (
   <Glyph>
     <path d="M11 5H5v14h14v-6" />
@@ -220,21 +181,18 @@ export const ExternalIcon = () => (
   </Glyph>
 );
 
-/** Steps back through the spotlight. */
 export const ChevronLeftIcon = () => (
   <Glyph>
     <path d="M15 6l-6 6 6 6" />
   </Glyph>
 );
 
-/** Steps forward through the spotlight. */
 export const ChevronRightIcon = () => (
   <Glyph>
     <path d="M9 6l6 6-6 6" />
   </Glyph>
 );
 
-/** Settings for the thing it sits beside: here, who is in the spotlight. */
 export const GearIcon = () => (
   <Glyph>
     <circle cx="12" cy="12" r="3" />
@@ -242,14 +200,12 @@ export const GearIcon = () => (
   </Glyph>
 );
 
-/** A funnel: the pieces going in, fewer coming out. */
 export const FilterIcon = () => (
   <Glyph>
     <path d="M3 4h18l-7 8v7l-4-2v-5L3 4Z" />
   </Glyph>
 );
 
-/** Three rules of falling length: a list put in an order. */
 export const SortIcon = () => (
   <Glyph>
     <path d="M4 6h16M4 12h10M4 18h5" />

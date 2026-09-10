@@ -10,13 +10,11 @@ import { UploadModal } from './UploadModal';
 // visitor downloads. It is also never mounted until something opens it.
 const Keyhole = lazy(() => import('./Keyhole'));
 
-/** The frame every route shares: sticky header, content, footer pinned down. */
 export const PageShell = ({
   children,
   onPieceUploaded,
 }: {
   children: ReactNode;
-  /** Pages that show work pass this to receive newly uploaded pieces. */
   onPieceUploaded?: (piece: Piece) => void;
 }) => {
   // The dialog lives with the button that opens it rather than in each

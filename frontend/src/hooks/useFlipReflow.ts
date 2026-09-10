@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 
-/** Matches the design's 300ms theme swap — the slowest motion in the UI. */
 const DURATION_MS = 300;
 const EASING = 'cubic-bezier(0.2, 0, 0, 1)';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -13,19 +12,10 @@ interface Placement {
   y: number;
 }
 
-/**
- * Animates a layout change that CSS cannot transition.
- *
- * The masonry is a CSS multi-column layout, and `columns` is not an
- * animatable property — switching density reflows instantly. So this does
- * FLIP: cache where every card sits, let React apply the new column rule,
- * then measure again and play each card from its old offset back to zero.
- * The reflow still happens in one frame; only `transform` is animated, so
- * nothing here feeds back into layout.
- *
- * Positions are measured relative to the container rather than the
- * viewport, so a scroll shift during the reflow can't skew the deltas.
- */
+// `columns` is not an animatable property, so a density change reflows in
+// one frame. This plays each card back from its old offset on `transform`
+// alone. Offsets are measured against the container, not the viewport, so a
+// scroll during the reflow cannot skew them.
 export const useFlipReflow = (
   containerRef: RefObject<HTMLElement | null>,
   changeKey: string,
@@ -81,9 +71,8 @@ export const useFlipReflow = (
 
       const dx = from.x - to.x;
       const dy = from.y - to.y;
-      // Sub-pixel moves aren't worth an animation. When the viewport is
-      // narrow enough that two densities resolve to the same column count,
-      // every delta lands here and nothing animates — which is correct.
+      // Sub-pixel moves aren't worth an animation. Two densities resolving
+      // to the same column count land here and animate nothing, correctly.
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
 
       animationsRef.current.push(

@@ -1,9 +1,5 @@
 import type { ReactNode } from 'react';
 
-/**
- * The "Collections" / "All work" row: serif heading on the left, an
- * action or filter cluster on the right, aligned on their baselines.
- */
 export const SectionHeader = ({
   title,
   children,

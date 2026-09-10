@@ -12,10 +12,8 @@ interface NavItem {
   active?: boolean;
 }
 
-/**
- * A piece lives under the gallery, so it keeps Gallery marked current --
- * unless we are in the reserve, which owns its own pieces.
- */
+/** A piece lives under the gallery, so it keeps Gallery marked current --
+    unless we are in the reserve, which owns its own pieces. */
 const buildNavItems = (pathname: string, role: Role): NavItem[] => {
   const inReserve = pathname.startsWith('/waived');
   const items: NavItem[] = [
@@ -61,17 +59,6 @@ const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   </Link>
 );
 
-/*
- * Square, glyph only, and last in the row.
- *
- * It sits apart from the theme toggle and Upload because it is not part of
- * the same errand: those two are things the owner does while working, this
- * one ends the working. Same border and hover as the toggle, with equal
- * padding so the box is square rather than the toggle's wider pill.
- *
- * Nothing stands in for it when signed out. A visitor is not shown a door,
- * per context/AUTH.md section 5.
- */
 const SignOut = ({
   onSignOut,
   className = '',
@@ -106,8 +93,6 @@ export const Header = ({
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
-      {/* Bar spans the viewport; its contents line up with the page
-          content at the same content measure. */}
       <div className="mx-auto flex w-full max-w-content items-center justify-between gap-6 px-gutter py-5">
         <Link
           to="/home"
@@ -135,10 +120,6 @@ export const Header = ({
               >
                 + Upload
               </button>
-              {/* Set apart from Upload rather than sitting in the row's
-                  16px rhythm: the two are next to each other but they are
-                  not the same kind of act, and a mis-click here ends the
-                  session someone was about to upload into. */}
               <SignOut onSignOut={onSignOut} className="hidden sm:ml-6 sm:flex" />
             </>
           )}
@@ -166,9 +147,6 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
-          {/* Listed flat rather than behind another disclosure: a dropdown
-              inside an open menu is a second click for a panel that would
-              have to find room inside a panel. */}
           {socials.length > 0 && (
             <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col border-t border-line pt-2">
               {socials.map((social) => (
@@ -177,10 +155,6 @@ export const Header = ({
             </div>
           )}
 
-          {/* The square does not fit the bar on a phone -- the row already
-              carries the wordmark, the toggle, Upload and the menu button,
-              and adding a fifth wrapped Upload onto two lines. Here it can
-              take a label, which suits a list of words better anyway. */}
           {role === 'owner' && (
             <button
               type="button"

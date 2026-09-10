@@ -14,19 +14,6 @@ import { PieceFilters } from './PieceFilters';
 import { PiecePickerGrid } from './PiecePickerGrid';
 import { SectionState } from './SectionState';
 
-/*
- * Building a collection: pick the work, name it, save.
- *
- * One dialog rather than a mode on the gallery page. Picking used to put
- * the landing page into a selection state, which meant scrolling the whole
- * gallery to choose and scrolling back to the top to name it or cancel.
- * Here the work and the controls are on screen at once, and the filters
- * mean the scroll is usually unnecessary.
- *
- * Picking itself is unchanged — click a piece, get a number, and the order
- * of the numbers is the order the collection hangs in.
- */
-
 /** Stable no-op loader, so a closed dialog issues no request. */
 const NO_PIECES = async (): Promise<Piece[]> => [];
 
@@ -139,8 +126,6 @@ export const NewCollectionDialog = ({
           </button>
         </div>
 
-        {/* 80/20. The grid scrolls on its own, so the controls never leave
-            the screen no matter how far into the gallery the picking goes. */}
         <div className="grid min-h-0 flex-1 md:grid-cols-[4fr_1fr]">
           <div className="min-h-0 overflow-y-auto p-6">
             {pieces.status === 'error' ? (
@@ -199,9 +184,6 @@ export const NewCollectionDialog = ({
                     ? 'Pick the pieces for this collection.'
                     : `${picked.length} ${picked.length === 1 ? 'piece' : 'pieces'} picked.`}
                 </p>
-                {/* Only once there is something to undo. Unpicking is not a
-                    filter — it clears the choice, not the view — so it sits
-                    with the count rather than with the filters. */}
                 {picked.length > 0 && (
                   <button
                     type="button"
@@ -217,8 +199,6 @@ export const NewCollectionDialog = ({
               </p>
             </div>
 
-            {/* Pushed to the bottom of the column, so the buttons sit in the
-                same place whether or not the filters are showing a year. */}
             <div className="mt-auto flex flex-col gap-3 border-t border-line pt-4">
               <p role="alert" className="text-[13px] text-danger empty:hidden">
                 {error}

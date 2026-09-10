@@ -22,14 +22,6 @@ import {
 } from '../services';
 import type { CollectionSummary, Piece } from '../types';
 
-/*
- * The owner's actions on a piece, and the dialogs behind them.
- *
- * Exhibited work offers only Waive; delete is not reachable from the wall.
- * Waived work offers Restore and Delete permanently. That two-stage shape
- * is enforced by the API as well, so this is the affordance for a rule
- * rather than the rule itself.
- */
 
 
 /** Stable no-op loader, so an exhibited piece issues no request. */
@@ -42,9 +34,7 @@ const describe = (caught: unknown): string =>
 
 interface PieceOwnerActionsProps {
   piece: Piece;
-  /** Handed the updated piece, so the page never has to refetch it. */
   onChanged: (piece: Piece) => void;
-  /** Called after the piece stops existing. */
   onDeleted: () => void;
 }
 
@@ -82,11 +72,8 @@ export const PieceOwnerActions = ({
     setNewIsPublic(true);
   };
 
-  /**
-   * Applies the checkbox state, creating the typed-in collection first if
-   * there is one. Creating last-minute rather than on keystroke means
-   * cancelling the dialog leaves no empty collection behind.
-   */
+  /** Creates the typed-in collection last, so cancelling leaves no empty one
+      behind. */
   const saveCollections = async (): Promise<Piece> => {
     let ids = selected;
     if (newName.trim()) {
@@ -137,21 +124,7 @@ export const PieceOwnerActions = ({
 
   return (
     <>
-      {/*
-        Bordered rather than bare text, so an action that changes the
-        gallery looks like a button instead of a link. Each carries the
-        glyph-plus-label treatment the theme toggle established.
-
-        Stacked and stretched to one width rather than wrapped: the wall
-        label rail is 320px, so these always fell onto their own rows
-        anyway, and three ragged widths read as three unrelated things.
-        Capped, because below `lg` the rail becomes the full content width
-        and a 2000px button is not a button.
-      */}
       <div className="flex max-w-xs flex-col items-stretch gap-2">
-        {/* Offered on waived work too: correcting a label has nothing to do
-            with whether the piece is on the wall, and the reserve is where
-            it would be tidied up before going back. */}
         <button
           type="button"
           onClick={() => setDialog('edit')}
@@ -314,9 +287,6 @@ export const PieceOwnerActions = ({
             placeholder="Name it, and this piece goes in"
             className="w-full border border-line bg-bg px-3 py-2.5 text-[14px] text-text placeholder:text-faint transition-colors duration-200 focus:border-accent focus:outline-1 focus:outline-accent"
           />
-          {/* Only once there is something to publish. Creating from a piece
-              used to force a public collection, while creating from the grid
-              offered the choice — the same act with two different rules. */}
           {newName.trim() && (
             <label className="flex cursor-pointer items-center gap-3 text-[14px] text-dim transition-colors duration-200 hover:text-text">
               <input

@@ -8,18 +8,10 @@ import { PieceTile } from './PieceTile';
 import { GHOST_BUTTON, ICON_BUTTON, PRIMARY_BUTTON } from './form-styles';
 
 /*
- * Arranging a collection: order, membership and cover, in one mode.
- *
- * All three are one array and one pointer to the backend, and
- * PUT .../pieces writes them in a single idempotent request — so they get
- * one mode and one Save rather than three controls writing separately.
- * Nothing reaches the API until Save: a drop that wrote immediately would
- * turn a curation session into a dozen requests, and make an accidental
- * drag permanent.
- *
- * The grid is a plain ordered one, not the masonry. The masonry fills
- * top-to-bottom down each column, which is unreadable when the thing being
- * edited is the sequence itself.
+ * Nothing reaches the API until Save: order, membership and cover are one
+ * array and one idempotent PUT, so a drop that wrote immediately would turn a
+ * curation session into a dozen requests and make an accidental drag
+ * permanent.
  */
 
 const BADGE =

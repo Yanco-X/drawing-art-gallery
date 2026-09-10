@@ -1,8 +1,7 @@
 """
 Turning an uploaded file into stored renditions.
 
-Pure image work -- no database, no Flask. Everything here is deterministic
-given bytes in, which keeps it testable on its own.
+Pure image work -- no database, no Flask.
 """
 
 import io
@@ -12,8 +11,8 @@ from dataclasses import dataclass
 
 from PIL import Image, ImageOps
 
-# Long-edge caps. The masonry renders thumbnails around 300px wide, so 600
-# covers retina without shipping the original; display covers the piece page.
+# Long-edge caps. The masonry renders thumbnails around 300px wide, so this
+# covers retina without shipping the original.
 THUMB_MAX_EDGE = 600
 DISPLAY_MAX_EDGE = 1600
 WEBP_QUALITY = 82
@@ -23,9 +22,8 @@ WEBP_QUALITY = 82
 # seams do not show between adjacent tiles while it interpolates.
 TILE_SIZE = 254
 TILE_OVERLAP = 1
-# method=4 rather than the 6 used for the renditions. Six is worth it for two
-# images per upload; across the ~550 tiles a 25-megapixel piece produces it
-# roughly doubles the wait for a few percent of size.
+# method=4 rather than the 6 used for the renditions: across the ~550 tiles a
+# 25-megapixel piece produces, 6 roughly doubles the wait for a few percent.
 TILE_METHOD = 4
 
 # Extensions we are willing to store an original as. The check that actually
@@ -132,9 +130,7 @@ def tile_level_count(width: int, height: int) -> int:
     How many Deep Zoom levels an image of this size has.
 
     Levels are successive halvings, from a single pixel at level 0 up to the
-    full image at the top. The top level is the first power of two that
-    covers the long edge, so a 2609px piece tops out at level 12 (4096) and
-    has 13 levels in all.
+    full image. A 2609px piece tops out at level 12 (4096), so 13 in all.
     """
     return math.ceil(math.log2(max(width, height, 1))) + 1
 
@@ -143,17 +139,12 @@ def tile_pyramid(raw: bytes) -> Iterator[tuple[int, int, int, bytes]]:
     """
     Every tile of a Deep Zoom pyramid, as (level, column, row, webp bytes).
 
-    A generator rather than a list: a large piece produces several hundred
-    tiles, and the caller writes each one to storage as it arrives instead of
-    holding the whole pyramid in memory.
+    A generator, so the caller writes each tile as it arrives instead of
+    holding several hundred in memory.
 
-    Each level is resampled from the full-resolution source rather than from
-    the level above it. Halving repeatedly would compound the resampling
-    error down the pyramid, and these are pencil drawings -- the fine
-    graphite texture is the entire reason for zooming in.
-
-    Only called with bytes that have already been through `process_upload`,
-    so the format is known good and the checks are not repeated here.
+    Each level is resampled from the full-resolution source, not from the
+    level above: repeated halving would compound resampling error down the
+    pyramid, and the fine graphite texture is the reason for zooming in.
     """
     source = ImageOps.exif_transpose(Image.open(io.BytesIO(raw)))
     if source.mode not in ("RGB", "RGBA"):

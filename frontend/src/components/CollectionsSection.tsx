@@ -13,20 +13,14 @@ export const CollectionsSection = ({
 }: {
   collections: CollectionSummary[];
   loading?: boolean;
-  /** Set when the fetch failed; takes precedence over the empty state. */
   error?: string;
-  /** Owner-only affordance, e.g. starting a new collection. */
   action?: ReactNode;
-  /** Where this row is being shown; carried into each collection. */
   origin?: string;
 }) => (
   <section
     id="collections"
     className="mx-auto w-full max-w-content px-gutter pb-section-sm"
   >
-    {/* No "View all" beside the action: the header's Collections nav item
-        already goes to /collections, and two ways to the same page put a
-        quiet link next to the one thing this section is actually offering. */}
     <SectionHeader title="Collections">{action}</SectionHeader>
 
     {error ? (

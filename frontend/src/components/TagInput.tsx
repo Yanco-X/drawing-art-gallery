@@ -2,17 +2,6 @@ import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { FIELD, LABEL } from './form-styles';
 
-/**
- * Free-text tags as chips.
- *
- * Enter or a comma commits the draft, and Backspace on an empty field takes
- * the last chip back. Blur commits too, so a tag typed and left behind is
- * not silently dropped.
- *
- * Shared by upload and edit. The two forms collect the same thing, and a
- * second copy of this would be a second set of rules about what counts as a
- * duplicate.
- */
 export const TagInput = ({
   id,
   tags,

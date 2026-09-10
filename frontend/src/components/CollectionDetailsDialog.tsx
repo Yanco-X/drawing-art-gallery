@@ -4,16 +4,6 @@ import { ApiError, updateCollection } from '../services';
 import type { Collection } from '../types';
 import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
 
-/*
- * A collection's name, description and visibility.
- *
- * Same form as NewCollectionDialog, deliberately: creating a collection and
- * correcting one afterwards should not feel like two different tools.
- *
- * The slug is never sent. The API only re-slugs when it receives one, so a
- * collection keeps the URL it was first given no matter how often the name
- * changes — which is the whole reason a link to it stays good.
- */
 export const CollectionDetailsDialog = ({
   collection,
   onClose,
@@ -33,9 +23,9 @@ export const CollectionDetailsDialog = ({
   const [error, setError] = useState<string | null>(null);
 
   /*
-   * Mounted only while it is open, so the fields above initialise from the
-   * collection as it stands right now. Syncing them from a prop in an
-   * effect would be the same thing done twice, one render later.
+   * Mounted only while open, so the fields initialise from the collection as
+   * it stands. Syncing from a prop in an effect would be the same thing done
+   * twice, one render later.
    */
   useEffect(() => {
     dialogRef.current?.showModal();

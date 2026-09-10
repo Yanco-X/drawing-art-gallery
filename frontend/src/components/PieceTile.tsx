@@ -2,24 +2,13 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Piece } from '../types';
 
-/**
- * A uniform thumbnail, for the places where pieces are being handled rather
- * than looked at — arranging a collection, picking work to add.
- *
- * Deliberately not `PieceCard`. That card honours each piece's aspect ratio,
- * which is right on a wall and wrong in a row of things being sorted: ragged
- * heights make an ordered sequence hard to read and a drop target hard to
- * aim at. Here every tile is the same box and the image is cropped to fit.
- */
 export const PieceTile = ({
   piece,
   selected = false,
   children,
 }: {
   piece: Piece;
-  /** Draws the accent border, for a tile that is picked or is the cover. */
   selected?: boolean;
-  /** Overlaid on the image: badges, remove, cover. */
   children?: ReactNode;
 }) => {
   const [failed, setFailed] = useState(false);

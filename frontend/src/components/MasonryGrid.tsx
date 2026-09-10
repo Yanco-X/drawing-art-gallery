@@ -5,15 +5,13 @@ import type { GridDensity, Piece } from '../types';
 import { PieceCard } from './PieceCard';
 
 
-/**
- * CSS multi-column masonry, per the design — no JS layout library.
+/*
+ * Columns fill top-to-bottom, so pieces read down each column rather than
+ * across the row. That is the trade-off of CSS multi-column; a JS masonry
+ * would be needed to change it.
  *
- * The trade-off is reading order: columns fill top-to-bottom, so pieces
- * run down each column rather than left-to-right across the row. Switch to
- * a JS/grid masonry if strict ordering ever matters.
- *
- * `columns` is set inline because the value is chosen at runtime; Tailwind
- * only emits utilities it can see statically in the source.
+ * `columns` is inline because the value is chosen at runtime, and Tailwind
+ * only emits utilities it can see statically.
  */
 export const MasonryGrid = ({
   pieces,
@@ -23,9 +21,7 @@ export const MasonryGrid = ({
 }: {
   pieces: Piece[];
   density: GridDensity;
-  /** Passed to each card, so a piece opened here knows where from. */
   origin?: string;
-  /** The piece the reader last opened from this list, if they came back. */
   marked?: string | null;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);

@@ -1,10 +1,8 @@
 """
 Storage backends.
 
-Every write of image bytes goes through this interface, so swapping local
-disk for object storage is a config change rather than surgery. The surface
-is deliberately tiny -- the less it exposes, the less can diverge between
-backends.
+Every write of image bytes goes through this interface, so swapping local disk
+for object storage is a config change rather than surgery.
 """
 
 import logging
@@ -20,9 +18,8 @@ logger = logging.getLogger(__name__)
 class Storage(Protocol):
     def save(self, key: str, data: bytes, content_type: str) -> None: ...
 
-    # Reading back is for re-deriving: the archived original is the only
-    # copy that can rebuild a rendition or a tile pyramid, and nothing else
-    # in the app has a reason to pull bytes out of storage.
+    # Reading back is for re-deriving: the archived original is the only copy
+    # that can rebuild a rendition or a tile pyramid.
     def read(self, key: str) -> bytes: ...
 
     def delete_prefix(self, prefix: str) -> None: ...
@@ -98,14 +95,10 @@ class S3Storage:
     """
     Any S3-compatible bucket: AWS S3, Cloudflare R2, Backblaze, MinIO.
 
-    Two buckets, split by access. Derivatives are world-readable because
-    this is a public gallery; originals are not, and are reached through a
-    presigned URL when the owner wants one.
-
-    The split has to be per-bucket rather than per-prefix because bucket
-    policies match on a key prefix, and the variant lives in the suffix
-    (`<id>/original.jpg` vs `<id>/thumb.webp`). Routing on the key is the
-    only thing that keeps the layout derivable from the piece id.
+    Two buckets, split by access: derivatives are world-readable, originals
+    are not. Per-bucket rather than per-prefix because bucket policies match
+    a key prefix and the variant lives in the suffix (`<id>/original.jpg` vs
+    `<id>/thumb.webp`).
     """
 
     PUBLIC_READ_POLICY = (

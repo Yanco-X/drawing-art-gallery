@@ -2,15 +2,6 @@ import type { Piece } from '../types';
 import { PieceTile } from './PieceTile';
 import { SectionState } from './SectionState';
 
-/**
- * A dense grid of pieces that can be picked, numbered in pick order.
- *
- * The numbered badge is the vocabulary collection creation established: the
- * order pieces are picked in becomes the order they hang, and a plain tick
- * would hide that. Uniform tiles rather than the masonry — this is a picker,
- * and ragged heights make a target harder to aim at and a sequence harder
- * to read.
- */
 export const PiecePickerGrid = ({
   pieces,
   picked,
@@ -18,7 +9,6 @@ export const PiecePickerGrid = ({
   emptyMessage,
 }: {
   pieces: Piece[];
-  /** Ids in pick order; position drives the badge. */
   picked: string[];
   onToggle: (id: string) => void;
   emptyMessage: string;

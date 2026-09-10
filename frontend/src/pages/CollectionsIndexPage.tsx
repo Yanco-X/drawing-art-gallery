@@ -8,11 +8,6 @@ import { useAsync, useSession } from '../hooks';
 import { collectionsFor } from '../services';
 import type { CollectionSummary } from '../types';
 
-/*
- * Every collection this caller may see — the landing row without the
- * truncation. Drafts are included for the owner and marked on the card;
- * a visitor is never told they exist.
- */
 const CollectionsIndexPage = () => {
   const { role } = useSession();
   const loadCollections = useMemo(() => collectionsFor(role), [role]);
@@ -43,9 +38,6 @@ const CollectionsIndexPage = () => {
           Work grouped into sets. Each one hangs in the order it was curated.
         </p>
 
-        {/* Under the description rather than in a section header: this page
-            has no section heading to hang it from, and title-then-reason-
-            then-action is the order it reads in anyway. */}
         {isOwner && (
           <button
             type="button"

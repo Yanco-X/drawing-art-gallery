@@ -1,21 +1,11 @@
 import type { CollectionSummary } from '../types';
 
-/*
- * A checkbox per collection.
- *
- * Used wherever a piece's membership is decided: restoring one from the
- * reserve, editing an existing piece's collections, and uploading a new
- * one. Deliberately dumb — the caller owns the selected ids and decides
- * what saving them means, because "append on restore" and "replace the
- * whole set" are the same control with different consequences.
- */
 export const CollectionPicker = ({
   collections,
   selected,
   onToggle,
   loading,
   legend = 'Add to collections',
-  /** Shown instead of the list when there is nothing to pick. */
   emptyMessage,
 }: {
   collections: CollectionSummary[];

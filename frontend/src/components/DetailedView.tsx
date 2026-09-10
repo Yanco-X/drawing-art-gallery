@@ -11,33 +11,18 @@ import {
 } from './icons';
 
 /*
- * The piece, the whole window, and every pixel of it.
+ * A native <dialog> rather than a route, so the piece page stays mounted
+ * underneath and closing returns to it with its scroll intact.
  *
- * A native <dialog> rather than a route: the piece page stays mounted
- * underneath, so closing returns to it with its scroll position rather than
- * re-rendering it. Top-layer stacking, focus trapping and the enter/exit
- * transition all come from the platform and from the base stylesheet.
- *
- * OpenSeadragon is imported dynamically, so its ~250KB becomes a chunk that
- * only downloads when someone actually opens this. A viewer most visits
- * never open has no business in the bundle every visit pays for.
+ * OpenSeadragon is imported dynamically: ~250KB that only downloads when
+ * someone opens this.
  */
 
-/*
- * Two clocks, not one.
- *
- * The rail sits at the edges; the minimap sits on the drawing. Someone who
- * has zoomed in moves the mouse away and stops, which is the moment they are
- * actually looking -- so the thing overlapping the artwork clears first, and
- * the rail follows.
- */
 const MINIMAP_IDLE_MS = 2000;
 const CHROME_IDLE_MS = 3000;
 
-/* Wide enough to make out the composition, small enough to stay out of it. */
 const MINIMAP_WIDTH = 180;
 
-/** Glyph-only control in the rail. Labelled, because it has no text. */
 const RailButton = ({
   label,
   onClick,
@@ -94,7 +79,6 @@ export const DetailedView = ({
   // id on a real element rather than a ref.
   const navigatorId = `sa-minimap-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  /* ---- the dialog itself ---- */
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -102,13 +86,10 @@ export const DetailedView = ({
     if (open && !dialog.open) dialog.showModal();
     else if (!open && dialog.open) {
       /*
-       * Leave fullscreen on the way out, or the frame stays fullscreen
-       * inside a `display: none` dialog: the window keeps the whole screen,
-       * draws nothing in it, and the person is left on the page underneath
-       * with no browser chrome and nothing on screen to say why.
-       *
-       * Only ours. A fullscreen element elsewhere on the page is not this
-       * component's to close.
+       * Leave fullscreen on the way out, or the frame stays fullscreen inside
+       * a `display: none` dialog: the window keeps the whole screen and draws
+       * nothing in it. Only ours -- a fullscreen element elsewhere is not
+       * this component's to close.
        */
       if (
         document.fullscreenElement &&
@@ -119,16 +100,12 @@ export const DetailedView = ({
     }
   }, [open]);
 
-  /* ---- chrome that gets out of the way ---- */
 
-  /* Starts both clocks. Touches no state, so an effect may call it. */
   const armIdle = useCallback(() => {
     window.clearTimeout(chromeTimer.current);
     window.clearTimeout(minimapTimer.current);
-    // Deliberately not skipped under `prefers-reduced-motion`. Getting out of
-    // the way is not motion, and someone who has asked for less animation
-    // wants an uncluttered view no less than anyone else. The stylesheet
-    // drops the fade itself for them, so it happens without the transition.
+    // Deliberately not skipped under `prefers-reduced-motion`: getting out of
+    // the way is not motion. The stylesheet drops the fade itself.
     minimapTimer.current = window.setTimeout(
       () => setMinimapAwake(false),
       MINIMAP_IDLE_MS,
@@ -140,11 +117,8 @@ export const DetailedView = ({
   }, []);
 
   /*
-   * Anything the person does brings the rail back and restarts the clock.
-   * `focusin` is on the list deliberately: a keyboard user never moves a
-   * pointer, and a control that has faded out and cannot be summoned is a
-   * bug rather than restraint. The same reasoning puts the whole fade
-   * behind `prefers-reduced-motion` above.
+   * Anything the person does brings the rail back. `focusin` is on the list
+   * deliberately: a keyboard user never moves a pointer.
    */
   const wake = useCallback(() => {
     setChrome(true);
@@ -171,15 +145,11 @@ export const DetailedView = ({
       window.clearTimeout(chromeTimer.current);
       window.clearTimeout(minimapTimer.current);
       events.forEach((name) => dialog.removeEventListener(name, wake));
-      // Restored on the way out rather than on the way in: both must be
-      // showing the next time this opens, and resetting here keeps the
-      // effect body free of state changes.
       setChrome(true);
       setMinimapAwake(true);
     };
   }, [open, armIdle, wake]);
 
-  /* ---- OpenSeadragon ---- */
 
   useEffect(() => {
     if (!open) return;
@@ -215,16 +185,11 @@ export const DetailedView = ({
         viewer = OpenSeadragon({
           element: hostRef.current,
           tileSources: source as never,
-          // Every control is ours, in the rail. OpenSeadragon's own
-          // buttons are sprite images from a prefixUrl, and would not
-          // match anything here.
+          // Every control is ours, in the rail. OpenSeadragon's own are
+          // sprite images from a prefixUrl.
           showNavigationControl: false,
-          // Mounted into our own element, so OpenSeadragon leaves the
-          // frame to us and to `.sa-minimap` in the stylesheet.
           showNavigator: true,
           navigatorId,
-          // Its visibility is ours to decide, from the zoom level, rather
-          // than OpenSeadragon's own idle timer.
           navigatorAutoFade: false,
           animationTime: reduced ? 0 : 0.5,
           blendTime: reduced ? 0 : 0.15,
@@ -243,14 +208,9 @@ export const DetailedView = ({
         });
 
         /*
-         * A little above the home zoom rather than exactly at it: floating
-         * point and the spring animation both leave the resting zoom a
-         * hair off `getHomeZoom()`, and a minimap that flickers in and out
-         * while the view settles is worse than one that waits.
-         *
-         * Fires on every animation frame of a zoom, so it sets a boolean
-         * rather than a number -- React skips the render when the value has
-         * not actually changed.
+         * A little above the home zoom, not exactly at it: floating point and
+         * the spring both leave the resting zoom a hair off `getHomeZoom()`.
+         * Sets a boolean, not a number, so React skips the render.
          */
         const syncZoom = () => {
           if (cancelled || !viewer) return;
@@ -261,25 +221,14 @@ export const DetailedView = ({
         viewer.addHandler('open', syncZoom);
 
         /*
-         * Make the minimap draw the drawing.
-         *
          * Navigator sets `_resizeWithViewer = false` whenever its control
-         * anchor is NONE -- which is precisely what handing it an element
-         * via `navigatorId` does. That flag gates the only call it ever
-         * makes to `updateSize()`, and `updateSize()` is what performs
-         * `viewport.resize()`, `goHome()` and `world.draw()`. Left alone,
-         * the navigator paints its frame and its display region over an
-         * empty world: a blank box with a rectangle floating in it.
-         *
-         * Hung off its world's `add-item` rather than an `open` handler,
-         * because the navigator never opens. The main viewer calls
-         * `navigator.addTiledImage()` directly, and only the main viewer
-         * ever raises `open` -- so an `open` listener here would wait
-         * forever.
-         *
-         * The explicit draw after `updateSize()` is not superstition:
-         * `updateSize` returns early when the container size has not
-         * changed, so on any later call it would do nothing at all.
+         * anchor is NONE, which is what `navigatorId` does. That flag gates
+         * its only call to `updateSize()`, which is what performs the
+         * resize, `goHome()` and `world.draw()` -- so left alone it paints a
+         * blank box with a rectangle in it. Hung off `add-item` because the
+         * navigator never raises `open`; the main viewer calls
+         * `addTiledImage()` on it directly. The explicit draw is needed
+         * because `updateSize` returns early when the size has not changed.
          */
         const navigator = viewer.navigator;
         if (navigator) {
@@ -309,18 +258,12 @@ export const DetailedView = ({
       cancelled = true;
       viewer?.destroy();
       viewerRef.current = null;
-      // These describe the instance being destroyed, so they go with it --
-      // and the next piece opens showing its placeholder rather than
-      // inheriting the last one's "ready".
       setReady(false);
       setFailed(false);
       setZoomed(false);
     };
-    // Re-keyed on the piece, so moving to a neighbour rebuilds the viewer
-    // and the zoom starts from the whole drawing again.
   }, [open, piece.id, piece.imageUrl, piece.tileSource, navigatorId]);
 
-  /* ---- fullscreen ---- */
 
   useEffect(() => {
     const sync = () => setFullscreen(Boolean(document.fullscreenElement));
@@ -329,26 +272,16 @@ export const DetailedView = ({
   }, []);
 
   /*
-   * Requested on the frame inside the dialog, never on the dialog itself.
-   *
-   * A `dialog` is one of the few elements the Fullscreen API names as
-   * ineligible -- it is already a top-layer element, and the spec will not
-   * let one element be in the top layer for two reasons at once. Asking
-   * anyway rejects with `TypeError: Dialog elements are invalid`, which is
-   * what this button did, silently, for as long as it has existed. The frame
-   * is an ordinary div, so it is eligible, and being a descendant of the
-   * open dialog it still paints above everything.
-   *
-   * The catch stays, because fullscreen can still be refused for reasons
-   * worth ignoring rather than crashing on -- an embedding page without
-   * `allow="fullscreen"`, chiefly. It no longer hides a mistake of ours.
+   * Requested on the frame, never on the dialog: a `dialog` is named by the
+   * Fullscreen API as ineligible, and asking rejects with `TypeError: Dialog
+   * elements are invalid`. The frame is an ordinary div and still paints
+   * above everything. The catch stays for a refusal we can ignore -- an
+   * embedding page without `allow="fullscreen"`, chiefly.
    */
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void frameRef.current?.requestFullscreen().catch(() => undefined);
   };
-
-  /* ---- keyboard ---- */
 
   const zoomBy = (factor: number) => {
     const viewer = viewerRef.current;
@@ -359,10 +292,8 @@ export const DetailedView = ({
 
   const fit = () => viewerRef.current?.viewport.goHome();
 
-  /*
-   * Only the keys OpenSeadragon does not already own. It handles arrows,
-   * +/- and w/a/s/d on its canvas; claiming those would fight it.
-   */
+  // Only the keys OpenSeadragon does not already own: it handles arrows,
+  // +/- and w/a/s/d on its canvas.
   const onKeyDown = (event: React.KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === '0') {
       event.preventDefault();
@@ -385,14 +316,9 @@ export const DetailedView = ({
       onKeyDown={onKeyDown}
       /*
        * Escape fires cancel. The viewer owns a history entry, so closing has
-       * to go back rather than simply hiding, or the URL and the screen stop
-       * agreeing with each other.
-       *
-       * And it steps out one level at a time. An open modal's cancel gets
-       * Escape before the browser can act on it and `preventDefault` spends
-       * it, so the browser never performs its own exit: the first Escape has
-       * to do that here, leaving the piece on screen the way a video player
-       * does, and the second closes the viewer.
+       * to go back rather than hide, or the URL and the screen disagree. An
+       * open dialog's cancel gets Escape before the browser can act on it, so
+       * the first Escape leaves fullscreen here and the second closes.
        */
       onCancel={(event) => {
         event.preventDefault();
@@ -404,22 +330,18 @@ export const DetailedView = ({
       }}
       className="m-0 h-screen max-h-none w-screen max-w-none border-none bg-bg p-0 text-text backdrop:bg-black/90"
     >
-      {/*
-        The frame, and the element that goes fullscreen. It carries its own
-        background rather than borrowing the dialog's: once it is the
-        fullscreen element it is the thing painting the screen, and the
-        ground behind a letterboxed drawing has to come from somewhere.
-      */}
+        {/*
+          Carries its own background: once it is the fullscreen element it is
+          the thing painting the screen.
+        */}
       <div
         ref={frameRef}
         className="relative h-full w-full overflow-hidden bg-bg"
       >
-        {/*
-          The first frame, instantly: the piece page behind has already
-          loaded this exact file, so it is in cache and paints before
-          OpenSeadragon has finished asking for a single tile. It fades out
-          once the real viewer has opened.
-        */}
+            {/*
+              Already in cache from the piece page behind, so it paints before
+              OpenSeadragon has asked for a single tile.
+            */}
         <img
           src={piece.imageUrl}
           alt=""
@@ -431,19 +353,6 @@ export const DetailedView = ({
 
         <div ref={hostRef} className="h-full w-full" />
 
-        {/*
-          Where you are in the drawing, and how much of it you are not seeing.
-
-          Fades on its own clock, sooner than the rail. An earlier version
-          kept it up for as long as the view was zoomed, reasoning that it is
-          feedback you need while panning. That confused "zoomed in" with
-          "panning": once someone stops moving they have started looking, and
-          a panel sitting on the artwork is noise at exactly the wrong moment.
-          It comes straight back on the next movement.
-
-          Below the rail rather than in a free corner, so it never sits on top
-          of the title or the zoom controls.
-        */}
         <div
           aria-hidden="true"
           className={`sa-minimap sa-fade absolute right-4 top-[72px] transition-opacity duration-300 ${
@@ -459,15 +368,10 @@ export const DetailedView = ({
           }}
         >
           {/*
-            Two elements rather than one, and the split matters.
-
-            OpenSeadragon mutates the element it is given -- it appends its
-            own `navigator` class and writes inline styles onto it. React
-            owns the wrapper above, whose className changes every time the
-            minimap shows or hides, and re-applying that className would wipe
-            whatever OpenSeadragon had put there. This inner element takes
-            no changing props, so React renders it once and never touches it
-            again, leaving OpenSeadragon free to do as it likes with it.
+            OpenSeadragon mutates the element it is given, appending its own
+            class and inline styles. This inner element takes no changing
+            props, so React renders it once and never wipes that; the wrapper
+            above, whose className does change, stays React's.
           */}
           <div id={navigatorId} className="h-full w-full" />
         </div>
@@ -480,11 +384,7 @@ export const DetailedView = ({
           </div>
         )}
 
-        {/*
-          One rail, top of the window, fading after a couple of seconds of
-          stillness. `inert` as well as invisible while hidden, so a faded
-          rail cannot be tabbed into by accident.
-        */}
+        {/* `inert` as well as invisible, so a faded rail cannot be tabbed into. */}
         <div
           inert={!chrome}
           className={`sa-fade absolute inset-x-0 top-0 flex flex-wrap items-center justify-between gap-4 border-b border-line bg-bg-translucent px-4 py-3 transition-opacity duration-300 ${
@@ -525,8 +425,6 @@ export const DetailedView = ({
           </div>
         </div>
 
-        {/* Neighbours, so the viewer is a way of browsing rather than a
-            detour that has to be left and re-entered for every piece. */}
         <div
           inert={!chrome}
           className={`sa-fade absolute inset-x-0 bottom-0 flex items-center justify-between px-4 py-4 transition-opacity duration-300 ${

@@ -21,8 +21,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .db import Base
 
 # Uuid (generic) rather than the postgresql dialect type: it renders as a
-# native uuid on Postgres and as CHAR(32) elsewhere, which lets the test
-# suite run against SQLite without a second set of models.
+# native uuid on Postgres and CHAR(32) elsewhere, which lets the test suite
+# run against SQLite without a second set of models.
 
 
 def _utcnow() -> datetime:
@@ -67,72 +67,44 @@ class Piece(Base):
     description: Mapped[str | None] = mapped_column(Text)
 
     # No path or URL column: every object key derives from this row's id, so
-    # there is nothing to keep in sync and nothing to migrate when the
-    # storage backend changes. The API composes public URLs at read time.
+    # there is nothing to keep in sync when the storage backend changes.
     original_ext: Mapped[str] = mapped_column(String(10), nullable=False)
     byte_size: Mapped[int | None] = mapped_column(Integer)
 
-    # Rendered as "{medium} · {year}" on the card and the wall label.
     medium: Mapped[str | None] = mapped_column(String(100))
     year: Mapped[int | None] = mapped_column(Integer)
 
-    # Recorded at upload from the stored file. The masonry reserves each
-    # card's height from width/height, so measuring in the browser instead
-    # would reflow the whole grid as images arrive.
+    # Recorded at upload from the stored file. The masonry reserves each card's
+    # height from width/height, so measuring in the browser would reflow the
+    # whole grid as images arrive.
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)
 
-    # Whether the Deep Zoom pyramid under <id>/tiles/ has been written.
-    # A flag rather than a storage probe: the detail view needs to know on
-    # every read, and a HEAD request per piece to answer it would be absurd.
-    # False is always safe -- it means the viewer falls back to the display
-    # rendition, which is what a piece uploaded before tiling existed does
-    # until the backfill reaches it.
+    # A flag rather than a storage probe: the detail view needs this on every
+    # read. False is always safe -- the viewer falls back to the display
+    # rendition, which is what a piece uploaded before tiling does.
     tiles_ready: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
 
-    # Null is exhibited, set is waived. A timestamp rather than a boolean so
-    # the reserve has a sort order and "waived three days ago" is free.
+    # Null is exhibited, set is waived. A timestamp rather than a boolean, so
+    # the reserve has a sort order for free.
     waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # Null is not hand-picked for the spotlight; an integer is the slot it
-    # holds, counting from zero. A column rather than a join table because
-    # the spotlight is at most five rows and carries nothing of its own --
-    # a table would be an id and a foreign key to say what one integer says.
-    #
-    # Cleared when a piece is waived, for the reason waive already drops
-    # collection membership: it keeps "set means exhibited" an invariant the
-    # schema holds rather than a filter every future query must remember.
+    # Null is not hand-picked; an integer is the slot it holds, from zero.
+    # Cleared when a piece is waived, so "set means exhibited" stays an
+    # invariant the schema holds rather than a filter every query remembers.
     spotlight_order: Mapped[int | None] = mapped_column(Integer)
 
     # Where to aim a crop, as percentages across and down the image. Null on
-    # both is dead centre, which is what every browser does unasked and what
-    # every piece uploaded before this existed keeps.
-    #
-    # Two integers, and deliberately nothing more. The alternative is baking
-    # a cropped rendition per piece, which costs storage, a pipeline stage
-    # and a backfill; these two numbers cost thirty bytes in the payload and
-    # are spent by the browser at paint time, where the image is being drawn
-    # anyway.
+    # both is dead centre, which is what a browser does unasked.
     focal_x: Mapped[int | None] = mapped_column(Integer)
     focal_y: Mapped[int | None] = mapped_column(Integer)
 
-    # How close the crop is, as a percent of the size at which the whole
-    # piece fits: 100 is all of it, 200 is twice as close. Null fills the
-    # frame outright, which is what `object-fit: cover` does unasked and
-    # what every piece kept before this existed.
-    #
-    # A multiple of fit, not of fill. Fill belongs to the frame, and the
-    # band's frame changes shape with the window -- its height is a
-    # `clamp()` and its width a share of the page. Anchored to fill, the
-    # same number framed a piece differently for every visitor; anchored to
-    # fit it means one amount of artwork everywhere, and only the hatch
-    # beside it varies. For a wall of tall portraits that is the invariant
-    # worth holding: the height is where the faces are.
-    #
-    # Not a crop rectangle, for the same reason: four numbers would be right
-    # at one viewport and wrong at every other.
+    # How close the crop is, as a percent of the size at which the whole piece
+    # fits: 100 is all of it, 200 is twice as close. Null fills the frame.
+    # A multiple of fit, not of fill, so one number means the same amount of
+    # artwork in every window.
     focal_zoom: Mapped[int | None] = mapped_column(Integer)
 
     created_date: Mapped[date | None] = mapped_column(Date)  # when the art was made
@@ -171,8 +143,6 @@ class Piece(Base):
         Object key for one rendition.
 
         `original` keeps its uploaded format; the derivatives are WebP.
-        Deriving these rather than storing them is what keeps the row free
-        of anything backend-specific.
         """
         if variant == "original":
             return f"{self.id}/original.{self.original_ext}"
@@ -184,8 +154,7 @@ class Piece(Base):
         Where this piece's Deep Zoom tiles live.
 
         Under the piece's own prefix, so deleting the piece already removes
-        them -- `delete_prefix` lists and batches, which is what makes a
-        five-hundred-tile pyramid no different from a single file.
+        them.
         """
         return f"{self.id}/tiles"
 
@@ -197,13 +166,9 @@ class Social(Base):
     """
     Where the artist can be found. One row per link in the header menu.
 
-    `platform` is a key, not a display name: it selects the drawn mark in
-    the frontend's registry, and a platform with no mark falls back to a
-    generic one rather than failing. Free text rather than an enum, so
-    joining a new site is a row instead of a migration.
-
-    `label` is separate because it is what the menu says -- two accounts on
-    the same platform need different words and the same icon.
+    `platform` is a key, not a display name: it selects the drawn mark in the
+    frontend's registry. Free text rather than an enum, so joining a new site
+    is a row instead of a migration. `label` is what the menu says.
     """
 
     __tablename__ = "socials"
@@ -214,7 +179,7 @@ class Social(Base):
     url: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # Not unique: the list is replaced whole, and a reshuffle passes through
-    # transient duplicates. Same reasoning as CollectionPiece.display_order.
+    # transient duplicates.
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
@@ -231,9 +196,8 @@ class Collection(Base):
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
-    # An explicit face for the collection, chosen from its own pieces.
-    # SET NULL rather than CASCADE: losing the cover piece must not delete
-    # the collection. Falls back to the first member, then a gradient swatch.
+    # SET NULL rather than CASCADE: losing the cover piece must not delete the
+    # collection. Falls back to the first member, then a gradient swatch.
     cover_piece_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("pieces.id", ondelete="SET NULL")
     )
@@ -272,9 +236,8 @@ class CollectionPiece(Base):
     Membership, with the owner's curated order.
 
     display_order is deliberately not unique: membership is replaced as a
-    whole ordered list, and a uniqueness constraint would trip on the
-    transient duplicates that any reshuffle passes through. The composite
-    primary key already stops a piece appearing twice in one collection.
+    whole ordered list, and a constraint would trip on the transient
+    duplicates any reshuffle passes through.
     """
 
     __tablename__ = "collection_pieces"

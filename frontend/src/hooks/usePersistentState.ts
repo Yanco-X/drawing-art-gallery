@@ -1,12 +1,5 @@
 import { useCallback, useState } from 'react';
 
-/**
- * useState backed by localStorage, for user preferences.
- *
- * `isValid` guards against stale or hand-edited values: anything that
- * fails it is ignored and `fallback` is used instead. Storage access is
- * wrapped because it throws outright in some privacy modes.
- */
 export function usePersistentState<T>(
   key: string,
   fallback: T,

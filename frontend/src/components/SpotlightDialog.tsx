@@ -16,21 +16,6 @@ import { PiecePickerGrid } from './PiecePickerGrid';
 import { SpotlightOrder } from './SpotlightOrder';
 import { SectionState } from './SectionState';
 
-/*
- * Curating the spotlight.
- *
- * The picking vocabulary collection creation established, with the name
- * field taken out and a cap put in: five slots, numbered, and the order
- * they are picked in is the order they start in -- then dragged into the
- * order they are shown.
- *
- * The one thing this dialog does that the collection one does not is show
- * what happens to the slots left over. Filling is the whole point of the
- * feature -- pick two and the newest three follow -- and a rule you can only
- * verify by closing the dialog and looking at the page is a rule that will
- * be mistaken for a bug.
- */
-
 /** Stable no-op loader, so a closed dialog issues no request. */
 const NO_PIECES = async (): Promise<Piece[]> => [];
 
@@ -42,7 +27,6 @@ export const SpotlightDialog = ({
 }: {
   open: boolean;
   onClose: () => void;
-  /** The current hand-picked ids, in slot order. */
   picks: string[];
   onSaved: (pieceIds: string[]) => void;
 }) => {

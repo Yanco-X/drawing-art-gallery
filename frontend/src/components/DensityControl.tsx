@@ -7,7 +7,6 @@ import {
   DensityDenseIcon,
 } from './icons';
 
-/** Each density drawn as the columns it produces. */
 const GRID_DENSITY_ICONS: Record<GridDensity, ReactNode> = {
   airy: <DensityAiryIcon />,
   comfortable: <DensityComfortableIcon />,
@@ -19,13 +18,6 @@ interface DensityControlProps {
   onChange: (density: GridDensity) => void;
 }
 
-/**
- * Not in the original design — the prototype exposed density as a
- * developer knob with no UI. Built in the tag-chip idiom (12px, same
- * padding and tracking, accent fill when active) but as one bordered group
- * with hairline dividers, so it reads as a single control rather than as
- * three more filters sitting next to the tags.
- */
 export const DensityControl = ({ value, onChange }: DensityControlProps) => (
   <div
     role="group"
@@ -51,8 +43,6 @@ export const DensityControl = ({ value, onChange }: DensityControlProps) => (
         }`}
       >
         {GRID_DENSITY_ICONS[density]}
-        {/* Label hidden on the narrowest screens, where this control shares
-            a row with the section heading and the icons carry it alone. */}
         <span className="hidden sm:inline">
           {GRID_DENSITY_LABELS[density]}
         </span>

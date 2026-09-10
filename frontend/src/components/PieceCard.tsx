@@ -6,9 +6,7 @@ import type { Piece } from '../types';
 
 interface PieceCardProps {
   piece: Piece;
-  /** The collection this card is being shown in, if any. */
   origin?: string;
-  /** The piece the reader last opened from this list, on their way back. */
   marked?: boolean;
 }
 
@@ -26,18 +24,10 @@ export const PieceCard = ({ piece, origin, marked = false }: PieceCardProps) => 
   const body = (
     <>
       {/*
-        The hatch sits underneath the image, so a slow or broken load shows
-        the placeholder rather than a hole. aspectRatio comes from the
-        stored dimensions, which reserves the height up front and stops the
-        masonry reflowing as images arrive.
-      */}
-      {/*
-        The marker is an outline rather than a border, because the border is
-        already spoken for: it goes accent on hover, and a marked card
-        wearing the same accent border would read as permanently hovered.
-        An offset hairline ring sits outside the frame instead -- the focus
-        ring's vocabulary, which is the set's existing way of pointing at
-        one thing among many without touching the artwork itself.
+        The hatch sits underneath the image, so a slow or broken load shows the
+        placeholder rather than a hole. `aspectRatio` comes from the stored
+        dimensions, which reserves the height and stops the masonry reflowing
+        as images arrive.
       */}
       <div
         className={`hatch relative flex w-full items-center justify-center border border-line transition-colors duration-200 group-hover:border-accent ${
@@ -68,8 +58,6 @@ export const PieceCard = ({ piece, origin, marked = false }: PieceCardProps) => 
         )}
         <span className="text-[14px] text-text">
           {piece.title}
-          {/* The ring is colour alone, which says nothing to a reader who
-              cannot see it. */}
           {marked && <span className="sr-only"> (last viewed)</span>}
         </span>
         {meta && <span className="text-[12px] text-faint">{meta}</span>}

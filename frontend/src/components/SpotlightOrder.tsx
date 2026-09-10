@@ -3,21 +3,6 @@ import type { DragEvent, KeyboardEvent } from 'react';
 import type { Piece } from '../types';
 import { ArrangeIcon } from './icons';
 
-/*
- * The band's running order, and the handle for changing it.
- *
- * The gesture is the collection arranger's, down to the arrow-key fallback
- * and the wording of the announcement: the owner has already learned it
- * there, and a second vocabulary for the same job is one to unlearn. This
- * list runs down rather than across, so the keys are up and down.
- *
- * Only hand-picked slots move. A filler's position is `created_at DESC` and
- * nothing here can change it -- fillers always follow the picks, which is
- * what lets an empty spotlight mean "the newest five" with no stored order
- * behind it. So they are listed, numbered and inert, and a drop onto one is
- * refused by the browser rather than by a rule the owner has to be told.
- */
-
 const SLOT =
   'flex items-center gap-3 px-2 py-1.5 text-[13px] transition-opacity ' +
   'duration-200';
@@ -27,9 +12,7 @@ export const SpotlightOrder = ({
   pickedCount,
   onReorder,
 }: {
-  /** Every slot the band will show, hand-picked ones first. */
   slots: Piece[];
-  /** How many of those are hand-picked, and so movable. */
   pickedCount: number;
   onReorder: (from: number, to: number) => void;
 }) => {
@@ -82,11 +65,6 @@ export const SpotlightOrder = ({
         {announcement}
       </p>
 
-      {/*
-        Every slot, not just the picks. A numbered slot was chosen; a quiet
-        one is being filled by the newest work and will change on its own
-        the next time something is uploaded.
-      */}
       <ol className="-mx-2 flex flex-col gap-1">
         {slots.map((piece, at) => {
           const chosen = at < pickedCount;

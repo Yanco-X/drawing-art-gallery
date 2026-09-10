@@ -6,14 +6,6 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { ICON_BUTTON, ICON_BUTTON_DANGER } from './form-styles';
 import { ArrangeIcon, DeleteIcon, EditIcon } from './icons';
 
-/*
- * The owner's actions on a collection, in the page header rather than
- * behind an edit mode — the same placement PieceWallLabel uses.
- *
- * Details and deletion are single writes and get a dialog each. Order,
- * membership and cover are one array to the API, so they live together in
- * arrange mode instead, which this only opens.
- */
 export const CollectionOwnerActions = ({
   collection,
   onChanged,
@@ -21,10 +13,8 @@ export const CollectionOwnerActions = ({
   onDeleted,
 }: {
   collection: Collection;
-  /** Handed the updated collection, so the page never has to refetch. */
   onChanged: (collection: Collection) => void;
   onArrange: () => void;
-  /** Called after the collection stops existing. */
   onDeleted: () => void;
 }) => {
   const [dialog, setDialog] = useState<'details' | 'delete' | null>(null);
@@ -57,8 +47,6 @@ export const CollectionOwnerActions = ({
 
   return (
     <>
-      {/* Left in a row rather than stacked like the piece actions: this sits
-          across the top of a full-width page, not in a 320px rail. */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"

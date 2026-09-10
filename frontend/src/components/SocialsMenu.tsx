@@ -16,10 +16,6 @@ const ROW =
   'flex items-center gap-3 px-4 py-3 text-[13px] tracking-btn uppercase ' +
   'transition-colors duration-200';
 
-/**
- * One row. Shared with the mobile menu, which lists the links directly
- * rather than nesting a dropdown inside a dropdown.
- */
 export const SocialLink = ({ social }: { social: Social }) => {
   const Mark = markFor(social.platform);
   return (
@@ -31,8 +27,6 @@ export const SocialLink = ({ social }: { social: Social }) => {
     >
       <Mark />
       <span className="flex-1">{social.label}</span>
-      {/* The leaving-arrow is the row's second glyph and sits at the far
-          edge: it says where the click goes, not what the row is. */}
       <span className="text-faint">
         <ExternalIcon />
       </span>
@@ -40,14 +34,6 @@ export const SocialLink = ({ social }: { social: Social }) => {
   );
 };
 
-/**
- * The header's Socials menu.
- *
- * A button rather than a link, because there is no page behind it. The
- * chevron is the only thing distinguishing it from its neighbours in the
- * nav, and it is what says a click opens something rather than goes
- * somewhere.
- */
 export const SocialsMenu = () => {
   const { socials, replace } = useSocials();
   const { role } = useSession();
@@ -98,10 +84,6 @@ export const SocialsMenu = () => {
         </span>
       </button>
 
-      {/* Rendered whether or not it is open, so closing can be animated:
-          unmounting would take the element away in the same frame and there
-          would be nothing left to fade. `display: none` keeps the links out
-          of the tab order while it is shut. */}
       <div
         data-open={open}
         onClick={() => setOpen(false)}

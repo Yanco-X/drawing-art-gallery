@@ -3,13 +3,10 @@ import { FIELD, ICON_BUTTON, LABEL } from './form-styles';
 import { CloseIcon, FilterIcon } from './icons';
 import { MultiSelect } from './MultiSelect';
 
-/**
- * The button that opens the filter, sitting beside the "All work" heading.
- *
+/*
  * Separate from the row because the two are not neighbours in the DOM: the
- * button belongs in the section header beside the density control, and the
- * row opens beneath the whole header. `AllWorkSection` holds the flag that
- * joins them.
+ * button sits in the section header, the row opens beneath the whole header.
+ * `AllWorkSection` holds the flag that joins them.
  */
 export const GalleryFilterButton = ({
   open,
@@ -21,15 +18,11 @@ export const GalleryFilterButton = ({
 }: {
   open: boolean;
   onToggle: () => void;
-  /** The row's id, for `aria-controls`. */
   controls: string;
   active: boolean;
   showing: number;
   total: number;
 }) => (
-  // Outlined accent while something is filtered: the interface pointing at
-  // itself, which DESIGN.md allows to repeat. Filled would claim to be the
-  // action the page exists for.
   <button
     type="button"
     onClick={onToggle}
@@ -46,29 +39,14 @@ export const GalleryFilterButton = ({
   >
     <FilterIcon />
     Filter
-    {/* The count, not a dot: how much is being hidden is worth knowing
-        without reopening the row to find out. */}
     {active && <span>· {showing === total ? total : showing}</span>}
   </button>
 );
 
-/**
- * The criteria, as a band between the section header and the grid.
- *
- * It was a floating panel first and was changed on 2026-09-08. Functionally
- * the panel was fine; it simply covered the drawings, and on a gallery the
- * work is the one thing the interface may not sit on top of. In flow it
- * pushes the grid down instead, which costs a scroll and nothing else.
- *
- * Year and Collections are multi-select dropdowns rather than rows of
- * checkboxes: the band stays one line tall however many years the gallery
- * grows, where flat lists would have made it taller every year.
- *
- * Rendered whether or not it is open, so closing can be animated and so the
- * typed query survives being hidden -- unmounting would clear the filter
- * every time the row was shut, which is not what shutting a row means.
- * `inert` while closed keeps its controls out of the tab order and out of
- * hit testing, since collapsed content is still both.
+/*
+ * Rendered whether or not it is open, so closing can be animated and a typed
+ * query survives being hidden. `inert` while closed keeps its controls out of
+ * the tab order and out of hit testing.
  */
 export const GalleryFilterRow = ({
   id,
@@ -91,7 +69,6 @@ export const GalleryFilterRow = ({
   query: string;
   onQueryChange: (value: string) => void;
   years: number[];
-  /** Only the years actually present, newest first. */
   availableYears: number[];
   onToggleYear: (year: number) => void;
   collections: CollectionSummary[];
@@ -111,9 +88,6 @@ export const GalleryFilterRow = ({
           <label htmlFor={id + '-query'} className={LABEL + ' mb-3 block'}>
             Search
           </label>
-          {/* Every field, not just the title: medium, year, tags and the
-              collections a piece is in are all things someone might have in
-              mind when they start typing. */}
           <input
             id={id + '-query'}
             type="search"
@@ -153,14 +127,6 @@ export const GalleryFilterRow = ({
           />
         )}
 
-        {/* Pushed to the far end, and last in the tab order, because it
-            undoes the row rather than being part of filling it in.
-
-            An icon button rather than the 12px `SUBTLE_ACTION` it started
-            as. Beside a 12px `faint` count, that treatment was the same
-            weight as the number it sat next to -- two quiet strings, one of
-            them secretly clickable. Given the box every other control in
-            this band wears, it reads as the control it is. */}
         <div className="ml-auto flex items-center gap-4">
           <p className="text-[12px] text-faint">
             {showing === total

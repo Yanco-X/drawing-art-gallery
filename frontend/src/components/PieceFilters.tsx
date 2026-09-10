@@ -1,12 +1,5 @@
 import { FIELD, LABEL, SUBTLE_ACTION } from './form-styles';
 
-/**
- * Title search and a year, for narrowing a picker.
- *
- * Stacked rather than laid out in a row, because these live in the picker's
- * control column beside the name and the actions. Filtering is live: there
- * is no apply step, so the grid answers as the title is typed.
- */
 export const PieceFilters = ({
   id,
   query,
@@ -24,7 +17,6 @@ export const PieceFilters = ({
   onQueryChange: (value: string) => void;
   year: string;
   onYearChange: (value: string) => void;
-  /** Only the years actually present, newest first. */
   years: number[];
   showing: number;
   total: number;

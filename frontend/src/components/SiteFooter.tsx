@@ -1,8 +1,6 @@
 /*
- * The footer is unselectable as a whole rather than one span of it. A
- * single element styled unlike everything around it is a tell, and the
- * mark that carries the trigger should not be the only thing here that
- * behaves oddly under a rapid click.
+ * Unselectable as a whole rather than one span of it: a single element styled
+ * unlike everything around it is a tell.
  */
 export const SiteFooter = ({ onMark }: { onMark?: () => void }) => (
   <footer className="mt-auto touch-manipulation border-t border-line select-none">

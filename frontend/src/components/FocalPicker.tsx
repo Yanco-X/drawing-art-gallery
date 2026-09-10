@@ -10,27 +10,6 @@ import {
 import type { Piece } from '../types';
 import { LABEL, SUBTLE_ACTION } from './form-styles';
 
-/*
- * How the spotlight frames this piece: where it aims, and how close.
- *
- * Two views of one set of numbers: the whole artwork with a mark on it, and
- * beneath it the band's actual shape showing what survives. Choosing on the
- * full image and judging on the crop are different jobs, and a control that
- * only did the first would have the owner saving and reloading to find out
- * what they picked.
- *
- * The zoom sits under the preview rather than beside the mark, because the
- * preview is the only thing it visibly changes. It is a percent of the size
- * at which the whole piece fits, so the line beneath the slider can say how
- * much of the piece is in frame and be telling the truth about the band as
- * well -- that number does not depend on the frame's shape. How much hatch
- * ends up beside it does, so the preview does not promise anything about
- * that.
- *
- * The band is 66/34 of a 2400px measure at up to 780px tall, so its artwork
- * half is roughly 3:2. The preview uses that rather than a round number,
- * because a preview at the wrong shape lies about what will be cut.
- */
 const BAND_RATIO = '3 / 2';
 /* The same shape as a number. Only used to park the slider where an
    unsized piece already sits, so that first drag does not jump. Nothing
@@ -88,10 +67,9 @@ export const FocalPicker = ({
   );
 
   /*
-   * Pointer capture rather than window listeners: the element keeps
-   * receiving moves once the pointer leaves it, and the browser cleans up on
-   * its own if the gesture is cancelled. It also makes touch and mouse the
-   * same code, which a mousedown/mousemove pair would not.
+   * Pointer capture rather than window listeners: the element keeps receiving
+   * moves once the pointer leaves it, the browser cleans up a cancelled
+   * gesture, and touch and mouse become one code path.
    */
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -151,11 +129,8 @@ export const FocalPicker = ({
         </div>
       ) : (
         <>
-          {/*
-            The whole piece, with the mark on it. `touch-none` matters: without
-            it a drag on a touch screen scrolls the dialog instead of moving
-            the point.
-          */}
+          {/* `touch-none` matters: without it a drag on a touch screen scrolls
+              the dialog instead of moving the point. */}
           <div
             ref={frameRef}
             role="application"
@@ -176,11 +151,6 @@ export const FocalPicker = ({
               className="max-h-[300px] w-full select-none object-contain"
             />
 
-            {/*
-              A hairline cross rather than a filled dot: at this size a dot
-              covers the very detail being aimed at, and the system has no
-              filled marks outside the density icons.
-            */}
             <span
               aria-hidden="true"
               style={{ left: `${atX}%`, top: `${atY}%` }}
@@ -195,7 +165,6 @@ export const FocalPicker = ({
             <span className="text-[12px] text-faint">
               Drag to choose what the band keeps.
             </span>
-            {/* The band's own shape, cropping live. */}
             <div
               style={{ aspectRatio: BAND_RATIO }}
               className="hatch w-full overflow-hidden border border-line"
@@ -227,11 +196,6 @@ export const FocalPicker = ({
               </div>
             </div>
 
-            {/*
-              A native range input, styled in `index.css`. It brings its own
-              keyboard stepping and reports its value to a screen reader,
-              neither of which is worth rebuilding for one field.
-            */}
             <input
               type="range"
               min={ZOOM_MIN}

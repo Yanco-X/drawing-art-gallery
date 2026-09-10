@@ -2,17 +2,8 @@ import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 /*
- * A confirmation step for actions that cannot be undone.
- *
- * Same native <dialog> foundation as the upload modal, so focus trapping,
- * Escape and the inert background come from the platform. Two details are
- * specific to destructive work:
- *
- *  - There is no close ×. The first focusable element is Cancel, so the
- *    dialog opens with focus on the safe choice and Enter does nothing
- *    harmful. Kept for both tones: one dialog, one behaviour.
- *  - At `tone="danger"` the confirming button is outlined rather than
- *    filled. A filled button is an invitation, and deletion is not one.
+ * There is deliberately no close x: the first focusable element is Cancel, so
+ * the dialog opens with focus on the safe choice and Enter does nothing.
  */
 
 const GHOST_BUTTON =
@@ -35,15 +26,11 @@ const CONFIRM_BUTTON =
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  /** What will happen, stated plainly. */
   children: ReactNode;
   confirmLabel: string;
   busyLabel?: string;
-  /**
-   * 'danger' outlines the confirming button in the danger token, for actions
-   * with no undo. Everything else fills it with the accent — waiving and
-   * restoring are reversible and should not borrow the weight of deletion.
-   */
+  /** 'danger' outlines the confirming button; everything else fills it with
+      the accent. Waiving and restoring are reversible. */
   tone?: 'default' | 'danger';
   busy?: boolean;
   error?: string | null;

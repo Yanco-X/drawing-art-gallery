@@ -3,13 +3,6 @@ import { PageShell } from '../components/PageShell';
 import { useAsync, useSession } from '../hooks';
 import { fetchWaivedPieces } from '../services';
 
-/*
- * The reserve: work withdrawn from the gallery but not destroyed.
- *
- * Its own route rather than a toggle on the gallery, so the gallery query
- * stays one thing and this has a URL of its own. Deletion is only reachable
- * from here, by way of a piece's own page.
- */
 const WaivedPage = () => {
   const { role } = useSession();
   const pieces = useAsync(fetchWaivedPieces);

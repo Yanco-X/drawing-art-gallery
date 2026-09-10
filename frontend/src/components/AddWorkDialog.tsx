@@ -7,15 +7,6 @@ import { PieceFilters } from './PieceFilters';
 import { PiecePickerGrid } from './PiecePickerGrid';
 import { SectionState } from './SectionState';
 
-/*
- * Picking work to add to a collection already being arranged.
- *
- * The same shape as the new collection dialog — grid on the left, controls
- * on the right — because it is the same act. Ticked pieces append in the
- * order they were ticked, which is the rule everywhere else pieces are
- * picked.
- */
-
 /** Stable no-op loader, so a closed dialog issues no request. */
 const NO_PIECES = async (): Promise<Piece[]> => [];
 
@@ -26,10 +17,8 @@ export const AddWorkDialog = ({
   onAdd,
 }: {
   open: boolean;
-  /** Already in the collection, so not offered again. */
   excludeIds: string[];
   onClose: () => void;
-  /** Handed the picked pieces, in pick order. */
   onAdd: (pieces: Piece[]) => void;
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);

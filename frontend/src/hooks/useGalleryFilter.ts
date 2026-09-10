@@ -4,11 +4,6 @@ import type { CollectionSummary, Piece } from '../types';
 export const useGalleryFilter = (
   pieces: Piece[],
   collections: CollectionSummary[],
-  /**
-   * What the reader last left this list narrowed to. Passed as the initial
-   * state rather than applied by an effect, so a return renders once,
-   * already narrowed, instead of showing the whole gallery for a frame.
-   */
   initial?: { query: string; years: number[]; collectionIds: string[] },
 ) => {
   const [query, setQuery] = useState(initial?.query ?? '');
@@ -17,8 +12,6 @@ export const useGalleryFilter = (
     initial?.collectionIds ?? [],
   );
 
-  /* Only the years actually present, so the control never offers one with
-     nothing behind it. */
   const availableYears = useMemo(() => {
     const present = new Set<number>();
     for (const piece of pieces) {
@@ -27,13 +20,6 @@ export const useGalleryFilter = (
     return [...present].sort((a, b) => b - a);
   }, [pieces]);
 
-  /*
-   * Which collections each piece is in, by name.
-   *
-   * Costs no request: `GET /api/collections` carries `pieceIds` and the
-   * landing page already asks for it, so this is a lookup over rows the
-   * page is holding. The spotlight's label does the same thing.
-   */
   const namesByPiece = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const collection of collections) {
@@ -46,11 +32,6 @@ export const useGalleryFilter = (
     return map;
   }, [collections]);
 
-  /*
-   * One lowercased string per piece, holding every field the search looks
-   * at. Built once per list rather than per keystroke, which is what keeps
-   * typing cheap as the gallery grows.
-   */
   const haystacks = useMemo(() => {
     const map = new Map<string, string>();
     for (const piece of pieces) {

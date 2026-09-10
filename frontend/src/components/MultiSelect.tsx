@@ -6,26 +6,15 @@ import { ChevronDownIcon } from './icons';
 export type MultiSelectOption = {
   value: string;
   label: string;
-  /** A count or other aside, shown quietly at the end of the row. */
   hint?: string;
 };
 
-/**
- * A select that takes more than one answer.
- *
+/*
  * A native `<select multiple>` is the obvious reach and the wrong one: it
- * renders as a permanently open scrolling box rather than a dropdown, it
- * needs ctrl-click to pick a second value, and it cannot be styled to this
- * set at all. So the trigger is a button dressed as a field and the menu is
- * real checkboxes -- which is also what makes it legible to a screen
- * reader, where a faked `role="listbox"` would need every state maintained
- * by hand.
- *
- * The menu is the socials dropdown's surface: `.menu-panel`, the 200ms
- * opacity and 8px drop, `display: none` while shut so its boxes leave the
- * tab order. A menu floating over the page is fine where the filter band
- * was not -- it is small, transient, and asked for, where the band was
- * large and covered the drawings for as long as it was open.
+ * renders as a permanently open scrolling box, needs ctrl-click for a second
+ * value, and cannot be styled to this set. So the trigger is a button dressed
+ * as a field and the menu is real checkboxes, which a screen reader can also
+ * read without every state being maintained by hand.
  */
 export const MultiSelect = ({
   label,
@@ -36,23 +25,16 @@ export const MultiSelect = ({
   summarise,
 }: {
   label: string;
-  /** Shown when nothing is picked, in `faint` like an input's placeholder. */
   placeholder: string;
   options: MultiSelectOption[];
   selected: string[];
   onToggle: (value: string) => void;
-  /** Overrides the "n selected" summary when several are picked. */
   summarise?: (count: number) => string;
 }) => {
   const [open, setOpen] = useState(false);
   const root = useDismissable<HTMLDivElement>(open, () => setOpen(false));
   const id = useId();
 
-  /*
-   * One pick reads better as itself than as "1 selected" -- it is shorter
-   * and it says which one, which is the thing the trigger is there to
-   * answer without being opened.
-   */
   const chosen = options.filter((option) => selected.includes(option.value));
   const summary =
     chosen.length === 0
@@ -67,9 +49,6 @@ export const MultiSelect = ({
         {label}
       </span>
 
-      {/* Dressed as a field so it sits level with the search input beside
-          it, and takes the accent border while it holds a value -- the
-          same hairline accent a focused field takes. */}
       <button
         type="button"
         onClick={() => setOpen((was) => !was)}
@@ -97,9 +76,9 @@ export const MultiSelect = ({
         </span>
       </button>
 
-      {/* No display utility here: utilities cascade after components and
-          would beat `.menu-panel`'s `display: none`, leaving an invisible
-          sheet of checkboxes over whatever sits beneath. */}
+      {/* No display utility here: utilities cascade after components and would
+          beat `.menu-panel`'s `display: none`, leaving an invisible sheet of
+          checkboxes over whatever sits beneath. */}
       <div
         data-open={open}
         className="menu-panel absolute top-full left-0 z-20 mt-2 max-h-[280px] w-full min-w-[180px] overflow-y-auto border border-line bg-surface"

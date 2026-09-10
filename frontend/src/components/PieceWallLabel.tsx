@@ -11,12 +11,6 @@ const Block = ({ label, children }: { label: string; children: ReactNode }) => (
   </div>
 );
 
-/**
- * The metadata beside the artwork, treated as a gallery wall label: small,
- * quiet, and separated from the work by a hairline rather than a panel.
- * Blocks are omitted entirely when they have nothing to say — an empty
- * heading is louder than no heading.
- */
 export const PieceWallLabel = ({
   piece,
   collections,
@@ -25,9 +19,7 @@ export const PieceWallLabel = ({
 }: {
   piece: Piece;
   collections: CollectionRef[];
-  /** Owner only. Omitted for visitors, so the block does not render at all. */
   actions?: ReactNode;
-  /** Grid placement, which belongs to the page rather than to the label. */
   className?: string;
 }) => {
   // Nullable on an uploaded piece: only draw the separator between values
@@ -63,8 +55,6 @@ export const PieceWallLabel = ({
         <>
           <Rule />
           <Block label="Tags">
-            {/* Static, not links: there is no tag route to point them at yet,
-              and a chip that looks clickable but isn't is worse than plain. */}
             <ul className="flex flex-wrap gap-2">
               {piece.tags.map((tag) => (
                 <li
@@ -101,11 +91,6 @@ export const PieceWallLabel = ({
       {actions && (
         <>
           <Rule />
-          {/*
-          Last in the rail and after a rule, deliberately: actions that
-          remove work do not belong beside the navigation at the top, where
-          they sit under a cursor already moving between pieces.
-        */}
           <div>{actions}</div>
         </>
       )}

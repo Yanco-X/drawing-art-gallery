@@ -849,8 +849,10 @@ Read in this order:
 ### How this project works
 
 Decisions are argued before they are written, and the reasoning is recorded
-next to the code rather than in a commit message. Comments explain *why*,
-never *what*. Features are specified in `context/` first, then built, then
+in `context/` rather than in a commit message -- and rather than in a wall of
+comment above the code it explains. Comments explain *why*, never *what*, and
+only where the why is short and the code would otherwise be changed wrongly.
+Anything longer is a document, and the code names the file. Features are specified in `context/` first, then built, then
 verified, then marked implemented in the document that specified them.
 
 The owner tests by hand and likes doing it. Build the thing, prove it with

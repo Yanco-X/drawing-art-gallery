@@ -1,16 +1,12 @@
 import { ApiError } from './pieces';
 
-/**
- * The sign-in call, kept out of `pieces.ts` on purpose.
- *
- * Everything in the services layer that the pages touch ends up in the
- * bundle every visitor downloads. This is the only request that carries a
+/*
+ * Kept out of `pieces.ts` on purpose: this is the only request carrying a
  * password field, so it lives in a module imported by nothing but the lazy
- * dialog -- which is what keeps the word out of the main chunk.
+ * dialog, which keeps it out of the chunk every visitor downloads.
  *
- * A refusal is thrown rather than routed through the lapsed-session
- * handler: it is this form's own business, and the dialog it would open is
- * already open.
+ * A refusal is thrown rather than routed through the lapsed-session handler --
+ * the dialog it would open is already open.
  */
 export const signIn = async (password: string): Promise<void> => {
   const response = await fetch('/api/session', {

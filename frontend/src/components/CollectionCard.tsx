@@ -4,9 +4,7 @@ import type { CollectionSummary } from '../types';
 
 interface CollectionCardProps {
   collection: CollectionSummary;
-  /** Position in the row; picks one of the four gradient swatches. */
   index: number;
-  /** Where this card is being shown, so the collection knows where back is. */
   origin?: string;
 }
 
@@ -27,8 +25,8 @@ export const CollectionCard = ({
         className="h-[90px] w-full object-cover opacity-85"
       />
     ) : (
-      // Swatches cycle through four gradients and are decorative only —
-      // they stand in until a collection has a cover image.
+  // Swatches cycle through four gradients and are decorative only -- they do
+  // not identify a collection.
       <div
         aria-hidden="true"
         className="h-[90px] opacity-85"
@@ -36,9 +34,6 @@ export const CollectionCard = ({
       />
     )}
     <div className="flex flex-col gap-1">
-      {/* A draft the owner can see and a visitor cannot. Marked the way a
-          waived piece is, because it says the same kind of thing: this is
-          here, and it is not on the wall. */}
       {!collection.isPublic && (
         <span className="text-[11px] uppercase tracking-eyebrow text-faint">
           Private

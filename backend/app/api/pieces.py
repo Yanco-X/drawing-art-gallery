@@ -23,8 +23,6 @@ def list_pieces():
     Gallery order, newest first. Also the picker source for curation.
 
     Waived pieces are excluded unless the owner asks for them by name.
-    The default is the safe one: a caller who forgets the parameter gets
-    the gallery, never the reserve.
     """
     session = SessionLocal()
     want_waived = request.args.get("waived") == "true"
@@ -52,10 +50,8 @@ def get_piece(piece_id):
     if piece is None:
         raise ApiError("Piece not found.", status=404)
     if piece.is_waived and not is_owner():
-        # 410 rather than 404: whoever holds this link saw the piece while
-        # it hung, so withholding its existence protects nothing and only
-        # makes the gallery look broken. The title and nothing else -- the
-        # label and the image came off the wall on purpose.
+        # 410 rather than 404: whoever holds this link saw the piece while it
+        # hung, so withholding its existence protects nothing.
         return jsonify(
             {"error": "This work is no longer exhibited.", "title": piece.title}
         ), 410
@@ -66,7 +62,7 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     """
     Get-or-create by slug.
 
-    Two uploads introducing the same new tag at once would race; the unique
+    Two uploads introducing the same new tag at once race; the unique
     constraint on tags.slug is what makes that safe rather than lucky.
     """
     tags: list[Tag] = []
@@ -87,23 +83,12 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
-# 100 is the whole piece in frame, so there is nothing below it worth
-# having: a piece smaller than the frame in both directions only shrinks
-# into the hatch. At 500 a fifth of the piece is in frame and the rendition
-# is being upscaled past what it can hold.
 FOCAL_ZOOM_MIN = 100
 FOCAL_ZOOM_MAX = 500
 
 
 def _parse_focal(raw, field: str):
-    """
-    A focal coordinate: a whole percent from 0 to 100, or null for centre.
-
-    Null is stored rather than 50 so a piece the owner has never placed can
-    be told from one they placed in the middle on purpose. Nothing reads the
-    difference today; it costs nothing to keep, and it cannot be recovered
-    later once every row says 50.
-    """
+    """A focal coordinate: a whole percent from 0 to 100, or null for centre."""
     if raw is None or raw == "":
         return None
     try:
@@ -121,18 +106,8 @@ def _parse_focal(raw, field: str):
 
 def _parse_focal_zoom(raw):
     """
-    How close the crop is, as a percent of the size at which the whole
-    piece fits. 100 is all of it; 200 is twice as close.
-
-    A multiple of fit rather than of fill, because fill is a property of
-    the frame and the band's frame changes shape with the window. Anchored
-    to fit, one number means the same amount of artwork to every visitor
-    and only the hatch beside it varies.
-
-    Null rather than 100 for the default, for the reason the focal point
-    stores null rather than 50: a piece the owner never sized stays
-    distinguishable from one they sized deliberately. Null still fills the
-    frame outright, which is the one framing that needs no frame to know.
+    How close the crop is, as a percent of the size at which the whole piece
+    fits. 100 is all of it; 200 is twice as close. Null fills the frame.
     """
     if raw is None or raw == "":
         return None
@@ -154,8 +129,7 @@ def _parse_year(raw):
     """
     A year from a form string or a JSON number.
 
-    Shared by upload and edit so the two cannot disagree about what counts
-    as a year. Empty string and null both mean "no year", not "invalid".
+    Empty string and null both mean "no year", not "invalid".
     """
     if raw is None or raw == "":
         return None
@@ -185,14 +159,9 @@ def create_piece():
     multipart/form-data: `image` plus title, description, medium, year,
     createdDate, and repeated `tags` and `collectionIds` fields.
 
-    Also builds the Deep Zoom pyramid the detail view zooms into, after the
-    commit and without being able to fail the upload -- see below.
-
-    Ordering matters here. Files are written before the row is committed:
-    files-then-database can leave orphaned bytes, which are invisible and
-    sweepable, while database-then-files can leave a row pointing at
-    nothing, which is a broken image on the page. The commit is the point
-    of truth, and a failed commit takes the objects back out.
+    Files are written before the row is committed: orphaned bytes are
+    sweepable, a row pointing at nothing is a broken image. The commit is the
+    point of truth, and a failed commit takes the objects back out.
     """
     upload = request.files.get("image")
     if upload is None or not upload.filename:
@@ -240,13 +209,9 @@ def create_piece():
     try:
         piece.tags = _resolve_tags(session, request.form.getlist("tags"))
         session.add(piece)
-        # Curation rides in the same transaction as the row, the way it does
-        # on restore. A piece that reached the gallery but missed the
-        # collections it was uploaded into would be a half-applied upload,
-        # and nothing in the response would say so. An unknown id fails the
-        # whole thing, and the rollback below takes the stored objects with
-        # it. (_join_collections is defined further down, next to the other
-        # membership helpers; it is resolved at call time.)
+        # Curation rides in the same transaction as the row, so an unknown id
+        # fails the whole thing and the rollback below takes the objects with
+        # it. (_join_collections is defined further down, resolved at call time.)
         _join_collections(session, piece, request.form.getlist("collectionIds"))
         session.commit()
     except Exception:
@@ -254,18 +219,10 @@ def create_piece():
         storage.delete_prefix(piece.storage_prefix)
         raise
 
-    # Deliberately after the commit, and deliberately not fatal.
-    #
-    # The pyramid is an enhancement: without it the detail view falls back to
-    # the display rendition, which is exactly what every piece uploaded before
-    # tiling existed does until the backfill reaches it. Tearing down a
-    # successful upload because a few hundred derived tiles failed would
-    # trade a working piece for no piece at all.
-    #
-    # It is synchronous because there is no job queue in this project, and
-    # introducing one to serve a personal gallery would be a great deal of
-    # machinery for a wait that runs about 1.7s on a typical piece and 6.5s
-    # on the largest in the collection.
+    # After the commit and deliberately not fatal: without a pyramid the
+    # detail view falls back to the display rendition, which is what every
+    # piece uploaded before tiling does. Synchronous because there is no job
+    # queue -- about 1.7s on a typical piece, 6.5s on the largest.
     try:
         write_tiles(storage, piece, raw)
         piece.tiles_ready = True
@@ -277,8 +234,6 @@ def create_piece():
         # that stop partway through a zoom. The backfill can rebuild it.
         clear_tiles(storage, piece)
 
-    # The detail shape, so the caller sees the memberships it just asked for
-    # rather than having to trust that they landed.
     return jsonify(piece_detail_to_dict(piece)), 201
 
 
@@ -289,19 +244,9 @@ def update_piece(piece_id):
     Correct a piece's wall label.
 
     Only keys actually present in the body are touched, so a form that sends
-    one field cannot blank the rest. Sending null or an empty string for an
-    optional field does clear it -- that is an edit, not an omission.
-
-    The image is deliberately not replaceable here. Swapping the bytes behind
-    an id would mean re-deriving both renditions and invalidating every URL
-    already handed out, which is a different act from fixing a title.
-
-    A piece has no slug -- it is addressed by its id -- so unlike a
-    collection there is no address here that a rename could break.
-
-    A waived piece can be edited. Correcting a label has nothing to do with
-    whether the work is on the wall, and the reserve is exactly where it
-    would be tidied up before going back.
+    one field cannot blank the rest. Null or an empty string does clear an
+    optional field -- that is an edit, not an omission. The image is not
+    replaceable here.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -357,10 +302,8 @@ def delete_piece(piece_id):
     if piece is None:
         raise ApiError("Piece not found.", status=404)
 
-    # The two-stage rule lives here rather than in the UI. Deletion
-    # destroys the original along with the derivatives, and a rule only
-    # the frontend enforces is not a rule for anything else holding the
-    # owner token.
+    # The two-stage rule lives here rather than in the UI: a rule only the
+    # frontend enforces is not a rule for anything else holding the token.
     if not piece.is_waived:
         raise ApiError(
             "Waive this piece before deleting it.",
@@ -390,11 +333,9 @@ def waive_piece(piece_id):
     """
     Withdraw a piece from the gallery, reversibly.
 
-    Membership in every collection is dropped rather than filtered out. That
-    turns "a row in collection_pieces means the piece is exhibited" into an
-    invariant the schema keeps, rather than a filter every present and future
-    query has to remember. The cost is that restoring does not put the piece
-    back where it was, which is why restore offers to re-curate.
+    Membership is dropped rather than filtered, which makes "a row in
+    collection_pieces means the piece is exhibited" an invariant the schema
+    keeps. Restore offers to re-curate because of it.
     """
     session = SessionLocal()
     piece = session.get(Piece, piece_id)
@@ -411,10 +352,8 @@ def waive_piece(piece_id):
 
     # delete-orphan on the relationship removes the join rows.
     piece.collection_links.clear()
-    # Same invariant, one step louder: the spotlight is the most prominent
-    # part of the gallery, so a piece withdrawn from the gallery cannot keep
-    # a slot in it. The band fills the gap from the newest work on the next
-    # read, and restoring does not take the slot back.
+    # Same invariant, one step louder: a piece withdrawn from the gallery
+    # cannot keep a spotlight slot. Restoring does not take it back.
     piece.spotlight_order = None
     piece.waived_at = _utcnow()
     session.commit()
@@ -423,12 +362,7 @@ def waive_piece(piece_id):
 
 
 def _append_to(collection: Collection, piece: Piece) -> None:
-    """
-    Put a piece at the end of a collection.
-
-    The end rather than a remembered position: the piece was not a member,
-    and now it is. Rearranging is what PUT /collections/<id>/pieces is for.
-    """
+    """Put a piece at the end of a collection."""
     highest = max(
         (link.display_order for link in collection.piece_links), default=-1
     )
@@ -482,10 +416,8 @@ def restore_piece(piece_id):
     """
     Return a piece to the gallery, optionally re-curating it.
 
-    Body: {"collectionIds": [...]} -- absent or empty restores to the
-    gallery alone. One transaction, so the restore and the membership either
-    both land or neither does; a piece back on the wall carrying half its
-    curation would be worse than a clean failure.
+    Body: {"collectionIds": [...]} -- absent or empty restores to the gallery
+    alone. One transaction, so restore and membership both land or neither.
     """
     session = SessionLocal()
     piece = session.get(Piece, piece_id)
@@ -508,14 +440,9 @@ def set_piece_collections(piece_id):
     """
     Set which collections a piece belongs to.
 
-    A set rather than an append, so the piece page can show a checkbox per
-    collection and have unchecking mean what it looks like it means. Ids
-    already present keep their position: re-saving an unchanged list must
-    not shuffle the owner's curation.
-
-    Refused for a waived piece. A row in collection_pieces means the piece
-    is exhibited, and that invariant is worth more than the convenience of
-    curating from the reserve.
+    A set rather than an append, so unchecking means what it looks like.
+    Ids already present keep their position. Refused for a waived piece: a
+    row in collection_pieces means the piece is exhibited.
     """
     session = SessionLocal()
     piece = session.get(Piece, piece_id)

@@ -2,22 +2,9 @@ import type { ReactElement } from 'react';
 import { Glyph } from './icons';
 
 /*
- * Platform marks, and the registry that ties them to a stored key.
- *
- * Apart from `icons.tsx` because these follow a different rule. That set is
- * drawn to this design -- square corners, no fill, hairlines. These copy
- * someone else's shape, because a brand is recognised or it is nothing:
- * Instagram keeps its rounded corners, YouTube keeps its pill.
- *
- * They are code, not data. The database stores only the key -- "instagram",
- * "artstation" -- and the drawing lives here in the bundle. Accepting an
- * uploaded SVG instead would mean taking a file format that can carry
- * script, sanitising it, storing it and serving it, all to avoid a one-line
- * addition to this file. A platform with no mark here still works; it shows
- * `LinkIcon` and reads as a link, which is what it is.
- *
- * Some of these are impressionistic at 16px -- DeviantArt's angular mark in
- * particular. Each is one path string; a better drawing is a one-line swap.
+ * These deliberately break the house rules that `icons.tsx` follows: a brand
+ * is recognised or it is nothing, so Instagram keeps its rounded corners and
+ * YouTube its pill. A platform with no mark here shows `LinkIcon`.
  */
 
 export const InstagramIcon = () => (
@@ -95,7 +82,6 @@ export const EmailIcon = () => (
   </Glyph>
 );
 
-/** The stand-in for a platform with no mark drawn for it. */
 export const LinkIcon = () => (
   <Glyph>
     <path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-6-6l-1.5 1.5" />
@@ -111,12 +97,6 @@ export interface Platform {
   hosts: string[];
 }
 
-/*
- * One list, three jobs: the mark beside a link in the menu, the choices in
- * the manage dialog, and the hostnames that let a pasted url name its own
- * platform. Keeping them together is what stops the picker offering a
- * platform the menu cannot draw.
- */
 export const PLATFORMS: Platform[] = [
   { key: 'instagram', label: 'Instagram', icon: InstagramIcon, hosts: ['instagram.com'] },
   { key: 'artstation', label: 'ArtStation', icon: ArtStationIcon, hosts: ['artstation.com'] },
@@ -140,13 +120,8 @@ export const markFor = (platform: string): (() => ReactElement) =>
 export const labelForPlatform = (platform: string): string =>
   BY_KEY.get(platform.toLowerCase())?.label ?? platform;
 
-/**
- * Which platform a pasted url belongs to.
- *
- * Matches the hostname and any parent of it, so `www.instagram.com` and a
- * regional subdomain both land on the same key. Returns null when nothing
- * matches, which the dialog treats as "you pick".
- */
+/** Matches the hostname and any parent of it, so `www.instagram.com` and a
+    regional subdomain land on the same key. */
 export const platformFromUrl = (raw: string): string | null => {
   const url = raw.trim();
   if (!url) return null;

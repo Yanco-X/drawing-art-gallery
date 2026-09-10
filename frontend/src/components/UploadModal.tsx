@@ -8,19 +8,6 @@ import { CollectionPicker } from './CollectionPicker';
 import { TagInput } from './TagInput';
 import { YearField } from './YearField';
 
-/*
- * Add work.
- *
- * Built on a native <dialog>: focus trapping, Escape to dismiss, an inert
- * background and top-layer stacking all come from the platform, which is
- * considerably more reliable than a hand-rolled focus trap.
- *
- * The design system had no form vocabulary, so this establishes one --
- * 1px lines instead of elevation, square corners, uppercase eyebrow labels
- * in `muted` rather than `faint` (which is too quiet to read as an
- * instruction), and the gold accent spent only on focus, required marks,
- * and the confirming button.
- */
 
 /** Mirrors MAX_UPLOAD_MB in backend/app/config.py. */
 const MAX_UPLOAD_MB = 40;
@@ -65,7 +52,6 @@ const dropZoneClasses = (dragging: boolean, hasFile: boolean) =>
 interface UploadModalProps {
   open: boolean;
   onClose: () => void;
-  /** Handed the created piece so the caller can show it without a refetch. */
   onUploaded?: (piece: Piece) => void;
 }
 
@@ -94,18 +80,16 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     else if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  // Drafts included: uploading is an owner act, and a draft is exactly the
-  // kind of collection new work gets gathered into. Fetched only while the
-  // dialog is open, so the page costs nothing until Add work is clicked.
+  // Drafts included: a draft is exactly what new work gets gathered into.
+  // Fetched only while the dialog is open.
   const loadCollections = useMemo(
     () => (open ? fetchAllCollections : NO_COLLECTIONS),
     [open],
   );
   const collections = useAsync(loadCollections);
 
-  // Derived from the file rather than stored: the preview is not
-  // independent state, and computing it in an effect would render once with
-  // no image and again with it.
+  // Derived from the file rather than stored: computing it in an effect would
+  // render once with no image and again with it.
   const preview = useMemo(
     () => (file ? URL.createObjectURL(file) : null),
     [file],
@@ -135,8 +119,8 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
   };
 
   const setField = (key: keyof typeof EMPTY_FIELDS, value: string) => {
-    // Any edit clears the message: leaving "a piece needs a title" up while
-    // a title sits in the box reads as though the form is still refusing.
+    // Any edit clears the message: one that outlives the problem reads as
+    // though the form is still refusing.
     setError(null);
     setFields((current) => ({ ...current, [key]: value }));
   };
@@ -211,9 +195,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     }
   };
 
-  // Spelled out the way Restore does, so the picked collections are
-  // confirmed by the button that acts on them rather than only by ticks
-  // sitting further up a scrolled form.
   const submitLabel =
     collectionIds.length === 0
       ? 'Add to gallery'
@@ -302,9 +283,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
               onChange={(event) => acceptFile(event.target.files?.[0])}
             />
 
-            {/* Under the artwork rather than beside the wall label: this is
-                about where the piece hangs, not what the label says, and
-                this column has the room the other one does not. */}
             <div className="mt-4 border-t border-line pt-4">
               <CollectionPicker
                 collections={
@@ -314,8 +292,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
                 loading={collections.status === 'loading'}
                 emptyMessage={
                   // An unreachable API and an empty gallery are not the same
-                  // answer, and "no collections yet" would be a lie about
-                  // the first one.
+                  // answer.
                   collections.status === 'error'
                     ? 'Could not load collections — you can add this piece to one afterwards.'
                     : 'No collections yet — this goes straight to the gallery.'

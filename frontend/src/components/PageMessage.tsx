@@ -1,10 +1,5 @@
 import type { ReactNode } from 'react';
 
-/**
- * The full-page stand-in for a route that resolved to nothing: not found,
- * unavailable, or not ours to see. Quiet rather than an error panel — a
- * missing thing in a gallery is an empty wall, not an alarm.
- */
 export const PageMessage = ({
   eyebrow,
   headline,
@@ -12,7 +7,6 @@ export const PageMessage = ({
 }: {
   eyebrow: string;
   headline: string;
-  /** Usually the way back. */
   children?: ReactNode;
 }) => (
   <section className="mx-auto flex w-full max-w-content flex-col gap-6 px-gutter pt-intro-top pb-section-lg">

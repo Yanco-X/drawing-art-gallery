@@ -36,12 +36,6 @@ const Step = ({
   );
 };
 
-/**
- * Neighbours in gallery order, sized to sit inline beside the back link
- * rather than as a block below the artwork. Titles move to the tooltip and
- * the accessible name -- at this size the labels alone carry the action,
- * and keeping them short is what lets the whole control live above the fold.
- */
 export const PieceNav = ({
   previous,
   next,
@@ -49,10 +43,7 @@ export const PieceNav = ({
 }: {
   previous?: Piece;
   next?: Piece;
-  /**
-   * Carried on to the neighbour, so walking a collection stays in it. Left
-   * off and the second step would fall back to gallery order.
-   */
+  /** Carried on to the neighbour, so walking a collection stays in it. */
   origin?: string;
 }) => (
   <nav aria-label="Piece navigation" className="flex items-center gap-2">

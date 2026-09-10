@@ -19,15 +19,56 @@ This document establishes the basic rules and guidelines for AI agents working o
 - Do not make sweeping changes across the entire codebase at once unless absolutely necessary.
 
 ## 4. Code Quality & Modularity
-- Write clean, readable, and well-documented code.
+- Write clean, readable code. Readable comes from naming and structure, not from documenting it afterwards.
 - Separate concerns appropriately (e.g., separate UI components from business logic).
 - Use proper TypeScript types and interfaces to ensure type safety on the frontend.
 - Adhere to PEP 8 standards for Python code.
 - One function per task, if a task is too big, break it down into smaller tasks.
-- No comments unless it is strictly necessary or the function is too complex.
-- No need to explain what the code does, as the code itself should be self-explanatory.
-- No need to explain the logic or the reason behind a decision, unless it is strictly necessary.
 - NO EMOJIS!!!
+
+### Names do the explaining
+
+A component, function or variable name must say what the thing is for, on its
+own, with no comment under it. If you find yourself writing a line that
+explains what something does, the name is wrong -- rename it and delete the
+line. `sortPieces`, `usePieceFilter`, `PieceWallLabel` are the standard: read
+the name, know the job.
+
+### Comments: default to none
+
+Write no comment unless it stops the next person breaking something.
+
+**Never write:**
+
+- What the code does, or a restatement of a name, a type or a signature.
+- A heading over an obvious block, or a summary of the function below it.
+- Design reasoning copied out of `context/`. That is the document's job, and
+  a copy goes stale in one of the two places without anyone noticing.
+- Commented-out code.
+
+**The one comment that earns its place** is a short note about something the
+code cannot say and a reader would otherwise get wrong: a browser quirk, a
+non-obvious constraint, an approach that was tried and does not work. One or
+two lines. If it needs a paragraph, it belongs in `context/` -- put it there
+and name the file.
+
+### Logic: plain, and cheap enough
+
+- Write the straightforward version. A reader should follow it top to bottom
+  without holding state in their head. Clever is a cost, not a saving.
+- **Do not optimize speculatively.** No caching, counters, indexes,
+  memoisation or extra layers added "for performance" without a measured
+  reason. `pieceCount` is derived rather than stored precisely because a
+  counter column is "one bug away from drifting for no measurable gain at
+  this scale", and that is the standard.
+- **Do not write accidentally expensive code either**, which is the other
+  half of the same rule: work repeated inside a loop that could be done once,
+  a nested scan where a map would do, a request per item where one call
+  returns the set.
+- `useMemo` and `useCallback` are for a measured cost or for a stable
+  dependency something else needs -- not a reflex on every value.
+- This gallery holds a couple of hundred pieces. Size the solution to that,
+  not to an imagined million.
 
 ## 5. Incremental Progress & Testing
 - Whenever possible, validate that the local changes work before moving on to the next step.

@@ -1,17 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Piece } from '../types';
 
-/**
- * Narrowing a list of pieces by title and year.
- *
- * Filtering happens in the browser over a list already fetched. The gallery
- * is small enough that a round trip per keystroke would be slower than
- * scanning what is already here, and it keeps the picker usable while the
- * API is not.
- *
- * `years` is derived from the pieces themselves rather than a range, so the
- * control never offers a year with nothing behind it.
- */
 export const usePieceFilter = (pieces: Piece[]) => {
   const [query, setQuery] = useState('');
   const [year, setYear] = useState('');

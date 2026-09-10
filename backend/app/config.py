@@ -27,10 +27,9 @@ class Config:
     # production: see context/AUTH.md section 7.
     OWNER_API_TOKEN = os.getenv("OWNER_API_TOKEN", "")
 
-    # Lax, not Strict: Strict withholds the cookie on inbound links, so
-    # arriving from a message or a bookmark would show the owner a
-    # logged-out gallery until they navigated internally. Every mutation is
-    # POST, PATCH, PUT or DELETE, which Lax already refuses cross-site.
+# Lax, not Strict: Strict withholds the cookie on inbound links, so arriving
+# from a message would show the owner a logged-out gallery. Every mutation is
+# POST, PATCH, PUT or DELETE, which Lax already refuses cross-site.
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0") == "1"
@@ -46,8 +45,8 @@ class Config:
     # Largest upload accepted, before any processing.
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_UPLOAD_MB", "40")) * 1024 * 1024
 
-    # "local" writes to UPLOAD_DIR and lets Flask serve /media/<key>.
-    # "s3" targets any S3-compatible bucket -- MinIO locally, R2 or S3 later.
+# "local" writes to UPLOAD_DIR and lets Flask serve /media/<key>; "s3" targets
+# any S3-compatible bucket.
     STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")
 
     # Uploaded artwork on disk during phase 1.
