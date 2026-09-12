@@ -49,6 +49,13 @@ they may not?**
    pulls it into the main chunk puts a password field in every visitor's
    download.
 
+9. **No secret in a tracked file.** Credentials belong in `backend/.env`
+   only; tracked files name the variable, never the value, and templates
+   hold blanks. Docs, examples, compose files and test fixtures that look
+   reusable all count. A value already committed is a finding even once
+   removed -- it is in git history and must be rotated. `AGENTS.md` section 9
+   carries the full rule.
+
 ## What is already known, and is not a finding
 
 Do not report these. They are recorded decisions with reasoning in `AUTH.md`
@@ -70,4 +77,4 @@ and the concrete request that would exploit it. If nothing is wrong, say so
 plainly -- a clean audit is a result, and inventing a finding to look useful
 wastes the owner's afternoon.
 
-Say explicitly which of the eight checks you ran and which you could not.
+Say explicitly which of the nine checks you ran and which you could not.

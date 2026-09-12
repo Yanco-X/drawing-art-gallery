@@ -107,15 +107,20 @@ in production; see §7.
 ### Environment
 
 Two files, both git-ignored, both already present on the owner's machine.
-Recreate them from this table if they are missing.
+Recreate them from this table if they are missing. No real value is ever
+written here -- this file is public. `backend/.env.example` carries the
+same keys as blanks.
 
 `backend/.env`
 
 | Key | Local value |
 |---|---|
-| `DATABASE_URL` | `postgresql+psycopg://sketchyart:sketchyart@localhost:5432/sketchyart` |
+| `POSTGRES_PASSWORD` | the local database password — `docker-compose.yml` reads it |
+| `DATABASE_URL` | `postgresql+psycopg://sketchyart:<POSTGRES_PASSWORD>@localhost:5432/sketchyart` |
 | `STORAGE_BACKEND` | `s3` |
-| `OWNER_API_TOKEN` | `dev-owner-token` |
+| `S3_ACCESS_KEY` | MinIO root user, and the key the app signs requests with |
+| `S3_SECRET_KEY` | MinIO root password, 8 characters or more |
+| `OWNER_API_TOKEN` | any long random string — `secrets.token_urlsafe(32)` |
 | `SECRET_KEY` | any 64 hex characters — signs the session cookie |
 | `FLASK_DEBUG` | `1` |
 
@@ -124,10 +129,10 @@ which shipped the owner's secret inside the bundle. Both the variable and
 the code reading it are gone; an existing file is harmless and can be
 deleted.
 
-S3 settings fall back to working defaults in `app/config.py` — bucket
+Bucket names and the endpoint still default in `app/config.py` — bucket
 `sketchyart`, private bucket `sketchyart-private`, endpoint
-`http://localhost:9000`, key and secret both `sketchyart`. MinIO console
-credentials are the same pair.
+`http://localhost:9000`. Credentials do not: the key pair comes from
+`.env`, and the MinIO console signs in with the same pair.
 
 > The proxy targets `127.0.0.1`, not `localhost`. Windows resolves
 > `localhost` to `::1` first and Flask binds IPv4 — using the name gives a

@@ -1,0 +1,26 @@
+# Secrets. Credentials live in backend/.env and nowhere else -- AGENTS.md
+# section 9. A template is the one exception, and it holds blanks only.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+
+# Database dumps and files carry the owner's password hash.
+*.dump
+*.sql.gz
+*.db
+*.sqlite
+*.sqlite3
+
+# Open security findings. Local only: a public list of unfixed weaknesses is
+# a map for an attacker. See AGENTS.md section 8.
+context/DEPLOYMENT-NOTES.md

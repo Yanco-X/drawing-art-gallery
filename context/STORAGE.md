@@ -148,8 +148,8 @@ storage is the code that will run in production.
     image: minio/minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: sketchyart
-      MINIO_ROOT_PASSWORD: sketchyart
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}       # from backend/.env
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
     ports: ["9000:9000", "9001:9001"]   # API, web console
     volumes: [sketchyart-minio:/data]
 ```

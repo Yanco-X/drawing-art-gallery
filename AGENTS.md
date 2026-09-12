@@ -190,6 +190,80 @@ change they meant to make. One question is cheaper than either.
 - @context/ai-interactions.md contains the AI interaction guidelines.
 - @context/coding-preferences.md contains in depth coding preferences and rules.
 - @context/current-feature.md contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
+- context/DEPLOYMENT-NOTES.md contains the security findings to close before launch. Deliberately not @-loaded: open it before touching config, cookies, storage or deployment. It is git-ignored and exists only on the owner's machine -- a public list of open weaknesses is a map for an attacker. If it is missing, ask; never recreate it in a tracked file.
+
+## 9. Security
+
+The repository is public, and the gallery will be. Anything committed is
+published, and deleting it later does not unpublish it -- git history keeps
+every version. The site's security rests on the password, the session and
+the server's checks, never on the code being secret. These rules are what
+make a security sweep unnecessary for routine work: follow them while
+writing, not afterwards.
+
+### Secrets
+
+- **Credentials live in `backend/.env` and nowhere else.** Passwords,
+  tokens, keys, and any URL with a password in it. Tracked files name the
+  variable -- `${POSTGRES_PASSWORD}`, `os.getenv("S3_SECRET_KEY")` -- never
+  the value. That covers code, docs, examples, comments and commit messages.
+- **A template holds blanks.** `.env.example` is public, so not even a local
+  development value goes in it. A "dev only" password in a public file is a
+  published password.
+- **No working fallback.** `os.getenv("X", "real-password")` ships the
+  password in the source. A secret with no value defaults to nothing, and the
+  app fails at startup.
+- **Nothing in `frontend/` is secret.** Vite inlines every `VITE_*` variable
+  into the bundle every visitor downloads. The browser never holds a
+  credential; the session is an `HttpOnly` cookie it cannot read.
+- **Test fixtures look fake**: `"test-token"`, never a value someone could
+  reuse against a real service.
+- **A secret already committed is burned.** Removing it from the file does
+  not help; say so, and say it must be rotated. Never repeat a secret's value
+  in chat, a document or a commit message -- name the file and line.
+
+The root `.gitignore` catches key files and stray `.env` copies. It is a net,
+not the rule: it cannot see a password typed into a tracked file.
+
+### The boundary
+
+`context/AUTH.md` section 1 is the visitor contract. New code keeps it:
+
+- A mutating route is `POST`, `PUT`, `PATCH` or `DELETE`, never `GET` --
+  `SameSite=Lax` does not protect a `GET` -- and carries `@require_owner`.
+- A read path or query parameter that can return more than a visitor sees
+  checks `is_owner()`, and gets a case in `tests/smoke_visitor.py`.
+  `?includePrivate=1` shipped ungated for weeks because this rule lived in a
+  comment.
+- What a visitor may not have answers 404, not 403. A 403 confirms it exists.
+- A new serialized field is one the contract allows: never a user, email,
+  hash, storage key or file path.
+
+### Input
+
+- Client input never becomes a file path or a storage key. Keys derive from
+  server-generated ids.
+- Uploads are validated by decoding the bytes, never by extension or
+  `Content-Type`.
+- Every field is bounded -- length, range, type -- and a bad one gets the
+  API's own 400. Leaving the database to refuse it is a 500.
+- Queries go through SQLAlchemy with bound parameters. No SQL built from
+  strings.
+
+### Development-only settings
+
+`FLASK_DEBUG=1`, `COOKIE_SECURE=0`, `OWNER_API_TOKEN` and the ports
+`docker-compose.yml` publishes are safe only on this machine. A new setting
+of that kind is marked development-only where it is defined, and added to the
+blocking list in `context/DEPLOYMENT-NOTES.md` -- so it is flipped before
+launch rather than found after.
+
+### When to call the security agent
+
+For changes to the boundary itself: `auth.py`, the session or keyhole code, a
+new route, a new visibility parameter, the upload pipeline, `storage.py`, or
+anything else that changes what a visitor can see. Run it on the change, not
+the repository. Routine work under the rules above does not need it.
 
 # Commands
 

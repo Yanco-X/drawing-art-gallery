@@ -16,7 +16,7 @@ python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
 # source .venv/bin/activate && pip install -r requirements.txt  # macOS/Linux
 
-cp .env.example .env        # then set OWNER_API_TOKEN
+cp .env.example .env        # then fill in every blank value
 ```
 
 Start PostgreSQL and MinIO (needs Docker Desktop running):
@@ -25,9 +25,12 @@ Start PostgreSQL and MinIO (needs Docker Desktop running):
 docker compose up -d
 ```
 
+Compose reads the Postgres and MinIO credentials from `.env`, and refuses
+to start while any of them is blank.
+
 MinIO is S3-compatible object storage, used to develop and exercise the
-phase 2 code path locally. Console at http://localhost:9001
-(sketchyart / sketchyart).
+phase 2 code path locally. Console at http://localhost:9001, signed in
+with `S3_ACCESS_KEY` and `S3_SECRET_KEY` from `.env`.
 
 Apply migrations:
 
@@ -64,12 +67,13 @@ STORAGE_BACKEND=s3 .venv/Scripts/python.exe tests/integration_live.py   # 23 che
 
 ## Auth
 
-Real authentication does not exist yet. Owner-only endpoints are gated on a
-shared secret sent as `X-Owner-Token`, checked against `OWNER_API_TOKEN`.
+The owner signs in with a password and holds an `HttpOnly` session cookie;
+`flask --app app set-owner` seeds the account. Owner-only endpoints answer
+401 to everyone else. Design: [`../context/AUTH.md`](../context/AUTH.md).
 
-It **fails closed**: with `OWNER_API_TOKEN` unset, every write endpoint
-returns 503 rather than allowing anonymous writes. Replace `app/auth.py`
-wholesale when sessions land; nothing else depends on how it works.
+`OWNER_API_TOKEN`, sent as `X-Owner-Token`, also passes the owner check.
+It exists for the test suites and is a back door: leave it unset in
+production. It fails closed -- unset, the token path accepts nothing.
 
 ## Endpoints
 

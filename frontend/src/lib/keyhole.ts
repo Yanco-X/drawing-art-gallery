@@ -3,7 +3,7 @@
 const ENTRY_PATH = window.location.pathname;
 
 const SPARE_PATH_HASH =
-  '78ea3d54b326bfd5bcfe123944c60c2b7d46c722ada4ca405deb93e76281da7b';
+  '2b23ccb8b7a96267b6e241338111dfe8f5e962298dde0cb84ff2741f875ab20a';
 
 const sha256 = async (value: string): Promise<string> => {
   const bytes = await crypto.subtle.digest(
