@@ -9,7 +9,7 @@
    `inline` makes those utilities resolve the var at the use site
    instead of baking in a value, which is what lets the swap work.
 
-   Token names match new_UI/README.md exactly — keep them in sync.
+   Token names match the frontmatter in context/DESIGN.md — keep them in sync.
    ───────────────────────────────────────────────────────────── */
 
 :root {

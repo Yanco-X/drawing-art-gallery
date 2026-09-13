@@ -1,6 +1,6 @@
 ---
 name: housekeeping
-description: Sweep the repository for drift - a stale map, features missing from it, dead modules, comment creep, a handoff file describing shipped work - then verify the build. Use when asked to tidy up, check repository health, or before starting a new feature.
+description: Sweep the repository for drift - features missing from the map, a stale knowledge graph, auto-loaded context creeping up, dead modules, comment creep, a handoff file describing shipped work - then verify the build. Use when asked to tidy up, check repository health, or before starting a new feature.
 ---
 
 # Housekeeping
@@ -18,12 +18,12 @@ only what this file says is safe to fix.**
 python scripts/housekeeping.py
 ```
 
-It regenerates the map, then reports on four things it cannot decide for
+It rebuilds the knowledge graph, then reports on things it cannot decide for
 itself. Take them in turn:
 
-**Map freshness.** Regenerating is safe and automatic -- the generated half is
-derived from source. If it says REGENERATED, look at `git diff context/MAP.md`
-and mention what moved. Do not hand-edit anything between the markers.
+**Knowledge graph.** `graphify update .` rebuilds the code graph locally, with
+no model calls, into git-ignored `graphify-out/` -- always safe. If the CLI is
+missing, say so: whoever calls the security agent depends on the graph.
 
 **Modules the map does not name.** Each is either a feature that needs a row
 in section 2, or plumbing that never will. Judge it: `GalleryFilter` is a
@@ -33,7 +33,7 @@ This is the one finding worth fixing on the spot -- the map is the thing every
 other agent depends on.
 
 **Modules nothing imports.** Barrels count as importers, so a hit here means
-genuinely nothing references it. Confirm against the map's import graph before
+genuinely nothing references it. Confirm with `graphify affected` before
 suggesting a delete, and **never delete without asking** -- `AGENTS.md`
 section 8 and `ai-interactions.md` both require it.
 
@@ -48,6 +48,12 @@ load-bearing. Only the first two are worth removing.
 History section describes work that shipped, the history belongs in
 `STATUS.md` and the file should be cleared for what is next. Say so; clearing
 it is the owner's call.
+
+**Auto-loaded context.** What every session reads before the first message,
+followed through `@` imports. Over ~8k tokens means an `@` has crept into a
+file that is itself imported -- a reading list turned into a loading list.
+That is how `AGENTS.md` section 8 once loaded every doc, ~45k tokens. Convert
+it back to a plain link.
 
 ## 2. The build
 

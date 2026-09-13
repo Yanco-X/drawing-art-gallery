@@ -3,14 +3,15 @@
     python scripts/housekeeping.py
 
 Prints a report and exits 0 always -- these are observations for a human or
-an agent to weigh, not a gate. Nothing is modified except the generated half
-of context/MAP.md, which is derived and safe to rewrite.
+an agent to weigh, not a gate. Nothing tracked is modified: the knowledge
+graph in graphify-out/ is rebuilt, and that directory is git-ignored.
 """
 
 from __future__ import annotations
 
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
@@ -31,20 +32,25 @@ def rule(title: str) -> None:
     print(f"\n{title}\n{'-' * len(title)}")
 
 
-def map_freshness() -> None:
-    rule("1. Map freshness")
-    before = (ROOT / "context" / "MAP.md").read_text(encoding="utf-8")
-    subprocess.run([sys.executable, str(ROOT / "scripts" / "build_map.py")],
-                   capture_output=True, cwd=ROOT)
-    after = (ROOT / "context" / "MAP.md").read_text(encoding="utf-8")
-    print("REGENERATED - the map was stale and is now current. Review the diff."
-          if before != after else "current.")
+def graph_freshness() -> None:
+    rule("1. Knowledge graph")
+    exe = shutil.which("graphify")
+    if exe is None:
+        print("graphify is not installed -- `uv tool install graphifyy`.")
+        return
+    result = subprocess.run([exe, "update", "."], capture_output=True, text=True,
+                            encoding="utf-8", errors="replace", cwd=ROOT)
+    lines = [l for l in result.stdout.splitlines() if "nodes" in l]
+    if result.returncode != 0 or not lines:
+        print("rebuild failed:")
+        print((result.stderr or result.stdout).strip()[-400:])
+        return
+    print(lines[-1].strip())
 
 
 def unmapped() -> None:
     rule("2. Modules the hand-written map does not name")
-    hand = (ROOT / "context" / "MAP.md").read_text(encoding="utf-8").split(
-        "<!-- generated:start -->")[0]
+    hand = (ROOT / "context" / "MAP.md").read_text(encoding="utf-8")
     misses = []
     for p in sorted(SRC.rglob("*.ts*")):
         stem = p.name.rsplit(".", 1)[0]
@@ -80,7 +86,7 @@ def orphans() -> None:
     print("\n".join(f"  {d}" for d in dead) if dead else "none.")
     if dead:
         print("\n  -> Nothing references these, barrels included. Confirm"
-              "\n     against the map import graph before deleting.")
+              "\n     against `graphify affected` before deleting.")
 
 
 def comment_budget() -> None:
@@ -130,13 +136,42 @@ def loose_ends() -> None:
               "\n     shipped work it is history, and history goes to STATUS.md.")
 
 
+IMPORT = re.compile(r"(?<![\w`/])@([\w][\w./-]*\.md)")
+
+
+def autoload_budget() -> None:
+    rule("6. What every session loads before the first message")
+    loaded: list[pathlib.Path] = []
+
+    def follow(path: pathlib.Path, depth: int) -> None:
+        if depth > 5 or path in loaded or not path.exists():
+            return
+        loaded.append(path)
+        for m in IMPORT.finditer(path.read_text(encoding="utf-8")):
+            follow((path.parent / m.group(1)).resolve(), depth + 1)
+
+    for entry in (ROOT / "CLAUDE.md", ROOT / ".claude" / "CLAUDE.md"):
+        follow(entry.resolve(), 0)
+    total = 0
+    for p in loaded:
+        tok = len(p.read_text(encoding="utf-8")) // 4
+        total += tok
+        print(f"  {tok:>6} tok  {p.relative_to(ROOT).as_posix()}")
+    print(f"  {total:>6} tok  total")
+    if total > 8000:
+        print("\n  -> An @path inside a file that is itself imported is another"
+              "\n     import. Make reading lists plain links: that is how"
+              "\n     AGENTS.md section 8 once loaded every doc, ~45k tokens.")
+
+
 def main() -> None:
     print("Housekeeping\n============")
-    map_freshness()
+    graph_freshness()
     unmapped()
     orphans()
     comment_budget()
     loose_ends()
+    autoload_budget()
     print("\nBuild and lint are not run here -- see the skill.")
 
 

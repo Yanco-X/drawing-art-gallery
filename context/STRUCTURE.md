@@ -1,9 +1,8 @@
 # Project Structure
 
 Why the codebase is shaped the way it is. **For where a given feature lives,
-read `context/MAP.md`** -- it carries the file-by-file index, and its route
-table and import graph are generated, so it does not go stale the way a tree
-drawn by hand does.
+read `context/MAP.md`**; for what depends on what, ask the knowledge graph --
+`graphify affected`, `graphify path`. `CLAUDE.md` says which to use when.
 
 A modularized monolith. `frontend/` and `backend/` are separate codebases in
 one repository, deployed together.

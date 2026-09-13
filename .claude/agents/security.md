@@ -12,6 +12,12 @@ what you find and hand it back.
 specification you are auditing against. `context/WAIVED-PIECES.md` section 3
 carries the read-gate rules.
 
+**Graph output may be in your prompt.** You cannot run graphify, so the caller
+runs `graphify affected "require_owner"` and `graphify affected "is_owner"`
+before spawning you. Treat them as the list of routes and read paths to check,
+then confirm each against the source -- the graph is derived from the code, and
+a stale one misses a new route. If they are absent, grep.
+
 ## What to check
 
 The gallery is public and single-owner. Every finding is a version of one

@@ -172,24 +172,29 @@ proved something they knew instantly, and a "restore" that silently undid a
 change they meant to make. One question is cheaper than either.
 
 ## 8. Context & References
-- @context/MAP.md is the index: the project's vocabulary, every feature and the
-  files that hold it, the fixed points, and where new code goes. Answer any
-  "where is X" from it before searching. Run `python scripts/build_map.py`
-  after adding, moving or deleting a file so its generated half stays true.
+
+Open these on demand. Only `CLAUDE.md`, this file and `context/MAP.md` are
+loaded automatically; everything below is a menu, not a reading list.
+
+- [`context/MAP.md`](context/MAP.md) is loaded for you already. It is the index:
+  the project's vocabulary, every feature and the files that hold it, the
+  fixed points, and where new code goes. Answer any "where is X" from it
+  before searching; for what depends on what, use graphify -- see `CLAUDE.md`.
+  A new feature gets a row, and `/housekeeping` reports any module without one.
 - Take into account md files for context, these files are meant to be read.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
-- @context/project-overview.md contains full in depth description of the project, its goals, and context.
-- @context/DESIGN.md contains the design guidelines and rules.
-- @context/STORAGE.md contains how data and image files are stored, the upload pipeline, and the storage adapter.
-- @context/WAIVED-PIECES.md contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
-- @context/AUTH.md contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
-- @context/gallery-admin-access-handoff.md contains the admin-access strategies that AUTH.md was decided against.
-- @context/PROJECT.md contains the project pillars, goals.
-- @context/STRUCTURE.md contains the project structure.
-- @README.md contains the overall project context and roadmap.
-- @context/ai-interactions.md contains the AI interaction guidelines.
-- @context/coding-preferences.md contains in depth coding preferences and rules.
-- @context/current-feature.md contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
+- [`context/project-overview.md`](context/project-overview.md) contains full in depth description of the project, its goals, and context.
+- [`context/DESIGN.md`](context/DESIGN.md) contains the design guidelines and rules.
+- [`context/STORAGE.md`](context/STORAGE.md) contains how data and image files are stored, the upload pipeline, and the storage adapter.
+- [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
+- [`context/AUTH.md`](context/AUTH.md) contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
+- [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md) contains the admin-access strategies that AUTH.md was decided against.
+- [`context/PROJECT.md`](context/PROJECT.md) contains the project pillars, goals.
+- [`context/STRUCTURE.md`](context/STRUCTURE.md) contains the project structure.
+- [`README.md`](README.md) contains the overall project context and roadmap.
+- [`context/ai-interactions.md`](context/ai-interactions.md) contains the AI interaction guidelines.
+- [`context/coding-preferences.md`](context/coding-preferences.md) contains in depth coding preferences and rules.
+- [`context/current-feature.md`](context/current-feature.md) contains the current feature being worked on. This file is meant to be updated as the feature is being worked on. Clean this file before starting a new feature.
 - context/DEPLOYMENT-NOTES.md contains the security findings to close before launch. Deliberately not @-loaded: open it before touching config, cookies, storage or deployment. It is git-ignored and exists only on the owner's machine -- a public list of open weaknesses is a map for an attacker. If it is missing, ask; never recreate it in a tracked file.
 
 ## 9. Security
@@ -264,6 +269,12 @@ For changes to the boundary itself: `auth.py`, the session or keyhole code, a
 new route, a new visibility parameter, the upload pipeline, `storage.py`, or
 anything else that changes what a visitor can see. Run it on the change, not
 the repository. Routine work under the rules above does not need it.
+
+Hand it the graph first. It is read-only and cannot run graphify, so the
+caller does: `graphify update .` if the graph is missing, then
+`graphify affected "require_owner"` and `graphify affected "is_owner"`, and
+both outputs go in the prompt. Together they list the routes and read paths on
+the boundary by `file:line` -- the set the agent checks against.
 
 # Commands
 

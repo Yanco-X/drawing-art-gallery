@@ -24,3 +24,8 @@ service-account*.json
 # Open security findings. Local only: a public list of unfixed weaknesses is
 # a map for an attacker. See AGENTS.md section 8.
 context/DEPLOYMENT-NOTES.md
+
+# Derived. graphify rebuilds these from the source on demand, and the graph
+# churns on every build.
+graphify-out/
+*.graphify-bak

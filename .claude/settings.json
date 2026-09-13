@@ -3,11 +3,16 @@
     "allow": [
       "Bash(docker compose *)",
       "Bash(rg *)",
-      "Bash(python scripts/build_map.py)",
       "Bash(git ls-files *)",
       "Bash(git log *)",
       "Bash(git diff *)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(graphify affected *)",
+      "Bash(graphify path *)",
+      "Bash(graphify explain *)",
+      "Bash(graphify query *)",
+      "Bash(graphify update *)",
+      "Bash(python scripts/housekeeping.py)"
     ]
   }
 }
