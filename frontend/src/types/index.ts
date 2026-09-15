@@ -136,3 +136,49 @@ export interface NewCollection {
   isPublic: boolean;
   pieceIds: string[];
 }
+
+export type VisitEvent =
+  | { kind: 'visit' }
+  | { kind: 'piece_view' | 'detailed_view'; pieceId: string }
+  | { kind: 'collection_view'; collectionId: string };
+
+// Both ends inclusive, as YYYY-MM-DD in the owner's own calendar.
+export interface VisitRange {
+  from: string;
+  to: string;
+}
+
+export interface DailyVisits {
+  date: string;
+  unique: number;
+  visits: number;
+}
+
+export interface PieceViewers {
+  id: string;
+  title: string;
+  viewers: number;
+  detailedViewers: number;
+}
+
+export interface CollectionViewers {
+  id: string;
+  name: string;
+  slug: string;
+  viewers: number;
+}
+
+export interface VisitSummary {
+  range: VisitRange & { tz: string };
+  visitors: {
+    unique: number;
+    visits: number;
+    previousUnique: number;
+    previousVisits: number;
+  };
+  // Distinct visitors per device, so the two can sum past `unique`.
+  devices: { mobile: number; desktop: number };
+  daily: DailyVisits[];
+  pieces: PieceViewers[];
+  collections: CollectionViewers[];
+}

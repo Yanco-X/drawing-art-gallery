@@ -10,7 +10,11 @@ import type {
   Role,
   Social,
   SocialDraft,
+  VisitEvent,
+  VisitRange,
+  VisitSummary,
 } from '../types';
+import { currentVisitorId } from '../lib/visitorId';
 
 export class ApiError extends Error {
   status: number;
@@ -94,6 +98,32 @@ export const fetchPiece = async (id: string): Promise<PieceResult> => {
 
 export const fetchPieces = async (): Promise<Piece[]> => {
   const response = await fetch('/api/pieces');
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// Neither awaited nor thrown: a count that fails must never reach a page.
+export const recordEvent = (event: VisitEvent): void => {
+  const visitorId = currentVisitorId();
+  if (!visitorId) return;
+  fetch('/api/visits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...event, visitorId }),
+    keepalive: true,
+  }).catch(() => {});
+};
+
+export const fetchVisitSummary = async (
+  range: VisitRange,
+): Promise<VisitSummary> => {
+  const query = new URLSearchParams({
+    from: range.from,
+    to: range.to,
+    // Days are bucketed in this zone, so "today" ends at the owner's midnight.
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+  const response = await fetch('/api/visits/summary?' + query);
   if (!response.ok) await raise(response);
   return response.json();
 };

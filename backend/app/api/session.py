@@ -14,16 +14,13 @@ from ..auth import is_owner, require_owner
 from ..db import SessionLocal
 from ..errors import ApiError
 from ..models import User
+from .helpers import client_ip
 
 bp = Blueprint("session", __name__, url_prefix="/session")
 
 
 def _attempts():
     return current_app.extensions["login_attempts"]
-
-
-def _client() -> str | None:
-    return request.remote_addr
 
 
 @bp.post("")
@@ -35,7 +32,7 @@ def sign_in():
     from "wrong password" would tell a stranger which half to work on.
     """
     limiter = _attempts()
-    client = _client()
+    client = client_ip()
     if limiter.is_blocked(client):
         raise ApiError("Too many attempts. Try again later.", status=429)
 
@@ -45,7 +42,7 @@ def sign_in():
     ).first()
 
     if owner is None or not check_password_hash(owner.password_hash, password):
-        limiter.record_failure(client)
+        limiter.record(client)
         raise ApiError("Those credentials were not accepted.", status=401)
 
     limiter.clear(client)

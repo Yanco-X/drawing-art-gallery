@@ -177,12 +177,27 @@ check(
 )
 
 
+print("\n== a visitor may be counted, and may not read the count ==")
+res = client.post(
+    "/api/visits",
+    json={"kind": "piece_view", "visitorId": "11111111-1111-1111-1111-111111111111",
+          "pieceId": hung},
+    headers={"User-Agent": "Mozilla/5.0"},
+)
+check("a visit event is accepted", res.status_code == 204, str(res.status_code))
+check("and says nothing back", res.get_data() == b"")
+check(
+    "the visit summary needs the owner",
+    client.get("/api/visits/summary?from=2026-09-01&to=2026-09-01").status_code == 401,
+)
+
+
 print("\n== a visitor may not write ==")
 # Walked from the url map rather than listed by hand: a mutation added
 # later is covered by this suite the day it is written, without anyone
 # remembering to come back here.
 SAMPLE = {"uuid": "00000000-0000-0000-0000-000000000000", "string": "x", "path": "x"}
-skipped = {("/api/session", "POST")}
+skipped = {("/api/session", "POST"), ("/api/visits", "POST")}
 mutations = []
 for rule in app.url_map.iter_rules():
     path = str(rule)

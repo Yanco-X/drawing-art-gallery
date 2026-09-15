@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AllWorkSection } from '../components/AllWorkSection';
 import { CollectionArrange } from '../components/CollectionArrange';
@@ -14,7 +14,7 @@ import {
   readTrail,
   serialiseTrail,
 } from '../lib/origin';
-import { fetchCollection } from '../services';
+import { fetchCollection, recordEvent } from '../services';
 import type { Collection } from '../types';
 
 const BackLink = () => (
@@ -65,6 +65,11 @@ const CollectionPage = () => {
 
   const fetched = load.status === 'ready' ? load.data : null;
   const collection = edited && edited.slug === slug ? edited : fetched;
+
+  const shownId = collection?.id ?? null;
+  useEffect(() => {
+    if (shownId) recordEvent({ kind: 'collection_view', collectionId: shownId });
+  }, [shownId]);
 
   if (load.status === 'loading') {
     return (

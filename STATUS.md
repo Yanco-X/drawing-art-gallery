@@ -31,7 +31,7 @@ drawing-art-gallery/
 │   │   └── services/      storage adapters, images, tiles, slugs
 │   ├── migrations/        alembic, 7 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
-│   └── tests/             8 suites, 321 checks
+│   └── tests/             10 suites, 408 checks
 ├── frontend/              77 .ts/.tsx files
 │   └── src/
 │       ├── components/    44 (incl. icons.tsx and platform-icons.tsx)
@@ -142,8 +142,8 @@ Bucket names and the endpoint still default in `app/config.py` — bucket
 
 ## 3. Data model
 
-Eight tables: `pieces`, `collections`, `collection_pieces`, `tags`,
-`piece_tags`, `users`, `socials`, `alembic_version`.
+Nine tables: `pieces`, `collections`, `collection_pieces`, `tags`,
+`piece_tags`, `users`, `socials`, `visit_events`, `alembic_version`.
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
@@ -214,9 +214,15 @@ simply not added, and deleting one is a click.
 set-owner`. `pieces.user_id` is still null on every row -- authorship was
 never the point of the table.
 
+**`visit_events`** — id, `visitor_id`, kind, `piece_id`, `collection_id`,
+device, `created_at`. One row per counted look at the gallery, deduplicated
+by `visitor_id` when read rather than counted into a column. Both foreign
+keys cascade, so deleting a piece or a collection deletes its stats; waiving
+keeps them. [`context/METRICS.md`](context/METRICS.md) holds the design.
+
 ### Migrations
 
-Nine revisions, head `d1f4a7b93c26`. History is immutable — add a
+Ten revisions, head `7c2e5a9d14b8`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -229,6 +235,7 @@ f3a17c0d5b92  add pieces.spotlight_order
 b8e42d1a6c37  add pieces.focal_x and pieces.focal_y
 c5d93e2f8a41  add pieces.focal_zoom
 d1f4a7b93c26  focal_zoom becomes a multiple of fit
+7c2e5a9d14b8  add visit_events
 ```
 
 ### Two model notes worth carrying
@@ -300,7 +307,7 @@ Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ## 5. API
 
-21 routes. Everything under `/api`. `[owner]` means the route requires the
+23 routes. Everything under `/api`. `[owner]` means the route requires the
 owner: a session cookie, or `X-Owner-Token` while the development
 credential is still configured — see §7.
 
@@ -348,6 +355,13 @@ credential is still configured — see §7.
 | Method | Path | Notes |
 |---|---|---|
 | `PUT` | `/api/spotlight` `[owner]` | The whole ordered list of piece ids, replaced. At most five, no duplicates, and 409 for a waived one. An empty list restores the default. **There is no GET** — `spotlightOrder` rides along on every piece in `GET /api/pieces`, so the band needs no request of its own |
+
+### Visits
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/visits` | The one visitor-callable write: `{kind, visitorId, pieceId \| collectionId}`. 204 whether stored or dropped -- the owner, bots, waived pieces and draft collections are dropped silently. 1 KB body, 60 a minute per client IP, 10,000 an hour in all |
+| `GET` | `/api/visits/summary` `[owner]` | `?from=&to=&tz=`, at most 366 days. Unique visitors, visits, device split, a row per day, and viewers per piece and per collection, beside the previous period of the same length |
 
 ### Other
 
@@ -484,19 +498,26 @@ and `tests/smoke_visitor.py` is named after it.
 
 ## 8. Verification
 
-Eight suites, 321 checks, no test framework — each is a script that prints
-its results and exits non-zero on failure.
+Ten suites, 408 checks, no test framework — each is a script that prints
+its results and exits non-zero on failure. Counts as of 2026-09-14.
 
 ```bash
 cd backend
 .venv/Scripts/python.exe tests/smoke_collections.py    # 55
-.venv/Scripts/python.exe tests/smoke_uploads.py        # 90
+.venv/Scripts/python.exe tests/smoke_uploads.py        # 117
 .venv/Scripts/python.exe tests/smoke_waived.py         # 40
-.venv/Scripts/python.exe tests/smoke_visitor.py        # 26
+.venv/Scripts/python.exe tests/smoke_visitor.py        # 29
 .venv/Scripts/python.exe tests/smoke_session.py        # 21
 .venv/Scripts/python.exe tests/smoke_socials.py        # 27
+.venv/Scripts/python.exe tests/smoke_spotlight.py      # 35
+.venv/Scripts/python.exe tests/smoke_visits.py         # 56
 .venv/Scripts/python.exe tests/integration_live.py     # 28
 ```
+
+`smoke_visits.py` covers the counting in
+[`context/METRICS.md`](context/METRICS.md): what is stored and what is
+silently dropped, every limit, the cascade on delete, and the owner's
+summary against seeded days in two time zones.
 
 `smoke_visitor.py` asserts the contract in
 [`context/AUTH.md`](context/AUTH.md) §1 with no credentials at all, and
@@ -506,7 +527,7 @@ added later is covered the day it is written. `smoke_session.py` runs with
 depend on the development credential. `smoke_socials.py` covers the list
 the header menu reads, including the url schemes it refuses.
 
-The first six run against an in-memory store and a throwaway database.
+Every smoke suite runs against an in-memory store and a throwaway database.
 **`integration_live.py` runs against the real stack** — a live Flask,
 PostgreSQL and MinIO. It creates a fixture titled `__integration_fixture__`,
 cleans up only that, and asserts the rest of the gallery is untouched. It
@@ -536,6 +557,7 @@ built-in `WebSocket`. Useful, but the owner tests by hand and prefers to.
 | Detailed View — tiles, the viewer, the minimap | Done |
 | Authentication — sessions, the visitor contract, the invisible way in | Done |
 | Socials — a header menu the owner curates | Done |
+| Visit metrics — anonymous counting, the owner's dashboard, the footer opt-out | Done, 2026-09-14 |
 
 **Waived pieces** is specified in full in
 [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) — 12 sections, and
@@ -811,7 +833,7 @@ Carried forward deliberately.
   them in — but it is data entry nobody has done yet.
 - **`-sketchy-art-gallery--project-overview.md`** in the repository root is
   stale and superseded by `context/project-overview.md`. Safe to delete.
-- **No suite looks at the UI.** The 321 checks cover the API, storage and
+- **No suite looks at the UI.** The 408 checks cover the API, storage and
   the image pipeline; nothing asserts that a page renders. Detailed View was
   verified by geometry, network and build, and its blank minimap was then
   found by the owner in use. Authentication was the first feature driven
@@ -847,6 +869,7 @@ Read in this order:
 | [`context/COLLECTIONS.md`](context/COLLECTIONS.md) | Viewing and editing collections; the private-draft rules |
 | [`context/AUTH.md`](context/AUTH.md) | Sessions, the visitor contract, the invisible way in |
 | [`context/DETAILED-VIEW.md`](context/DETAILED-VIEW.md) | The full-window viewer: tiles, zoom, minimap |
+| [`context/METRICS.md`](context/METRICS.md) | Visit counting: the random id, the limits, the dashboard, and how to read the numbers |
 | [`context/gallery-admin-access-handoff.md`](context/gallery-admin-access-handoff.md) | The admin-access strategies `AUTH.md` was decided against |
 | [`context/coding-preferences.md`](context/coding-preferences.md) | How code should read |
 | [`context/current-feature.md`](context/current-feature.md) | Scratch space for the feature in flight |

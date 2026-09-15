@@ -40,6 +40,14 @@ class Config:
     LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
     LOGIN_ATTEMPT_WINDOW = timedelta(minutes=int(os.getenv("LOGIN_WINDOW_MIN", "15")))
 
+    # 1 in production, behind Railway's edge, which sets X-Real-IP to the
+    # caller. Left at 0 there, every visitor shares the proxy's address; set
+    # to 1 anywhere Flask is reachable directly, a client picks its own.
+    TRUST_X_REAL_IP = os.getenv("TRUST_X_REAL_IP", "0") == "1"
+
+    VISITS_PER_CLIENT_PER_MINUTE = 60
+    VISITS_PER_HOUR = 10_000
+
     # Largest upload accepted, before any processing.
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_UPLOAD_MB", "40")) * 1024 * 1024
 

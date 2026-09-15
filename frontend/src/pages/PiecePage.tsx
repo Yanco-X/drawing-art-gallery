@@ -27,6 +27,7 @@ import {
   fetchPiece,
   fetchPieces,
   fetchWaivedPieces,
+  recordEvent,
 } from '../services';
 import type { Collection, Piece } from '../types';
 
@@ -244,6 +245,18 @@ const PiecePage = () => {
   useEffect(() => {
     if (missing && viewing) setParams(queryWith(false), { replace: true });
   }, [missing, viewing, setParams, queryWith]);
+
+  // Keyed on the id, so an edit does not count as another look. The viewer
+  // counts on its own: a `?view=1` arrival and the viewer's own prev/next
+  // never pass through openViewer.
+  const shownId = piece?.id ?? null;
+  const viewedId = viewing ? shownId : null;
+  useEffect(() => {
+    if (shownId) recordEvent({ kind: 'piece_view', pieceId: shownId });
+  }, [shownId]);
+  useEffect(() => {
+    if (viewedId) recordEvent({ kind: 'detailed_view', pieceId: viewedId });
+  }, [viewedId]);
 
   if (load.status === 'loading') {
     return (

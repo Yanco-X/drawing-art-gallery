@@ -19,6 +19,8 @@ export {
   signOut,
   fetchRole,
   fetchSocials,
+  fetchVisitSummary,
+  recordEvent,
   saveSocials,
   setSpotlight,
   whenSessionLapses,

@@ -119,6 +119,8 @@ Four steps, from loudest to quietest. Picking the right step is most of the work
 | `muted` | Nav links, control labels | `#97958d` | `#6f6c63` |
 | `faint` | Meta, counts, eyebrow, footer, "View all" | `#62605a` | `#9a968b` |
 
+One more token borrows from this ladder without being text: `chart-quiet`, the series drawn for context beside an accent one on the metrics chart. It is `faint` on dark and `muted` on light, because the gray that stays distinguishable from the gold differs by ground -- measured with a palette validator, and recorded in `METRICS.md` section 10 rather than judged by eye.
+
 ### Surface and structure
 
 | Token | Role | Dark | Light |
@@ -494,7 +496,7 @@ Deleting a piece removes the row, the original, and both renditions, with no und
 
 ### Footer
 
-Top border in `line`, 28px vertical padding, content split left and right and allowed to wrap. Both strings are 12px `faint`.
+Top border in `line`, 28px vertical padding, content split left and right and allowed to wrap. Both strings are 12px `faint`. Beside the wordmark, in the same 12px `faint`, a sentence says anonymous visits are counted and carries the opt-out as an underlined `SUBTLE_ACTION` -- the notice and objection `METRICS.md` section 7 requires. It wraps under the wordmark before the row itself wraps.
 
 ## Implementation Notes
 

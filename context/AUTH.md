@@ -41,12 +41,13 @@ list requires the owner.
 | See a piece's public memberships | The `collections` array, filtered to public ones |
 | Move through the work | Prev/next, `?view=1` deep links, collection slugs that survive a rename |
 | See where the artist is | The socials menu. There is nothing private in it -- a link the owner is not ready to share is not added |
+| Be counted | `POST /api/visits`: a random id and what was viewed, nothing else, and only into its own table. 204 whether stored or dropped. The footer's opt-out ends it -- `METRICS.md` |
 
 ### A visitor may not
 
 | | |
 |---|---|
-| Write anything | Every mutation answers 401 |
+| Write anything else | Every other mutation answers 401 |
 | Reach the reserve | `GET /api/pieces?waived=true` answers 401 |
 | Reach a waived piece | `GET /api/pieces/<id>` answers 410 -- see §2 |
 | Reach a draft collection | `GET /api/collections/<slug>` answers 404 |
@@ -88,6 +89,7 @@ and only makes the gallery look broken. So:
 | Unknown id | 404, silence |
 | Draft collection | 404, silence |
 | Collection turned private | 404, silence |
+| Visit event naming any of the above | 204, silence -- the same answer as one that was stored |
 
 The split is not arbitrary and does not need a new column to hold it. A
 piece carries `waived_at`, which is a record that it was once exhibited. A

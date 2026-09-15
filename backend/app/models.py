@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     Date,
     DateTime,
@@ -268,4 +269,38 @@ class Tag(Base):
 
     pieces: Mapped[list["Piece"]] = relationship(
         secondary=piece_tags, back_populates="tags"
+    )
+
+
+class VisitEvent(Base):
+    """One counted look at the gallery -- context/METRICS.md."""
+
+    __tablename__ = "visit_events"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'visit' AND piece_id IS NULL AND collection_id IS NULL)"
+            " OR (kind IN ('piece_view', 'detailed_view')"
+            " AND piece_id IS NOT NULL AND collection_id IS NULL)"
+            " OR (kind = 'collection_view'"
+            " AND collection_id IS NOT NULL AND piece_id IS NULL)",
+            name="ck_visit_events_target",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    visitor_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    # CASCADE, not SET NULL: a deleted piece's stats go with it, and the check
+    # above would refuse a view left with no target.
+    piece_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("pieces.id", ondelete="CASCADE")
+    )
+    collection_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("collections.id", ondelete="CASCADE")
+    )
+
+    device: Mapped[str] = mapped_column(String(10), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
     )

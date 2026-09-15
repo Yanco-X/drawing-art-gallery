@@ -22,6 +22,7 @@
   --sa-muted: #97958d;
   --sa-faint: #62605a;
   --sa-danger: #d77868;
+  --sa-chart-quiet: #62605a;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #262629 0px,
@@ -48,6 +49,7 @@
     --sa-muted: #6f6c63;
     --sa-faint: #9a968b;
     --sa-danger: #a33f2f;
+    --sa-chart-quiet: #6f6c63;
     --sa-hatch: repeating-linear-gradient(
       45deg,
       #ece8e0 0px,
@@ -72,6 +74,7 @@
   --sa-muted: #6f6c63;
   --sa-faint: #9a968b;
   --sa-danger: #a33f2f;
+  --sa-chart-quiet: #6f6c63;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #ece8e0 0px,
@@ -95,6 +98,7 @@
   --sa-muted: #97958d;
   --sa-faint: #62605a;
   --sa-danger: #d77868;
+  --sa-chart-quiet: #62605a;
   --sa-hatch: repeating-linear-gradient(
     45deg,
     #262629 0px,
@@ -125,6 +129,10 @@
   /* Destructive confirmation only. Not a second accent: it names one
      kind of consequence and is spent nowhere else. */
   --color-danger: var(--sa-danger);
+  /* The series drawn for context beside an accent one. Per theme because
+     the gray that stays distinct from the gold differs on each ground:
+     muted on light, faint on dark -- measured, not eyeballed. */
+  --color-chart-quiet: var(--sa-chart-quiet);
 
   /* Shared by both themes. */
   --color-accent: #c9a86a;

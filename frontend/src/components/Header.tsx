@@ -29,9 +29,15 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
     },
   ];
 
-  // The reserve is the owner's own view; a visitor is not told it exists.
+  // The reserve and the counts are the owner's own views; a visitor is not
+  // told they exist.
   if (role === 'owner') {
     items.push({ label: 'Waived', to: '/waived', active: inReserve });
+    items.push({
+      label: 'Metrics',
+      to: '/metrics',
+      active: pathname.startsWith('/metrics'),
+    });
   }
   return items;
 };

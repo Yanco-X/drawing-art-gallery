@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from flask import Flask, jsonify, send_from_directory
 
@@ -8,7 +9,7 @@ from .cli import register_cli
 from .config import Config
 from .db import SessionLocal, init_engine
 from .errors import register_error_handlers
-from .ratelimit import AttemptLimiter
+from .ratelimit import AttemptLimiter, WindowCounter
 from .storage import LocalStorage, build_storage
 
 
@@ -26,6 +27,12 @@ def create_app(
     app.extensions["storage"] = storage or build_storage(config_object)
     app.extensions["login_attempts"] = AttemptLimiter(
         app.config["LOGIN_MAX_ATTEMPTS"], app.config["LOGIN_ATTEMPT_WINDOW"]
+    )
+    app.extensions["visits_per_client"] = AttemptLimiter(
+        app.config["VISITS_PER_CLIENT_PER_MINUTE"], timedelta(minutes=1)
+    )
+    app.extensions["visits_budget"] = WindowCounter(
+        app.config["VISITS_PER_HOUR"], timedelta(hours=1)
     )
 
     init_auth(app)
