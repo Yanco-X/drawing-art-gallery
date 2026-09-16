@@ -157,6 +157,12 @@ storage is the code that will run in production.
 Going live later means pointing `S3_ENDPOINT` at the real provider and
 running a one-off re-upload. The application code is already proven.
 
+**`S3_MANAGE_BUCKETS=0` in production** (added 2026-09-15). At `1`, the
+default, the app creates both buckets and sets the public-read policy at
+startup, which is what MinIO needs. Hosted buckets are created and exposed
+in the provider's dashboard instead, and Cloudflare R2 does not implement
+the policy call at all, so there the app must not try.
+
 ### Buckets
 
 | Bucket | Contents | Access |

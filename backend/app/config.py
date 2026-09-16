@@ -80,6 +80,11 @@ class Config:
     S3_REGION = os.getenv("S3_REGION", "us-east-1")
     # Set to a CDN domain in production; defaults to the bucket on the endpoint.
     S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL") or None
+    # 1 creates the two buckets and sets the public-read policy at startup,
+    # which is how development against MinIO gets them. 0 in production:
+    # hosted buckets are made and exposed in the provider's dashboard, and
+    # R2 does not implement the policy call at all.
+    S3_MANAGE_BUCKETS = os.getenv("S3_MANAGE_BUCKETS", "1") == "1"
 
 
 def production_setting_problems(env: Mapping[str, str]) -> list[str]:

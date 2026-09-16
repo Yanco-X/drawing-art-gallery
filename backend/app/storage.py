@@ -238,7 +238,8 @@ def build_storage(config) -> Storage:
             region=config.S3_REGION,
             public_base_url=config.S3_PUBLIC_BASE_URL,
         )
-        storage.ensure_buckets()
+        if config.S3_MANAGE_BUCKETS:
+            storage.ensure_buckets()
         return storage
     if backend == "memory":
         return MemoryStorage()
