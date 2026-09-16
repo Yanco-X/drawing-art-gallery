@@ -12,6 +12,7 @@ inside a comment that said the opposite.
 import io
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,7 +24,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.db import Base  # noqa: E402
-from app.storage import MemoryStorage  # noqa: E402
+from app.storage import LocalStorage, MemoryStorage  # noqa: E402
 
 OWNER = {"X-Owner-Token": "test-token"}
 checks = []
@@ -44,6 +45,9 @@ class TestConfig(Config):
     OWNER_API_TOKEN = "test-token"
     DEBUG = False
     STORAGE_BACKEND = "memory"
+    # Small, so the check that an oversized body answers as JSON need not
+    # send 40 MB. The suite's own uploads are a few kilobytes.
+    MAX_CONTENT_LENGTH = 1024 * 1024
 
 
 storage = MemoryStorage()
@@ -60,6 +64,8 @@ app = create_app(
 from app import db as db_module  # noqa: E402
 
 Base.metadata.create_all(db_module.engine)
+# Crashes on purpose, for the check that a crash answers as JSON.
+app.add_url_rule("/api/__crash", "crash", lambda: 1 / 0)
 client = app.test_client()
 
 
@@ -228,6 +234,56 @@ res = client.get("/api/session/me")
 check("and the caller is told they are a visitor",
       res.status_code == 200 and res.get_json()["role"] == "visitor",
       str(res.get_json()))
+
+
+print("\n== a write names the page it came from ==")
+event = {"kind": "visit", "visitorId": "11111111-1111-1111-1111-111111111111"}
+browser = {"User-Agent": "Mozilla/5.0"}
+check("a write from another host is refused",
+      client.post("/api/visits", json=event,
+                  headers={**browser, "Origin": "https://images.example.test"}).status_code == 403)
+check("a write from this host is not",
+      client.post("/api/visits", json=event,
+                  headers={**browser, "Origin": "http://localhost"}).status_code == 204)
+
+
+print("\n== errors answer as JSON ==")
+res = client.post("/api/session", data=b"x" * (2 * 1024 * 1024),
+                  content_type="application/json")
+check("a body over the limit answers 413 as JSON",
+      res.status_code == 413 and res.is_json, f"{res.status_code} {res.content_type}")
+res = client.get("/api/__crash")
+check("a crash answers 500 as JSON, with no traceback",
+      res.status_code == 500 and res.is_json
+      and "Traceback" not in res.get_data(as_text=True),
+      f"{res.status_code} {res.content_type}")
+check("and API answers are never cached",
+      res.headers.get("Cache-Control") == "private, no-store",
+      str(res.headers.get("Cache-Control")))
+
+
+print("\n== the archival original is never served ==")
+# Last, because a second app rebinds the shared session to its own engine.
+local_root = tempfile.mkdtemp()
+piece_key = "0f0f0f0f-0f0f-0f0f-0f0f-0f0f0f0f0f0f"
+os.makedirs(os.path.join(local_root, piece_key))
+for name in ("original.jpg", "thumb.webp"):
+    with open(os.path.join(local_root, piece_key, name), "wb") as handle:
+        handle.write(b"bytes")
+
+
+class LocalConfig(TestConfig):
+    STORAGE_BACKEND = "local"
+    UPLOAD_DIR = local_root
+
+
+local = create_app(
+    LocalConfig, database_url="sqlite+pysqlite:///:memory:", storage=LocalStorage(local_root)
+).test_client()
+check("a derivative is served under the local backend",
+      local.get(f"/media/{piece_key}/thumb.webp").status_code == 200)
+check("the original is not",
+      local.get(f"/media/{piece_key}/original.jpg").status_code == 404)
 
 
 passed = sum(1 for _, ok, _ in checks if ok)

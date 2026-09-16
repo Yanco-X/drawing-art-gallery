@@ -1,12 +1,13 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, abort, jsonify, request, send_file, send_from_directory
+from werkzeug.utils import safe_join
 
 from .api import api_bp
 from .auth import init_auth
 from .cli import register_cli
-from .config import Config
+from .config import Config, production_setting_problems
 from .db import SessionLocal, init_engine
 from .errors import register_error_handlers
 from .ratelimit import AttemptLimiter, WindowCounter
@@ -19,6 +20,15 @@ def create_app(
     engine_options: dict | None = None,
     storage=None,
 ) -> Flask:
+    if config_object is Config:
+        # Built from the environment, so the environment is what is checked.
+        # The suites pass subclasses, which set exactly what they test.
+        problems = production_setting_problems(os.environ)
+        if problems:
+            raise RuntimeError(
+                "Refusing to start with development settings: " + "; ".join(problems)
+            )
+
     app = Flask(__name__)
     app.config.from_object(config_object)
 
@@ -40,6 +50,14 @@ def create_app(
     register_error_handlers(app)
     app.register_blueprint(api_bp)
 
+    @app.after_request
+    def never_cache_api(response):
+        # Owner and visitor get different answers from one address, so
+        # nothing between them may keep a copy.
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "private, no-store"
+        return response
+
     @app.get("/api/health")
     def health():
         return jsonify(
@@ -55,8 +73,15 @@ def create_app(
 
         @app.get("/media/<path:key>")
         def media(key: str):
+            # Only the derivatives are public, as the s3 bucket split has it.
+            # The archival original never leaves storage by URL.
+            if "/original." in key:
+                abort(404)
             os.makedirs(upload_dir, exist_ok=True)
             return send_from_directory(upload_dir, key)
+
+    if os.path.isdir(app.config["FRONTEND_DIST"]):
+        serve_built_site(app)
 
     @app.teardown_appcontext
     def remove_session(exception=None):
@@ -67,3 +92,35 @@ def create_app(
         SessionLocal.remove()
 
     return app
+
+
+def serve_built_site(app: Flask) -> None:
+    """
+    Serve the built frontend from this app, so the site and the API answer on
+    one origin. Registered only where a build exists: in development Vite
+    serves the site and proxies /api here.
+    """
+    dist = app.config["FRONTEND_DIST"]
+
+    @app.get("/")
+    def home():
+        return site("")
+
+    @app.get("/<path:path>")
+    def site(path: str):
+        # Unknown API paths keep the API's own JSON 404. Everything else
+        # falls back to index.html, which is what a client-side router needs
+        # to answer a deep link like /piece/<id>.
+        if path.startswith(("api/", "media/")):
+            abort(404)
+
+        target = safe_join(dist, path) if path else None
+        if target and os.path.isfile(target):
+            response = send_from_directory(dist, path)
+            if path.startswith("assets/"):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return response
+
+        response = send_file(os.path.join(dist, "index.html"))
+        response.headers["Cache-Control"] = "no-cache"
+        return response

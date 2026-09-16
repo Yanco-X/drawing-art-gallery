@@ -1,3 +1,6 @@
+# What the app needs, with floors. The container installs requirements.lock,
+# the exact versions this was last tested with; regenerate it after any
+# change here (the command is at the top of that file).
 Flask>=3.1
 SQLAlchemy>=2.0.36
 alembic>=1.14
@@ -13,3 +16,6 @@ Pillow>=11.0
 # S3-compatible object storage. Works against AWS S3, Cloudflare R2,
 # Backblaze, and MinIO -- only the endpoint and credentials differ.
 boto3>=1.35
+# The production server, run in the container. Flask's own server is for
+# development and says so itself on every start.
+gunicorn>=23.0

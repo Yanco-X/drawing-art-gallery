@@ -45,15 +45,25 @@ def _set_membership(session, collection: Collection, piece_ids: list) -> None:
         raise ApiError("pieceIds contains the same piece more than once.")
 
     if parsed:
-        found = set(
-            session.scalars(select(Piece.id).where(Piece.id.in_(parsed))).all()
-        )
+        rows = session.execute(
+            select(Piece.id, Piece.waived_at).where(Piece.id.in_(parsed))
+        ).all()
+        found = {row.id for row in rows}
         missing = [str(pid) for pid in parsed if pid not in found]
         if missing:
             raise ApiError(
                 "Some pieces do not exist.",
                 status=404,
                 details={"missing": missing},
+            )
+        # A row in collection_pieces means the piece is exhibited: the same
+        # refusal set_piece_collections gives, from the other direction.
+        waived = [str(row.id) for row in rows if row.waived_at is not None]
+        if waived:
+            raise ApiError(
+                "Restore these pieces before adding them to collections.",
+                status=409,
+                details={"waived": waived},
             )
 
     collection.piece_links.clear()

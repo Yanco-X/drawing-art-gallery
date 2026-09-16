@@ -1,4 +1,5 @@
 from flask import jsonify
+from werkzeug.exceptions import HTTPException
 
 
 class ApiError(Exception):
@@ -24,3 +25,14 @@ def register_error_handlers(app):
     @app.errorhandler(405)
     def handle_method_not_allowed(_error):
         return jsonify({"error": "Method not allowed"}), 405
+
+    @app.errorhandler(HTTPException)
+    def handle_http_error(error: HTTPException):
+        return jsonify({"error": error.name}), error.code
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(_error: Exception):
+        # Logged in full here; the answer carries none of it. A traceback in
+        # an API response is a map of the server.
+        app.logger.exception("Unhandled error")
+        return jsonify({"error": "Something went wrong."}), 500

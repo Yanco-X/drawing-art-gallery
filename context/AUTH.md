@@ -156,9 +156,14 @@ Two conditions keep that true, and both are worth stating because breaking
 either silently reopens the hole:
 
 1. **No mutation ever moves to GET.** Not planned, and there is no reason to.
-2. **The API stays same-origin with the site.** If deployment splits them,
-   the cookie needs `SameSite=None`, Lax stops protecting anything, and a
-   CSRF token scheme becomes mandatory rather than optional.
+2. **The API stays on the same host as the site.** `SameSite` is
+   same-*site*, not same-origin: a page on a sibling subdomain -- where the
+   images live -- still carries the cookie. So every write also checks its
+   `Origin` header against the request's own host and refuses any other
+   (`refuse_cross_site_writes` in `auth.py`, added 2026-09-15). If
+   deployment ever splits the API onto another domain, the cookie needs
+   `SameSite=None` and that check becomes the only protection rather than
+   the second.
 
 Deployment is undecided, so the code assumes same-origin -- which is what
 the Vite proxy already gives in development -- and the flags are config.

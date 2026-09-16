@@ -140,6 +140,10 @@ check("membership dropped on waive", detail["pieceCount"] == 1, str(detail["piec
 check("the remaining member is the other one",
       [p["title"] for p in detail["pieces"]] == ["Gamma"],
       str([p["title"] for p in detail["pieces"]]))
+res = client.put(f"/api/collections/{cid}/pieces", headers=OWNER, json={"pieceIds": [b, c]})
+check("and it cannot be put back while waived",
+      res.status_code == 409 and res.get_json()["details"]["waived"] == [b],
+      f"{res.status_code} {res.get_json()}")
 check("the waived piece reports no collections", waived["collections"] == [],
       str(waived["collections"]))
 check("cover fell back to the surviving member",

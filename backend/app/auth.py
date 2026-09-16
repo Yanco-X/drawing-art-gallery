@@ -1,6 +1,7 @@
 import hmac
 import uuid
 from functools import wraps
+from urllib.parse import urlsplit
 
 from flask import current_app, request
 from flask_login import LoginManager, current_user
@@ -14,6 +15,7 @@ login_manager = LoginManager()
 
 def init_auth(app) -> None:
     login_manager.init_app(app)
+    app.before_request(refuse_cross_site_writes)
 
     @login_manager.user_loader
     def load_user(user_id: str):
@@ -21,6 +23,22 @@ def init_auth(app) -> None:
             return SessionLocal().get(User, uuid.UUID(user_id))
         except (ValueError, AttributeError, TypeError):
             return None
+
+
+def refuse_cross_site_writes() -> None:
+    """
+    SameSite=Lax keeps a cross-site page from sending the cookie, but
+    same-site is wider than same-origin: a page on a sibling subdomain --
+    where the images live -- would still carry it. The Origin header names
+    the page making the request, so a write from any other host is refused.
+    A request with no Origin, such as curl or the suites, is left to the
+    cookie rules.
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+    origin = request.headers.get("Origin")
+    if origin and urlsplit(origin).netloc != request.host:
+        raise ApiError("Cross-site request refused.", status=403)
 
 
 def _token_matches() -> bool:

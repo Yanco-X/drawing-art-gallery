@@ -1,166 +1,89 @@
 # Current Feature
 
-Gallery filter: a control beside the "All work" heading that narrows the
-grid by typed text, by year, and by collection.
-
-Asked for on 2026-09-08. The classic content filter, built in small passes.
-This pass is the shape of it -- a button, a floating panel, and three
-criteria. More criteria follow.
+First deployment: Railway for the app and Postgres, Cloudflare R2 for the
+images.
 
 ## Status
 
-**Pass 1 in progress.** The button, the row, and the three criteria
-below. No backend change and no new dependency: the landing page already
-holds every piece and every collection, so this is a filter over rows in
-hand.
+**Decided 2026-09-12, work starting 2026-09-15.** Pass 1 is the production
+shape: the frontend and backend built and served as one thing, settings that
+fail loudly rather than quietly, and the images moved from MinIO to R2 by
+configuration.
 
-## What it does
+## The shape
 
-* **A `Filter` button beside the "All work" heading**, in the section header
-  row where the density control already sits. It opens a band beneath the
-  header and above the grid.
-* **Typed text narrows on every field**, not just the title: title,
-  description, medium, year, tags, and the names of the collections a piece
-  belongs to. Applied as typed, with no apply step.
-* **Year is a multi-select dropdown**, a checkbox per year, so several can
-  be held at once. Only years actually present are offered.
-* **Collections are a multi-select dropdown**, a checkbox each with its
-  count. A piece matches if it is in any checked collection.
+* **One Railway service serves the API and the built site** from the same
+  address, so nothing about the session cookie changes.
+* **Postgres on Railway**, reached over its private network.
+* **R2 holds the images**: a public bucket for thumbnails, display images and
+  tiles behind `images.<domain>`, and a private bucket for originals. That is
+  `STORAGE.md`'s two-bucket design with the endpoint pointed elsewhere; the
+  frontend is untouched, because image addresses are composed at read time.
+* **The domain is registered at Cloudflare**, which is what lets R2 serve the
+  public bucket through it. The site's own record starts unproxied, so
+  exactly one proxy -- Railway's edge -- sits in front of Flask.
+
+## Pass 1: the work
+
+* A production web server and start command, and a build recipe that compiles
+  the frontend and runs the backend as one image.
+* Flask serves the built site, with deep links such as `/piece/…` falling
+  back to the app.
+* Startup refuses to run when a production setting is unsafe, and one
+  catch-all error response returns JSON without internals.
+* `Cache-Control: private, no-store` on API responses. Owner and visitor get
+  different answers from the same address, so nothing in front may cache them.
+* An `Origin` check on the routes that change something.
+* `postgresql+psycopg://` for the database address Railway hands out.
+* Bucket setup at startup becomes skippable: hosted buckets are created in a
+  dashboard, and R2 does not implement the policy call the app makes.
+* Pinned backend dependency versions, so the server rebuilds to what was
+  tested.
+
+Then: move the gallery across (a database dump and restore, plus 3,654 image
+files), rehearse on Railway's free address, and attach the domain last.
+
+**The pre-launch checklist lives in `DEPLOYMENT-NOTES.md`** -- what must be
+done before the first public request, and what follows in the first week. It
+is git-ignored and exists only on the owner's machine.
 
 ## Decisions
 
-**Criteria combine with AND, values within a criterion with OR.** Ticking
-2021 and 2022 shows both years; ticking 2021 and the Night Calls collection
-shows 2021 pieces that are also in Night Calls. This is what a filter is
-usually taken to mean, and the alternative -- everything OR'd together --
-widens the result as you add criteria, which reads as broken.
+**Railway with R2, rather than Railway alone.** Railway's buckets are
+private-only, and the detailed view builds tile addresses from a single
+public base, so a Railway-only setup would need a Flask route carrying every
+image byte. R2 serves them directly, at no traffic cost, and needs no new
+code. At gallery traffic both cost about the same; the difference is code and
+what happens under a spike.
 
-**A row in the page, not a panel over it.** Built as a floating
-`.menu-panel` under its button first, and changed the same day. The panel
-worked; it covered the drawings, and on a gallery the work is the one thing
-the interface may not sit on top of. Opening in flow pushes the grid down,
-which costs a scroll and nothing else, and the button still hides the whole
-thing when it is not wanted.
+**The images sit on a sibling subdomain**, which is why the `Origin` check is
+in pass 1 rather than in the first week: `SameSite` is same-site, not
+same-origin.
 
-**So it is a layout reflow, not a surface arriving**, and it takes the
-budget the masonry already spends on density changes -- 300ms on
-`cubic-bezier(0.2, 0, 0, 1)` -- rather than the dialog's 8px rise. Nothing
-is arriving over anything. `grid-template-rows: 0fr -> 1fr` does it, since
-height cannot transition from `auto`, with the child as the clipper so the
-card inside keeps a margin that gets clipped too.
+**One rule decides the client's address.** `client_ip()` already serves both
+the sign-in limit and the visit counter, so production turns on
+`TRUST_X_REAL_IP` only once the edge is proven to overwrite a forged header.
+Tested on the first deploy, before the domain is attached.
 
-**Year and Collections are dropdowns, not rows of checkboxes.** Flat lists
-made the band taller every year the gallery gains; three compact controls
-keep it one line whatever the data does. A native `<select multiple>` was
-not an option -- it renders as a permanently open scrolling box rather than
-a dropdown, needs ctrl-click for a second value, and cannot be styled to
-this set. So the trigger is a button dressed as a field and the menu is real
-checkboxes, which is also what a screen reader can read without every state
-being maintained by hand.
+**Cloudflare in front of the site is deferred.** It is a switch, not a
+migration, once the domain is there. Taking it moves the client's address to
+another header, and both limiters have to change in the same pass.
 
-**A dropdown floating over the grid is fine where the band was not.** The
-band covered the drawings for as long as it was open; a menu is small,
-transient, and opened deliberately. It takes `.menu-panel`, the same surface
-the socials dropdown uses.
-
-**Which cost the band's clip a condition.** `overflow: hidden` is what makes
-the collapse look like one, and it would clip a menu opening out of the
-band -- the menu would simply not be there. So the clip lifts 300ms after
-the row opens, on a discrete transition, and returns in the same frame on
-close. Without `allow-discrete` an older browser un-clips immediately and
-the content spills for 300ms while the row grows: a cosmetic fault on the
-way in, against a dropdown nobody can see.
-
-**Shut, the row is `inert`.** Collapsed content is still focusable and still
-hit-tested; `inert` is what takes it out of the tab order without
-unmounting. The spotlight's inactive slides had to close the same trap.
-
-**It stays mounted while shut**, so a typed query survives being hidden.
-Unmounting would clear the filter every time the row was closed, which is
-not what closing a row means.
-
-**Layout goes on a child of `.filter-row`, never on the element itself.**
-A `flex` utility on that element beats the `grid` the class needs --
-Tailwind emits `@layer utilities` after `@layer components`. The same rule
-guards `.menu-panel`, where the failure was an invisible sheet of buttons
-over the control beneath it.
-
-**Filtering runs in the browser over the list already fetched**, the same
-argument the picker's filter makes: the gallery is small, a round trip per
-keystroke would be slower, and the filter keeps working while the API does
-not.
-
-**Collection membership costs no request.** `GET /api/collections` carries
-`pieceIds` and the landing page already asks for it, so a piece's
-collections are a lookup over rows the page is holding. This is what the
-spotlight's label already does.
-
-**A separate hook from the picker's `usePieceFilter`.** That one is
-title-only with a single year, sitting in a picker's control column. This
-one searches every field and holds sets. They are different filters with
-different shapes, and folding them together would have meant changing the
-picker to serve the gallery. Worth revisiting once this one settles.
-
-**The filter is opt-in.** `AllWorkSection` also draws the collection page
-and the reserve; passing `collections` is what turns the control on, so
-those two are untouched by this pass.
-
-## Sorting, added 2026-09-08
-
-Three keys -- Year, A-Z, Last upload -- on the gallery and inside a
-collection. A `Sort` button in the same header row, whose options open
-**sideways** into the row rather than down or over: the header is mostly
-empty, and the control cluster is the far item of a `space-between` row, so
-widening it moves its left edge and leaves the gallery alone.
-
-* **The default is the order the list arrived in**, not a sort. Newest first
-  on the gallery, the owner's curated order inside a collection. Sorting is
-  an override and `Reset` puts the curation back -- a sort that silently
-  discarded an arrangement somebody dragged into place would be one feature
-  destroying a more expensive one.
-* **Unknowns go last in both directions.** A piece with no year is not a
-  piece from year zero.
-* **One backend field.** `createdDate` is when the work was drawn; "Last
-  upload" wants when it arrived. `created_at` was on the row and not in the
-  payload, and list order could not stand in for it, because a collection
-  arrives curated and its array positions say nothing about upload time.
-  Additive, no migration.
-* **`sortPieces` is exported as a pure function** and was checked against the
-  live gallery: both directions of all three keys, unknowns last either way,
-  input not mutated, nothing lost.
-
-## Keeping the list as you left it, 2026-09-08
-
-The filter and the sort are component state, and `AllWorkSection` remounts
-on every navigation -- so opening a piece and coming back reset both. They
-now live in the same store that already held the scroll and the marker,
-keyed by pathname.
-
-* **Handed to the hooks as initial state**, not applied by an effect, so a
-  return renders narrowed and sorted in one pass instead of flashing the
-  whole gallery first.
-* **They do not expire.** The scroll is spent on the way back; this is not,
-  for the reason the marker is not -- it describes the list rather than one
-  trip to it. Safe because it is visible: both buttons wear the accent while
-  they hold something, and the filter's carries a count.
-* **`sortPieces` moved to `lib/`** so the store could name its types without
-  a lib-to-hooks dependency. The hook is now state only.
-* **The bars keep their position too**, open or shut, not only their values.
-  The sort's open flag moved out of `GallerySort` and up to the section so it
-  could be remembered with the rest; the filter's already lived there.
+**Nothing is decided by default.** The storage backend, debug, the cookie
+flags and the secret are set deliberately in Railway's variables, not
+inherited from a development default.
 
 ## Open questions
 
-**Whether the filter belongs in the URL.** Local state for now, which is
-less machinery. A query string would make a filtered view shareable and
-survive a reload, and the collections work already argued that a set worth
-looking at is worth linking to. Deferred rather than decided -- it is a
-change of shape, not an addition, so it is cheaper to make once the criteria
-have stopped moving.
-
-**Tags are searched but have no control of their own.** Typing a tag name
-finds its pieces, which is most of what `STATUS.md` section 10 wanted from
-tag filtering. A checkbox list of tags is the obvious next criterion.
+* **The domain name.** `yancurations.com` is the candidate; free on `.com`,
+  `.art` and `.gallery` as of 2026-09-15.
+* **The local `visit_events` rows** -- carried across with the dump, or
+  production starts clean. Starting clean is the recommendation: they are the
+  owner's own browsing.
+* **Scheduled volume backups on the Hobby plan.** Confirm at setup.
+* **What Railway's edge does with a forged `X-Real-IP`**, which decides
+  `TRUST_X_REAL_IP` and the visit counter's per-client limit.
+* **The spend cap figures**, alert and hard limit.
 
 ## History
 
@@ -210,3 +133,18 @@ tag filtering. A checkbox list of tags is the obvious next criterion.
 - **2026-09-08**: Agent UI testing rule written down. `AGENTS.md` section 5:
   the owner does the browser testing, an agent stops at the typecheck and
   the build.
+- **2026-09-08**: **Gallery filter, sort and list memory -- done.** The
+  filter band with text, year and collection criteria; three sort keys
+  opening sideways into the header row; and a store that keeps both, plus
+  the scroll position and the last-viewed marker, across a trip to a piece
+  and back.
+- **2026-09-09**: Security sweep of the whole repository, recorded in the
+  git-ignored `DEPLOYMENT-NOTES.md`.
+- **2026-09-12**: Credentials taken out of the repository and rotated.
+- **2026-09-12**: Visit metrics specified in `context/METRICS.md`.
+- **2026-09-12**: Hosting decided -- Railway for the app and Postgres,
+  Cloudflare R2 for the images.
+- **2026-09-13**: Visit metrics built. `POST /api/visits`, the owner
+  dashboard at `/metrics`, and a `client_ip()` helper shared with the
+  sign-in limit.
+- **2026-09-15**: This file cleared for the deployment feature.

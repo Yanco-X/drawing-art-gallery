@@ -26,6 +26,15 @@ TILE_OVERLAP = 1
 # 25-megapixel piece produces, 6 roughly doubles the wait for a few percent.
 TILE_METHOD = 4
 
+# Every rendition drops the original's metadata by naming each field, rather
+# than trusting the encoder's default: some Pillow versions copy EXIF -- GPS
+# included -- into a WebP when nothing says otherwise.
+WEBP_NO_METADATA = {"exif": b"", "icc_profile": None, "xmp": b""}
+
+# A ceiling on the pixels one upload may decode to. The largest piece in the
+# gallery is 25 megapixels; a small PNG can claim thousands.
+MAX_PIXELS = 80_000_000
+
 # Extensions we are willing to store an original as. The check that actually
 # matters is whether Pillow can decode it -- this only normalises the suffix.
 ALLOWED_FORMATS = {
@@ -80,7 +89,7 @@ def _to_webp(image: Image.Image) -> bytes:
     if image.mode not in ("RGB", "RGBA"):
         image = image.convert("RGBA" if "A" in image.mode else "RGB")
     buffer = io.BytesIO()
-    image.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=6)
+    image.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=6, **WEBP_NO_METADATA)
     return buffer.getvalue()
 
 
@@ -102,6 +111,9 @@ def process_upload(raw: bytes) -> ProcessedImage:
     if fmt not in ALLOWED_FORMATS:
         raise InvalidImage(f"Unsupported image format: {fmt or 'unknown'}.")
     original_ext = ALLOWED_FORMATS[fmt]
+
+    if image.width * image.height > MAX_PIXELS:
+        raise InvalidImage("That image is too large to process.")
 
     # Apply the EXIF orientation flag and drop the rest of the metadata.
     # Phone photos are otherwise sideways, and EXIF often carries GPS
@@ -179,5 +191,6 @@ def tile_pyramid(raw: bytes) -> Iterator[tuple[int, int, int, bytes]]:
                     format="WEBP",
                     quality=WEBP_QUALITY,
                     method=TILE_METHOD,
+                    **WEBP_NO_METADATA,
                 )
                 yield level, column, row, buffer.getvalue()
