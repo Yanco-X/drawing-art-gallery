@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
 from .db import SessionLocal
-from .models import User
+from .models import User, new_session_token
 
 
 def register_cli(app) -> None:
@@ -36,6 +36,7 @@ def register_cli(app) -> None:
                 action = "updated"
 
             owner.password_hash = generate_password_hash(password)
+            owner.session_token = new_session_token()
             session.commit()
             click.echo(f"Owner {action}: {owner.email}")
 

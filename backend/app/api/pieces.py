@@ -12,7 +12,7 @@ from ..schemas import piece_detail_to_dict, piece_to_dict
 from ..services.images import InvalidImage, process_upload
 from ..services.slugs import slugify
 from ..services.tiles import clear_tiles, write_tiles
-from .helpers import parse_uuid
+from .helpers import bounded_text, parse_uuid
 
 bp = Blueprint("pieces", __name__, url_prefix="/pieces")
 
@@ -125,6 +125,10 @@ def _parse_focal_zoom(raw):
     return value
 
 
+YEAR_MIN, YEAR_MAX = 1900, 2100
+TITLE_MAX, DESCRIPTION_MAX, MEDIUM_MAX = 255, 4000, 100
+
+
 def _parse_year(raw):
     """
     A year from a form string or a JSON number.
@@ -134,9 +138,14 @@ def _parse_year(raw):
     if raw is None or raw == "":
         return None
     try:
-        return int(raw)
+        year = int(raw)
     except (TypeError, ValueError):
         raise ApiError("year must be a number.", details={"year": raw})
+    if not YEAR_MIN <= year <= YEAR_MAX:
+        raise ApiError(
+            f"year must be between {YEAR_MIN} and {YEAR_MAX}.", details={"year": raw}
+        )
+    return year
 
 
 def _parse_created_date(raw):
@@ -167,7 +176,7 @@ def create_piece():
     if upload is None or not upload.filename:
         raise ApiError("An image file is required.", details={"image": "required"})
 
-    title = (request.form.get("title") or "").strip()
+    title = bounded_text(request.form.get("title"), "title", TITLE_MAX)
     if not title:
         raise ApiError("A piece needs a title.", details={"title": "required"})
 
@@ -188,10 +197,11 @@ def create_piece():
     piece = Piece(
         id=uuid.uuid4(),
         title=title,
-        description=(request.form.get("description") or "").strip() or None,
+        description=bounded_text(request.form.get("description"), "description", DESCRIPTION_MAX)
+        or None,
         original_ext=processed.original_ext,
         byte_size=processed.byte_size,
-        medium=(request.form.get("medium") or "").strip() or None,
+        medium=bounded_text(request.form.get("medium"), "medium", MEDIUM_MAX) or None,
         year=year,
         width=processed.width,
         height=processed.height,
@@ -258,16 +268,18 @@ def update_piece(piece_id):
         raise ApiError("Piece not found.", status=404)
 
     if "title" in data:
-        title = (data.get("title") or "").strip()
+        title = bounded_text(data.get("title"), "title", TITLE_MAX)
         if not title:
             raise ApiError("A piece needs a title.", details={"title": "required"})
         piece.title = title
 
     if "description" in data:
-        piece.description = (data.get("description") or "").strip() or None
+        piece.description = (
+            bounded_text(data.get("description"), "description", DESCRIPTION_MAX) or None
+        )
 
     if "medium" in data:
-        piece.medium = (data.get("medium") or "").strip() or None
+        piece.medium = bounded_text(data.get("medium"), "medium", MEDIUM_MAX) or None
 
     if "year" in data:
         piece.year = _parse_year(data["year"])

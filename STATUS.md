@@ -68,7 +68,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report 7c2e5a9d14b8
+alembic upgrade head          # should report 3e9c1f7a52d4
 flask --app app run --port 5000
 ```
 
@@ -390,7 +390,7 @@ credential is still configured — see §7.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/health` | |
+| `GET` | `/api/health` | `{"status": "ok"}` and nothing else |
 | `GET` | `/media/<key>` | Only registered when `STORAGE_BACKEND=local` |
 
 **Renaming does not change the slug.** `PATCH` only re-slugs when `slug` is

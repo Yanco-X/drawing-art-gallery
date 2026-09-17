@@ -15,13 +15,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.environ["OWNER_API_TOKEN"] = ""
 
+from sqlalchemy import select  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
 
 from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
-from app.models import User  # noqa: E402
+from app.models import User, new_session_token  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
 
 PASSWORD = "__session_fixture__ correct horse"
@@ -147,6 +148,17 @@ check(
 )
 app.extensions["login_attempts"].clear("127.0.0.1")
 check("cleared, the owner can sign in again", sign_in(PASSWORD).status_code == 200)
+
+print("\n== a password change ends every session ==")
+check("signed in beforehand", client.get("/api/session/me").get_json()["role"] == "owner")
+with app.app_context():
+    session = SessionLocal()
+    owner = session.scalars(select(User).where(User.role == "owner")).first()
+    owner.session_token = new_session_token()
+    session.commit()
+check("the old cookie no longer identifies the owner",
+      client.get("/api/session/me").get_json()["role"] == "visitor")
+check("the password still signs in", sign_in(PASSWORD).status_code == 200)
 
 
 passed = sum(1 for _, ok, _ in checks if ok)

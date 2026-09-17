@@ -1,10 +1,10 @@
 import hmac
-import uuid
 from functools import wraps
 from urllib.parse import urlsplit
 
 from flask import current_app, request
 from flask_login import LoginManager, current_user
+from sqlalchemy import select
 
 from .db import SessionLocal
 from .errors import ApiError
@@ -18,11 +18,10 @@ def init_auth(app) -> None:
     app.before_request(refuse_cross_site_writes)
 
     @login_manager.user_loader
-    def load_user(user_id: str):
-        try:
-            return SessionLocal().get(User, uuid.UUID(user_id))
-        except (ValueError, AttributeError, TypeError):
-            return None
+    def load_user(session_token: str):
+        return SessionLocal().scalars(
+            select(User).where(User.session_token == session_token)
+        ).first()
 
 
 def refuse_cross_site_writes() -> None:

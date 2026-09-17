@@ -164,7 +164,7 @@ Four gradients at 135 degrees, cycled by index, used only as a placeholder where
 
 ## Typography
 
-Two families, loaded from Google Fonts today and to be self-hosted before production.
+Two families, served from `frontend/public/fonts` through `src/fonts.css`, so no visitor's browser reports to Google.
 
 * **Instrument Serif** (400, with italic) -- display headline, section headings, collection and card names, wordmark.
 * **Instrument Sans** (400-600) -- all UI and body text.

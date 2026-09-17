@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlsplit
 from datetime import timedelta
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
@@ -58,11 +59,23 @@ def create_app(
             response.headers["Cache-Control"] = "private, no-store"
         return response
 
+    policy = content_security_policy(app.config)
+
+    @app.after_request
+    def security_headers(response):
+        response.headers["Content-Security-Policy"] = policy
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        # An outside link followed from the unlisted sign-in path must not
+        # hand that path to the destination.
+        response.headers["Referrer-Policy"] = "same-origin"
+        if app.config["SESSION_COOKIE_SECURE"]:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
+        return response
+
     @app.get("/api/health")
     def health():
-        return jsonify(
-            {"status": "ok", "storage": app.config.get("STORAGE_BACKEND", "local")}
-        )
+        return jsonify({"status": "ok"})
 
     # Phase 1 only. Serving bytes from Flask is fine for development and
     # wrong for production, where a reverse proxy or CDN should do it. With
@@ -124,3 +137,18 @@ def serve_built_site(app: Flask) -> None:
         response = send_file(os.path.join(dist, "index.html"))
         response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+def content_security_policy(config) -> str:
+    # Images come from the object store's own origin; everything else is this
+    # site. React writes style attributes, which need 'unsafe-inline'.
+    images = ["'self'", "blob:", "data:"]
+    if config["STORAGE_BACKEND"] == "s3":
+        base = urlsplit(config["S3_PUBLIC_BASE_URL"] or config["S3_ENDPOINT"])
+        images.append(f"{base.scheme}://{base.netloc}")
+    return (
+        "default-src 'self'; "
+        f"img-src {' '.join(images)}; "
+        "style-src 'self' 'unsafe-inline'; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    )

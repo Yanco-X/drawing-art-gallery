@@ -200,6 +200,15 @@ check("a blank title is refused",
 check("a non-numeric year is refused",
       client.patch(f"/api/pieces/{pid}", headers=OWNER,
                    json={"year": "soon"}).status_code == 400)
+check("a year before 1900 is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"year": 1800}).status_code == 400)
+check("a title over 255 characters is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"title": "x" * 256}).status_code == 400)
+check("a description over 4000 characters is refused",
+      client.patch(f"/api/pieces/{pid}", headers=OWNER,
+                   json={"description": "x" * 4001}).status_code == 400)
 check("a malformed date is refused",
       client.patch(f"/api/pieces/{pid}", headers=OWNER,
                    json={"createdDate": "04-03-2026"}).status_code == 400)

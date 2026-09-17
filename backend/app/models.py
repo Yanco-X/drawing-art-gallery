@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import date, datetime, timezone
 
@@ -48,6 +49,10 @@ piece_tags = Table(
 )
 
 
+def new_session_token() -> str:
+    return secrets.token_hex(16)
+
+
 class User(Base, UserMixin):
     __tablename__ = "users"
 
@@ -56,8 +61,16 @@ class User(Base, UserMixin):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="visitor", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    # What the cookie carries, in place of the id: `flask set-owner` replaces
+    # it, and that is what ends every session on a password change.
+    session_token: Mapped[str] = mapped_column(
+        String(32), unique=True, nullable=False, default=new_session_token
+    )
 
     pieces: Mapped[list["Piece"]] = relationship(back_populates="user")
+
+    def get_id(self) -> str:
+        return self.session_token
 
 
 class Piece(Base):

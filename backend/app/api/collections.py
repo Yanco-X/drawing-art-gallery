@@ -9,9 +9,11 @@ from ..errors import ApiError
 from ..models import Collection, CollectionPiece, Piece
 from ..schemas import collection_summary_to_dict, collection_to_dict
 from ..services.slugs import unique_slug
-from .helpers import parse_uuid
+from .helpers import bounded_text, parse_uuid
 
 bp = Blueprint("collections", __name__, url_prefix="/collections")
+
+NAME_MAX, DESCRIPTION_MAX = 255, 4000
 
 
 def _body() -> dict:
@@ -127,7 +129,7 @@ def get_collection(slug: str):
 @require_owner
 def create_collection():
     data = _body()
-    name = (data.get("name") or "").strip()
+    name = bounded_text(data.get("name"), "name", NAME_MAX)
     if not name:
         raise ApiError("A collection needs a name.", details={"name": "required"})
 
@@ -135,7 +137,8 @@ def create_collection():
     collection = Collection(
         name=name,
         slug=unique_slug(session, Collection, data.get("slug") or name),
-        description=(data.get("description") or "").strip() or None,
+        description=bounded_text(data.get("description"), "description", DESCRIPTION_MAX)
+        or None,
         is_public=bool(data.get("isPublic", True)),
     )
     session.add(collection)
@@ -157,7 +160,7 @@ def update_collection(collection_id):
     collection = _load(session, collection_id)
 
     if "name" in data:
-        name = (data.get("name") or "").strip()
+        name = bounded_text(data.get("name"), "name", NAME_MAX)
         if not name:
             raise ApiError("A collection needs a name.", details={"name": "required"})
         collection.name = name
@@ -168,7 +171,9 @@ def update_collection(collection_id):
         )
 
     if "description" in data:
-        collection.description = (data.get("description") or "").strip() or None
+        collection.description = (
+            bounded_text(data.get("description"), "description", DESCRIPTION_MAX) or None
+        )
 
     if "isPublic" in data:
         collection.is_public = bool(data["isPublic"])

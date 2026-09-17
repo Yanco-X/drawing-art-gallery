@@ -15,6 +15,16 @@ def parse_uuid(value, field: str) -> uuid.UUID:
         raise ApiError(f"{field} is not a valid id.", details={field: value})
 
 
+def bounded_text(value, field: str, limit: int) -> str:
+    """A trimmed string no longer than the column that stores it."""
+    text = str(value).strip() if value is not None else ""
+    if len(text) > limit:
+        raise ApiError(
+            f"{field} must be at most {limit} characters.", details={field: "too long"}
+        )
+    return text
+
+
 def client_ip() -> str | None:
     # X-Real-IP is the caller only behind Railway's edge, which overwrites
     # it. Anywhere Flask is reachable directly, a client can forge it.

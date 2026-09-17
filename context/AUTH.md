@@ -120,8 +120,10 @@ on, and tags are the only candidate the data model has.
 ## 3. Sessions
 
 **Flask-Login, cookie-backed.** The session id lives in Flask's signed
-cookie; Flask-Login stores the user id in it and reloads the row per request
-through `user_loader`.
+cookie; Flask-Login stores the owner's `session_token` in it, not the id, and
+reloads the row per request through `user_loader`. `flask set-owner`
+replaces the token along with the password, so changing the password ends
+every session, the remember cookie included.
 
 Chosen over JWT because a one-user gallery needs no statelessness, and a
 token in JavaScript is the problem being solved rather than a different
@@ -144,6 +146,16 @@ redirecting.
 cookie; rotating it signs the owner out everywhere. Absent, a new key is
 minted per process, so sessions simply do not survive a restart -- annoying
 rather than unsafe, which is the right way round for a missing secret.
+
+**Response headers**, set on every answer by `security_headers` in
+`app/__init__.py`. The content security policy is `default-src 'self'`,
+with images also allowed from the object store's origin and style
+attributes allowed inline, since React writes them; nothing may frame the
+site. `Referrer-Policy: same-origin` keeps the spare sign-in path out of
+the `Referer` an outside link would carry. HSTS is sent only once cookies
+are secure. The fonts are served from `frontend/public/fonts` and the
+theme stamp is `/theme.js` rather than an inline script, which is what
+lets scripts stay at `'self'`.
 
 ### CSRF
 
@@ -558,6 +570,8 @@ what holds the door in production is only what passes there.
 - A session cookie satisfies every `@require_owner` endpoint
 - Logout clears the session and the remember cookie, and the next mutation
   answers 401
+- Replacing the owner's session token, as `flask set-owner` does, turns the
+  existing cookie into a visitor's; the password still signs in
 - With `OWNER_API_TOKEN` unset, the token path is dead and only the session
   works
 - A waived piece answers 410 with its title to a visitor and 200 to the

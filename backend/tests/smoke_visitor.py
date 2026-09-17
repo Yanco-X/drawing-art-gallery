@@ -262,6 +262,19 @@ check("and API answers are never cached",
       str(res.headers.get("Cache-Control")))
 
 
+print("\n== headers on every answer ==")
+answer = client.get("/api/health")
+check("health names nothing but its status", answer.get_json() == {"status": "ok"},
+      str(answer.get_json()))
+check("framing is refused",
+      "frame-ancestors 'none'" in answer.headers.get("Content-Security-Policy", "")
+      and answer.headers.get("X-Frame-Options") == "DENY")
+check("scripts come only from this site",
+      answer.headers["Content-Security-Policy"].startswith("default-src 'self'; "))
+check("the referrer stays on this site", answer.headers.get("Referrer-Policy") == "same-origin")
+check("content types are not sniffed", answer.headers.get("X-Content-Type-Options") == "nosniff")
+check("no HSTS while cookies are not secure", "Strict-Transport-Security" not in answer.headers)
+
 print("\n== the archival original is never served ==")
 # Last, because a second app rebinds the shared session to its own engine.
 local_root = tempfile.mkdtemp()
@@ -275,6 +288,7 @@ for name in ("original.jpg", "thumb.webp"):
 class LocalConfig(TestConfig):
     STORAGE_BACKEND = "local"
     UPLOAD_DIR = local_root
+    SESSION_COOKIE_SECURE = True
 
 
 local = create_app(
@@ -284,6 +298,8 @@ check("a derivative is served under the local backend",
       local.get(f"/media/{piece_key}/thumb.webp").status_code == 200)
 check("the original is not",
       local.get(f"/media/{piece_key}/original.jpg").status_code == 404)
+check("HSTS arrives once cookies are secure",
+      local.get("/api/health").headers.get("Strict-Transport-Security") == "max-age=31536000")
 
 
 passed = sum(1 for _, ok, _ in checks if ok)
