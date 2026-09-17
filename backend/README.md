@@ -116,7 +116,7 @@ a cover that stops being a member is reset to the first-piece fallback.
 
 Migrations run on `ADMIN_DATABASE_URL`, the account that owns the tables,
 and fall back to `DATABASE_URL`; `alembic.ini` holds no credentials. The
-app itself connects as `gallery_app`, which `scripts/app_role.sql` creates
+app itself connects as `yancurations_postgres`, which `scripts/app_role.sql` creates
 with row access only. `STATUS.md` section 2 has the setup.
 
 ## Storage

@@ -118,7 +118,7 @@ same keys as blanks.
 |---|---|
 | `POSTGRES_PASSWORD` | the local database password — `docker-compose.yml` reads it |
 | `ADMIN_DATABASE_URL` | `postgresql+psycopg://sketchyart:<POSTGRES_PASSWORD>@127.0.0.1:5432/sketchyart` — owns the tables; migrations and `set-owner` use it |
-| `DATABASE_URL` | `postgresql+psycopg://gallery_app:<its password>@127.0.0.1:5432/sketchyart` — what the app runs on; see below |
+| `DATABASE_URL` | `postgresql+psycopg://yancurations_postgres:<its password>@127.0.0.1:5432/sketchyart` — what the app runs on; see below |
 | `STORAGE_BACKEND` | `s3` |
 | `S3_ACCESS_KEY` | MinIO root user, and the key the app signs requests with |
 | `S3_SECRET_KEY` | MinIO root password, 8 characters or more |
@@ -143,7 +143,7 @@ Bucket names and the endpoint still default in `app/config.py` — bucket
 ### Two database accounts
 
 `sketchyart`, which the compose file creates, owns the tables. The app does
-not run as it. `scripts/app_role.sql` creates `gallery_app`, which reads and
+not run as it. `scripts/app_role.sql` creates `yancurations_postgres`, which reads and
 writes rows, cannot change the schema or `alembic_version`, and can only
 read `users`. Migrations and `flask set-owner` use `ADMIN_DATABASE_URL`;
 the app uses `DATABASE_URL`. Production is the same split, and the
@@ -153,11 +153,11 @@ Once per database, after `alembic upgrade head`, from `backend/`:
 
 ```bash
 cat scripts/app_role.sql | docker compose exec -T db psql -U sketchyart -d sketchyart
-docker compose exec db psql -U sketchyart -d sketchyart   # then: \password gallery_app
+docker compose exec db psql -U sketchyart -d sketchyart   # then: \password yancurations_postgres
 ```
 
 `\password` prompts twice and sends the server a hash. Then point
-`DATABASE_URL` at `gallery_app` with that password. A superuser never meets
+`DATABASE_URL` at `yancurations_postgres` with that password. A superuser never meets
 a permission error, which is why development runs on the limited account
 too: a missing grant fails here, not in production.
 

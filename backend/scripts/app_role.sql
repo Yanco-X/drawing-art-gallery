@@ -9,22 +9,22 @@
 -- the value out of the log and the shell history. Alphanumeric, so the URL
 -- needs no escaping:
 --
---   \password gallery_app
+--   \password yancurations_postgres
 --
 -- The default privileges cover tables later migrations create, as long as
 -- migrations keep running as the owner account (ADMIN_DATABASE_URL).
 
-CREATE ROLE gallery_app LOGIN;
-ALTER ROLE gallery_app SET statement_timeout = '30s';
+CREATE ROLE yancurations_postgres LOGIN;
+ALTER ROLE yancurations_postgres SET statement_timeout = '30s';
 
-GRANT USAGE ON SCHEMA public TO gallery_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gallery_app;
+GRANT USAGE ON SCHEMA public TO yancurations_postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO yancurations_postgres;
 
 -- Only `flask set-owner` writes users, and it runs as the owner account.
-REVOKE INSERT, UPDATE, DELETE ON users FROM gallery_app;
-REVOKE ALL ON alembic_version FROM gallery_app;
+REVOKE INSERT, UPDATE, DELETE ON users FROM yancurations_postgres;
+REVOKE ALL ON alembic_version FROM yancurations_postgres;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gallery_app;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO yancurations_postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO gallery_app;
+  GRANT USAGE, SELECT ON SEQUENCES TO yancurations_postgres;
