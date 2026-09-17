@@ -21,6 +21,9 @@ class Config:
     # Credentials have no default: a fallback here is a password published
     # in a public repository. Unset, the app fails at startup.
     DATABASE_URL = _with_psycopg(os.getenv("DATABASE_URL"))
+    # Owns the tables. Migrations and `flask set-owner` use it; the app process
+    # never holds it (the Dockerfile strips it before gunicorn starts).
+    ADMIN_DATABASE_URL = _with_psycopg(os.getenv("ADMIN_DATABASE_URL"))
     DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 
     # Signs the session cookie. Absent, a new key is minted per process --
@@ -74,7 +77,7 @@ class Config:
 
     S3_BUCKET = os.getenv("S3_BUCKET", "sketchyart")
     S3_PRIVATE_BUCKET = os.getenv("S3_PRIVATE_BUCKET", "sketchyart-private")
-    S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:9000")
+    S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:9000")
     S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
     S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
     S3_REGION = os.getenv("S3_REGION", "us-east-1")

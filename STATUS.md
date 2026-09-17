@@ -68,7 +68,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report d1f4a7b93c26
+alembic upgrade head          # should report 7c2e5a9d14b8
 flask --app app run --port 5000
 ```
 
@@ -98,7 +98,8 @@ The owner already exists in the live database. On a fresh one, create them:
 ```
 
 It prompts for an email — an identifier only, never asked for at sign-in —
-and a password. A password never goes in `.env` or a migration.
+and a password. A password never goes in `.env` or a migration. It writes
+through `ADMIN_DATABASE_URL`, the only account allowed to.
 
 **For a development session, `OWNER_API_TOKEN` is usually easier.** It still
 satisfies every owner route, which is how the suites run. It must be unset
@@ -116,7 +117,8 @@ same keys as blanks.
 | Key | Local value |
 |---|---|
 | `POSTGRES_PASSWORD` | the local database password — `docker-compose.yml` reads it |
-| `DATABASE_URL` | `postgresql+psycopg://sketchyart:<POSTGRES_PASSWORD>@localhost:5432/sketchyart` |
+| `ADMIN_DATABASE_URL` | `postgresql+psycopg://sketchyart:<POSTGRES_PASSWORD>@127.0.0.1:5432/sketchyart` — owns the tables; migrations and `set-owner` use it |
+| `DATABASE_URL` | `postgresql+psycopg://gallery_app:<its password>@127.0.0.1:5432/sketchyart` — what the app runs on; see below |
 | `STORAGE_BACKEND` | `s3` |
 | `S3_ACCESS_KEY` | MinIO root user, and the key the app signs requests with |
 | `S3_SECRET_KEY` | MinIO root password, 8 characters or more |
@@ -131,12 +133,33 @@ deleted.
 
 Bucket names and the endpoint still default in `app/config.py` — bucket
 `sketchyart`, private bucket `sketchyart-private`, endpoint
-`http://localhost:9000`. Credentials do not: the key pair comes from
+`http://127.0.0.1:9000`. Credentials do not: the key pair comes from
 `.env`, and the MinIO console signs in with the same pair.
 
 > The proxy targets `127.0.0.1`, not `localhost`. Windows resolves
 > `localhost` to `::1` first and Flask binds IPv4 — using the name gives a
 > connection refused that looks like a dead backend.
+
+### Two database accounts
+
+`sketchyart`, which the compose file creates, owns the tables. The app does
+not run as it. `scripts/app_role.sql` creates `gallery_app`, which reads and
+writes rows, cannot change the schema or `alembic_version`, and can only
+read `users`. Migrations and `flask set-owner` use `ADMIN_DATABASE_URL`;
+the app uses `DATABASE_URL`. Production is the same split, and the
+container drops the admin URL before gunicorn starts.
+
+Once per database, after `alembic upgrade head`, from `backend/`:
+
+```bash
+cat scripts/app_role.sql | docker compose exec -T db psql -U sketchyart -d sketchyart
+docker compose exec db psql -U sketchyart -d sketchyart   # then: \password gallery_app
+```
+
+`\password` prompts twice and sends the server a hash. Then point
+`DATABASE_URL` at `gallery_app` with that password. A superuser never meets
+a permission error, which is why development runs on the limited account
+too: a missing grant fails here, not in production.
 
 ---
 

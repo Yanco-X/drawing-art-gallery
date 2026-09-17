@@ -59,6 +59,7 @@ These do not move, and most questions end at one of them.
 | Any call to the backend | `frontend/src/services/pieces.ts` -- every request in the app is one function here |
 | Any shared type | `frontend/src/types/index.ts` |
 | Any database column | `backend/app/models.py` |
+| Who may connect to the database, and with what rights | `backend/scripts/app_role.sql` |
 | The JSON shape the frontend receives | `backend/app/schemas.py` (camelCase, matching `types/index.ts`) |
 | A design token, colour or spacing value | `frontend/src/index.css` |
 | Shared input and button classes | `frontend/src/components/form-styles.ts` |

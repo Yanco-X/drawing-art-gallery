@@ -114,8 +114,10 @@ a cover that stops being a member is reset to the first-piece fallback.
 .venv/Scripts/alembic.exe downgrade -1
 ```
 
-The URL comes from `DATABASE_URL`; `alembic.ini` holds no credentials.
-Set `ALEMBIC_DATABASE_URL` to point a migration run somewhere else.
+Migrations run on `ADMIN_DATABASE_URL`, the account that owns the tables,
+and fall back to `DATABASE_URL`; `alembic.ini` holds no credentials. The
+app itself connects as `gallery_app`, which `scripts/app_role.sql` creates
+with row access only. `STATUS.md` section 2 has the setup.
 
 ## Storage
 

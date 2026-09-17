@@ -13,12 +13,10 @@ import app.models  # noqa: F401,E402  (import registers the tables on Base)
 
 config = context.config
 
-# Prefer an explicit override (used to autogenerate offline), else the app's
-# configured database.
-config.set_main_option(
-    "sqlalchemy.url",
-    os.getenv("ALEMBIC_DATABASE_URL") or AppConfig.DATABASE_URL,
-)
+# Migrations run as the account that owns the tables; the app's own account
+# may only touch rows. Alembic reads % as ConfigParser interpolation.
+url = AppConfig.ADMIN_DATABASE_URL or AppConfig.DATABASE_URL
+config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

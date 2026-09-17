@@ -17,6 +17,11 @@ COPY backend/ backend/
 COPY --from=frontend /build/dist frontend/dist
 WORKDIR /app/backend
 
+# The files stay owned by root: the process can read the app, not change it.
+RUN useradd --system --no-create-home gallery
+USER gallery
+
 # One worker keeps the sign-in and visit limits exact, since both count per
 # process. The threads carry browsing while an upload builds its tiles.
-CMD ["sh", "-c", "alembic upgrade head && gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 4 --timeout 120 'app:create_app()'"]
+# Migrations run as the table owner; gunicorn starts without that URL.
+CMD ["sh", "-c", "alembic upgrade head && exec env -u ADMIN_DATABASE_URL gunicorn --no-control-socket --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 4 --timeout 120 'app:create_app()'"]
