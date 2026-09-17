@@ -17,8 +17,10 @@ export default defineConfig({
     // CORS to configure and the /media/<key> URLs the backend composes work
     // verbatim in the browser.
     proxy: {
-      '/api': API,
-      '/media': API,
+      // The shorthand form rewrites Host to Flask's address, and auth.py
+      // refuses a write whose Origin does not match Host.
+      '/api': { target: API, changeOrigin: false },
+      '/media': { target: API, changeOrigin: false },
     },
   },
 })
