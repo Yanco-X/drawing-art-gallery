@@ -119,6 +119,32 @@ and fall back to `DATABASE_URL`; `alembic.ini` holds no credentials. The
 app itself connects as `yancurations_postgres`, which `scripts/app_role.sql` creates
 with row access only. `STATUS.md` section 2 has the setup.
 
+## Backups
+
+`scripts/backup.py` dumps the database with `pg_dump` and copies every
+archival original the backup bucket does not yet hold. Derivatives are left
+out: they are rebuilt from the originals. On Railway it is a scheduled
+service from the same image, started with `python scripts/backup.py`, on
+credentials of its own:
+
+| Variable | Value |
+|---|---|
+| `BACKUP_DATABASE_URL` | a plain `postgresql://` URL for `yancurations_backup`, which `scripts/app_role.sql` creates with read access only |
+| `BACKUP_S3_ENDPOINT`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY` | a token that reads the private bucket and writes the backup bucket. The web service never holds it |
+| `BACKUP_S3_BUCKET` | the backup bucket |
+| `S3_PRIVATE_BUCKET` | the originals bucket, as the web service names it |
+
+Old dumps expire through a lifecycle rule on the bucket, not through code.
+
+To restore, download a dump and, with `psql` and `pg_restore` on the plain
+`postgresql://` form of the admin URL:
+
+```bash
+psql "$ADMIN_URL" -c "CREATE DATABASE scratch"
+pg_restore --no-owner --no-acl -d "$ADMIN_URL_FOR_SCRATCH" the.dump
+psql "$ADMIN_URL_FOR_SCRATCH" -c "SELECT count(*) FROM pieces"
+```
+
 ## Storage
 
 Set by `STORAGE_BACKEND`:

@@ -28,3 +28,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO yancurations_postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO yancurations_postgres;
+
+-- The scheduled backup reads every table and writes nothing. Give it a
+-- password the same way: \password yancurations_backup
+CREATE ROLE yancurations_backup LOGIN;
+GRANT pg_read_all_data TO yancurations_backup;

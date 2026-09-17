@@ -10,6 +10,8 @@ RUN npm run build
 
 FROM python:3.14-slim
 ENV PYTHONUNBUFFERED=1
+# pg_dump, for the backup service that runs from this image on a schedule.
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY backend/requirements.lock backend/requirements.lock
 RUN pip install --no-cache-dir -r backend/requirements.lock
