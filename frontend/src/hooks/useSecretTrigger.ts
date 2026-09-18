@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 
-const TAPS = 5;
-const WINDOW_MS = 3000;
+const TAPS = 15;
+const WINDOW_MS = 6000;
 
 export const useSecretTrigger = (onTrigger: () => void) => {
   const taps = useRef<number[]>([]);

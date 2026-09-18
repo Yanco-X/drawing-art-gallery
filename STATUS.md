@@ -87,8 +87,8 @@ curl http://127.0.0.1:5000/api/session/me     # {"role": "visitor"}
 
 ### Signing in
 
-The gallery shows no way in — that is the design, not a missing button. Five
-clicks within three seconds on the `© 2026` in the footer opens the dialog.
+The gallery shows no way in — that is the design, not a missing button. Fifteen
+clicks within six seconds on the `© 2026` in the footer opens the dialog.
 Full reasoning in [`context/AUTH.md`](context/AUTH.md) §5.
 
 The owner already exists in the live database. On a fresh one, create them:
@@ -711,7 +711,7 @@ existence protects nothing and only looks broken — the one deliberate
 exception to the rule that a withheld thing is simply not there.
 
 The gallery shows no way in: no sign-in link, no login route, `OwnerSignIn`
-and `InertLink` both deleted. Five clicks on the footer's `© 2026` opens a
+and `InertLink` both deleted. Fifteen clicks on the footer's `© 2026` opens a
 lazily-loaded dialog, and an unlinked path whose hash is the only thing in
 the bundle is the spare key. That hiding is cosmetic, is documented as
 cosmetic, and is not what holds the door.

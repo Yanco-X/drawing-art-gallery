@@ -43,7 +43,10 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    // A visitor's 401 is not a lapse: there was no session to lose, and
+    // opening the keyhole would announce it on every owner-only page.
     whenSessionLapses(() => {
+      if (!hasOwnerMarker()) return;
       lapsed.current = true;
       setKeyholeOpen(true);
     });

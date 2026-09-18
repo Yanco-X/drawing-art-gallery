@@ -225,7 +225,7 @@ up.
 
 ### The trigger
 
-**Five clicks within three seconds on the `© 2026` mark** in
+**Fifteen clicks within six seconds on the `© 2026` mark** in
 [`SiteFooter.tsx`](../frontend/src/components/SiteFooter.tsx).
 
 A `click` fires for a mouse and a tap alike, so one code path serves desktop
@@ -236,7 +236,7 @@ The copyright mark was chosen against four criteria -- present on every
 route, inert, does not look tappable, and nobody would poke it. It is a
 plain `<span>` inside `PageShell`'s footer, so it satisfies all four. The
 header wordmark is more reachable, being sticky, but everything up there is
-already a link or a control, and five taps would navigate or toggle five
+already a link or a control, and fifteen taps would navigate or toggle fifteen
 times.
 
 The scroll to reach the footer does not matter. The remember cookie means
@@ -245,7 +245,7 @@ browser, a lapsed cookie -- so the thing to optimise for is *impossible to
 find by accident*, not *convenient*.
 
 Two mobile details: `touch-action: manipulation` so rapid taps do not fire
-Safari's double-tap zoom, and `user-select: none` so five clicks do not
+Safari's double-tap zoom, and `user-select: none` so fifteen clicks do not
 leave the text highlighted on desktop. **Both are applied to the whole
 footer**, not to that one span: a single element carrying styling nothing
 else in the app carries is a tell.
