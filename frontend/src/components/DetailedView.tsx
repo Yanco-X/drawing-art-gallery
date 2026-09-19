@@ -61,6 +61,7 @@ export const DetailedView = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const minimapRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const chromeTimer = useRef<number | undefined>(undefined);
   const minimapTimer = useRef<number | undefined>(undefined);
@@ -74,11 +75,6 @@ export const DetailedView = ({
   // Whether the view is zoomed past the whole piece. The minimap answers
   // "where am I", which is only a question once you cannot see everything.
   const [zoomed, setZoomed] = useState(false);
-
-  // OpenSeadragon looks this up with getElementById, so it has to be a real
-  // id on a real element rather than a ref.
-  const navigatorId = `sa-minimap-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
-
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -156,6 +152,7 @@ export const DetailedView = ({
 
     let cancelled = false;
     let viewer: Viewer | null = null;
+    const minimap = minimapRef.current;
 
     const source = piece.tileSource
       ? {
@@ -180,16 +177,26 @@ export const DetailedView = ({
     void (async () => {
       try {
         const { default: OpenSeadragon } = await import('openseadragon');
-        if (cancelled || !hostRef.current) return;
+        if (cancelled || !hostRef.current || !minimap) return;
+
+        // A new one for every viewer: destroying a viewer takes its
+        // navigator element out of the page, and the next finds none.
+        const navigatorElement = document.createElement('div');
+        navigatorElement.className = 'h-full w-full';
+        minimap.append(navigatorElement);
 
         viewer = OpenSeadragon({
           element: hostRef.current,
           tileSources: source as never,
+          // The tiles come from the storage host without CORS, which WebGL
+          // refuses. Its per-image fallback to canvas can miss the redraw
+          // and leave the minimap empty, so canvas from the start.
+          drawer: 'canvas',
           // Every control is ours, in the rail. OpenSeadragon's own are
           // sprite images from a prefixUrl.
           showNavigationControl: false,
           showNavigator: true,
-          navigatorId,
+          navigatorElement,
           navigatorAutoFade: false,
           animationTime: reduced ? 0 : 0.5,
           blendTime: reduced ? 0 : 0.15,
@@ -222,7 +229,7 @@ export const DetailedView = ({
 
         /*
          * Navigator sets `_resizeWithViewer = false` whenever its control
-         * anchor is NONE, which is what `navigatorId` does. That flag gates
+         * anchor is NONE, which handing it an element does. That flag gates
          * its only call to `updateSize()`, which is what performs the
          * resize, `goHome()` and `world.draw()` -- so left alone it paints a
          * blank box with a rectangle in it. Hung off `add-item` because the
@@ -257,12 +264,14 @@ export const DetailedView = ({
     return () => {
       cancelled = true;
       viewer?.destroy();
+      // Destroy leaves the navigator's wrapper behind.
+      minimap?.replaceChildren();
       viewerRef.current = null;
       setReady(false);
       setFailed(false);
       setZoomed(false);
     };
-  }, [open, piece.id, piece.imageUrl, piece.tileSource, navigatorId]);
+  }, [open, piece.id, piece.imageUrl, piece.tileSource]);
 
 
   useEffect(() => {
@@ -354,6 +363,7 @@ export const DetailedView = ({
         <div ref={hostRef} className="h-full w-full" />
 
         <div
+          ref={minimapRef}
           aria-hidden="true"
           className={`sa-minimap sa-fade absolute right-4 top-[72px] transition-opacity duration-300 ${
             zoomed && ready && minimapAwake
@@ -366,15 +376,7 @@ export const DetailedView = ({
             // OpenSeadragon has no letterboxing to do inside it.
             height: Math.round(MINIMAP_WIDTH / (piece.aspectRatio || 1)),
           }}
-        >
-          {/*
-            OpenSeadragon mutates the element it is given, appending its own
-            class and inline styles. This inner element takes no changing
-            props, so React renders it once and never wipes that; the wrapper
-            above, whose className does change, stays React's.
-          */}
-          <div id={navigatorId} className="h-full w-full" />
-        </div>
+        />
 
         {failed && (
           <div className="absolute inset-0 flex items-center justify-center">

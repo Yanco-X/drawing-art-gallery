@@ -248,10 +248,10 @@ it appears were decided against a viewer that had been used.
 
 ### Decisions
 
-**Mounted via `navigatorId`, not `navigatorPosition`.** Given an element,
-OpenSeadragon sets the control anchor to `NONE` and *skips* the inline
-border and background it otherwise writes onto the navigator. So the frame
-is ours rather than an override, and placement is ordinary CSS.
+**Mounted into our own element, not placed by `navigatorPosition`.** Given
+an element, OpenSeadragon sets the control anchor to `NONE` and *skips* the
+inline border and background it otherwise writes onto the navigator. So the
+frame is ours rather than an override, and placement is ordinary CSS.
 
 **It fades on its own clock, sooner than the rail** — 2s against 3s.
 
@@ -302,7 +302,7 @@ is short by its own border on each axis.
 
 **The navigator has to be told to draw.** `Navigator` sets
 `_resizeWithViewer = false` whenever its control anchor is `NONE`, which is
-precisely what handing it an element through `navigatorId` does. That flag
+precisely what handing it an element does. That flag
 gates the only call it ever makes to `updateSize()` — and `updateSize()` is
 what runs `viewport.resize()`, `goHome()` and `world.draw()`. Left alone it
 paints its frame and its display region over an empty world: a blank box
@@ -320,8 +320,8 @@ on any later call.
 **Two elements, not one.** OpenSeadragon mutates the element it is handed —
 appending its `navigator` class and writing inline styles. React owns the
 wrapper, whose className changes every time the minimap shows or hides, and
-re-applying it would wipe OpenSeadragon's mutations. The inner element takes
-no changing props, so React renders it once and never touches it again.
+re-applying it would wipe OpenSeadragon's mutations. The inner element is not
+React's at all: the viewer's effect makes a new one for every viewer (Pass 5).
 
 ## Pass 4 — done 2026-09-07
 
@@ -389,12 +389,54 @@ the dialog being what goes fullscreen; the viewport reaching the screen and
 returning; the label and icon following `fullscreenchange`; Escape at each
 of its two levels; and closing from fullscreen leaving nothing behind.
 
+## Pass 5 — done 2026-09-18
+
+Three faults, reported together: the minimap sometimes empty; the viewer
+failing on its second opening, the drawing up with "[ this piece could not be
+opened ]" over it and no zoom; and the same failure on every piece reached
+with the viewer's own arrows.
+
+### Decided 2026-09-18
+
+**A new navigator element for every viewer.** `viewer.destroy()` takes the
+navigator element out of the page. The element sits in a wrapper
+OpenSeadragon adds, and with the anchor at `NONE` the control's `destroy()`
+detaches the element and leaves the wrapper where it was. The next viewer
+looked the element up by id, found nothing, and threw in its constructor
+after its canvas was already in the host, so no viewer came up and the catch
+showed the failure. Reopening had failed like this since Pass 3. The arrows
+started failing when the piece page stopped unmounting between pieces
+(`useArrivingPiece`): until then each step mounted a fresh viewer. The effect
+now appends a new element to the frame before each viewer and empties the
+frame after destroying it.
+
+**Canvas, not WebGL.** OpenSeadragon 6 prefers WebGL, and WebGL cannot take
+an image from another origin fetched without CORS. That is every tile here:
+they come from the storage host. Each tiled image failed texture creation
+and fell back to the canvas drawer, but the fallback only applies on the
+next frame, and OpenSeadragon asks for none. When the navigator's tiles all
+landed in one frame, that frame failed and the minimap stayed a frame and a
+display region over nothing, which is the empty box Pass 3 fixed, from a
+second cause. The main view hid it, because every pan and zoom redraws.
+Measured over eight pieces, each opened cold and warm on a fresh page load:
+11 of 16 minimaps empty before, none after. `crossOriginPolicy: 'Anonymous'`
+would keep WebGL, but only with CORS on the bucket in every environment.
+Canvas draws one drawing at a time with room to spare.
+
+### Checked
+
+Headless Chrome over CDP with real input events, against the dev server and
+the gallery's own pieces: open, zoom, close and reopen; arrive on `?view=1`,
+then Next and Previous inside the viewer. Each reached a viewer that zooms,
+with no failure message and one container in the host. The minimap was
+measured, not eyeballed: the share of light pixels inside its frame, near 0
+when empty and 0.75 to 0.96 when drawn.
+
 ## Open
 
-- **The visual has never been checked by automation**, though it could have
-  been — see `STATUS.md` §8. The blank minimap shipped because of it: a
-  single screenshot would have shown an empty box. Pass 3's fix has been
-  confirmed by the owner in use, not by a check.
+- **The checks are scratch scripts**, like Pass 4's: nothing in the
+  repository runs them. The blank minimap shipped twice for want of one: a
+  single screenshot shows an empty box.
 - **No `Storage.read` test against S3.** The backfill exercised it against
   real MinIO 14 times, but no suite covers it.
 - Tiles are not regenerated if an original is ever replaced. Nothing can
