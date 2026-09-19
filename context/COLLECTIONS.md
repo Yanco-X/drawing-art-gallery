@@ -121,11 +121,11 @@ from the gallery's.
 ### Order
 
 `GET /api/collections/<slug>` returns `pieces` in `display_order` and the
-page renders them in that order. Note the caveat in `MasonryGrid`: CSS
-multi-column fills top-to-bottom, so a curated order reads down each column
-rather than across each row. Acceptable for now, and recorded here because
-curation is the whole point of a collection — if the order ever needs to
-read left-to-right, that is the reason to replace the masonry.
+page renders them in that order. Since 2026-09-19 the masonry reads across
+the rows (`DESIGN.md`, Masonry grid), so a collection reads left to right as
+it was arranged. It read down each column before, and this section named
+that as the reason to replace the masonry one day; gallery curation was the
+day.
 
 ### An empty collection
 
@@ -267,12 +267,11 @@ Nothing is written until Save. A drop that immediately hit the API would
 turn one curation session into a dozen writes, and an accidental drag would
 be permanent.
 
-**Arrange uses a plain ordered grid, not the masonry.** The masonry fills
-top-to-bottom down each column (§4), which is unreadable when the thing
-being edited *is* the sequence. In arrange mode tiles run left to right, in
-order, numbered. The display grid is unchanged -- see the caveat in §4, now
-more visible than before, and the reason to revisit the masonry if curated
-order ever needs to read across rows.
+**Arrange uses a plain ordered grid, not the masonry.** The masonry places
+each piece under the shortest column, so a position has no fixed place,
+which is unreadable when the thing being edited *is* the sequence. In
+arrange mode tiles run left to right, in order, numbered. (Until 2026-09-19
+the masonry also read down each column; see the order note above.)
 
 **Drag and drop is native.** HTML5 `draggable` plus `dragstart`/`dragover`/
 `drop`, no library: `AGENTS.md` §2 rules out a new dependency without

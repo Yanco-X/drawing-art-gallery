@@ -15,6 +15,14 @@ bp = Blueprint("collections", __name__, url_prefix="/collections")
 
 NAME_MAX, DESCRIPTION_MAX = 255, 4000
 
+# The owner's order, new collections above it, newest first; the gallery's
+# rule for pieces, applied to the list of sets.
+COLLECTION_ORDER = (
+    Collection.curated_order.asc().nulls_first(),
+    Collection.created_at.desc(),
+    Collection.name,
+)
+
 
 def _body() -> dict:
     data = request.get_json(silent=True)
@@ -98,7 +106,7 @@ def _apply_cover(session, collection: Collection, raw_cover) -> None:
 @bp.get("")
 def list_collections():
     session = SessionLocal()
-    stmt = select(Collection).order_by(Collection.created_at.desc(), Collection.name)
+    stmt = select(Collection).order_by(*COLLECTION_ORDER)
     # Visitors never see unpublished collections. Owners pass ?includePrivate=1,
     # and asking without credentials is refused rather than quietly downgraded.
     if request.args.get("includePrivate") == "1":

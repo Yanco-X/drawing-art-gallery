@@ -110,6 +110,11 @@ class Piece(Base):
     # invariant the schema holds rather than a filter every query remembers.
     spotlight_order: Mapped[int | None] = mapped_column(Integer)
 
+    # The gallery's order, from zero, set by the owner. Null is not placed
+    # yet -- a new upload or a restored piece -- and waits above the placed
+    # ones. Cleared by a waive, for the same invariant as the spotlight slot.
+    curated_order: Mapped[int | None] = mapped_column(Integer)
+
     # Where to aim a crop, as percentages across and down the image. Null on
     # both is dead centre, which is what a browser does unasked.
     focal_x: Mapped[int | None] = mapped_column(Integer)
@@ -216,6 +221,10 @@ class Collection(Base):
         Uuid, ForeignKey("pieces.id", ondelete="SET NULL")
     )
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Where the owner put it among the collections, from zero. Null is a new
+    # one, waiting above the placed ones, as a new piece does in the gallery.
+    curated_order: Mapped[int | None] = mapped_column(Integer)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(

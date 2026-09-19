@@ -21,6 +21,7 @@ const EMPTY_FIELDS = {
   medium: '',
   year: '',
   createdDate: '',
+  position: '',
 };
 
 const LABEL = 'text-[12px] uppercase tracking-eyebrow text-muted';
@@ -373,6 +374,27 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
             </div>
 
             <TagInput id={fieldId + '-tags'} tags={tags} onChange={setTags} />
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor={fieldId + '-position'} className={LABEL}>
+                Position in the gallery
+              </label>
+              <input
+                id={fieldId + '-position'}
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={fields.position}
+                onChange={(event) => setField('position', event.target.value)}
+                placeholder="Top"
+                className={FIELD}
+              />
+              <p className="text-[12px] text-faint">
+                Empty puts it at the top, waiting to be placed on the Curate
+                page. A number hangs it there, and fixes the gallery's order
+                as it stands.
+              </p>
+            </div>
           </div>
         </div>
 

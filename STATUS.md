@@ -27,20 +27,21 @@ drawing-art-gallery/
 │   ├── docker-compose.yml postgres + minio — note: not at the root
 │   ├── app/               config, models, schemas, auth, cli, ratelimit, errors, db
 │   │   ├── api/           pieces.py, collections.py, session.py, socials.py,
-│   │   │                  spotlight.py, helpers.py
+│   │   │                  spotlight.py, curation.py, visits.py, helpers.py
 │   │   └── services/      storage adapters, images, tiles, slugs
-│   ├── migrations/        alembic, 7 revisions
+│   ├── migrations/        alembic, 14 revisions
 │   ├── scripts/           import_uploads.py, backfill_tiles.py
-│   └── tests/             10 suites, 408 checks
+│   └── tests/             11 suites, 457 checks
 ├── frontend/              77 .ts/.tsx files
 │   └── src/
 │       ├── components/    44 (incl. icons.tsx and platform-icons.tsx)
 │       ├── contexts/      theme, session, socials — provider + context per pair
 │       ├── hooks/         11 (incl. useAsync, useSession, useSpotlight)
-│       ├── pages/         5  (Landing, Piece, Waived, Collection, Collections)
+│       ├── pages/         7  (Landing, Piece, Collection, Collections, Curation,
+│       │                  Waived, Metrics)
 │       ├── lib/           session.ts (the owner marker), keyhole.ts (the spare
 │       │                  path), spotlight.ts (which five the band shows),
-│       │                  order.ts (one item moved within an array)
+│       │                  order.ts (moving and placing items in an array)
 │       ├── services/      pieces.ts — the API client; keyhole.ts — sign-in only
 │       └── types/         the shared shapes
 └── context/               design and specification documents
@@ -68,7 +69,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report 3e9c1f7a52d4
+alembic upgrade head          # should report c4e8a1d2b7f5
 flask --app app run --port 5000
 ```
 
@@ -170,8 +171,8 @@ Nine tables: `pieces`, `collections`, `collection_pieces`, `tags`,
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
-`updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`, `focal_x`,
-`focal_y`, `focal_zoom`.
+`updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`,
+`curated_order`, `focal_x`, `focal_y`, `focal_zoom`.
 
 **`spotlight_order`** is the slot a piece holds in the landing page band,
 counting from zero, or null for one the owner never picked. It is the
@@ -219,7 +220,7 @@ collections do have one, and the rule that protects a collection's URL
 across a rename has no equivalent here: there is no address to protect.
 
 **`collections`** — id, name, slug, description, `cover_piece_id`,
-`is_public`, `created_at`, `updated_at`.
+`is_public`, `curated_order`, `created_at`, `updated_at`.
 
 **`collection_pieces`** — the join, carrying `display_order`. This is the
 curation: a collection's order lives here and nowhere else.
@@ -245,7 +246,7 @@ keeps them. [`context/METRICS.md`](context/METRICS.md) holds the design.
 
 ### Migrations
 
-Ten revisions, head `7c2e5a9d14b8`. History is immutable — add a
+Fourteen revisions, head `c4e8a1d2b7f5`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -259,6 +260,10 @@ b8e42d1a6c37  add pieces.focal_x and pieces.focal_y
 c5d93e2f8a41  add pieces.focal_zoom
 d1f4a7b93c26  focal_zoom becomes a multiple of fit
 7c2e5a9d14b8  add visit_events
+3e9c1f7a52d4  add users.session_token
+a6d0f3b8e217  lowercase tag names
+9b3d6e2f1a74  add pieces.curated_order, placed newest first
+c4e8a1d2b7f5  add collections.curated_order, placed newest first
 ```
 
 ### Two model notes worth carrying
@@ -330,7 +335,7 @@ Full rationale in [`context/STORAGE.md`](context/STORAGE.md).
 
 ## 5. API
 
-23 routes. Everything under `/api`. `[owner]` means the route requires the
+25 routes. Everything under `/api`. `[owner]` means the route requires the
 owner: a session cookie, or `X-Owner-Token` while the development
 credential is still configured — see §7.
 
@@ -338,9 +343,9 @@ credential is still configured — see §7.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/pieces` | Exhibited only. `?waived=true` `[owner]` returns the reserve, newest waived first |
+| `GET` | `/api/pieces` | Exhibited only, in the curated order with unplaced pieces first (`CURATION.md`). `?waived=true` `[owner]` returns the reserve, newest waived first |
 | `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`. **410 and a tombstone** for a waived piece unless owner |
-| `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives and the Deep Zoom pyramid. Repeated `collectionIds` fields join the piece to collections in the same transaction |
+| `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives and the Deep Zoom pyramid. Repeated `collectionIds` fields join the piece to collections in the same transaction. Optional `position`, from 1, hangs it there and numbers the gallery; absent leaves it unplaced at the top |
 | `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags, focalX, focalY, focalZoom. Only keys present are touched. Allowed on a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
 | `POST` | `/api/pieces/<id>/waive` `[owner]` | 409 if already waived |
@@ -351,7 +356,7 @@ credential is still configured — see §7.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/collections` | Public only. `?includePrivate=1` `[owner]` for all. Each row carries `pieceIds`, the membership the spotlight reads to name a piece's collections without a second request |
+| `GET` | `/api/collections` | Public only, in the curated order with new ones first. `?includePrivate=1` `[owner]` for all. Each row carries `pieceIds`, the membership the spotlight reads to name a piece's collections without a second request |
 | `GET` | `/api/collections/<slug>` | Detail with pieces in `display_order`. 404 for a private collection unless owner |
 | `POST` | `/api/collections` `[owner]` | Optional `pieceIds` in pick order, `coverPieceId` |
 | `PATCH` | `/api/collections/<id>` `[owner]` | `name`, `slug`, `description`, `isPublic`, `coverPieceId`. The UI never sends `slug`, so a rename keeps the URL |
@@ -378,6 +383,13 @@ credential is still configured — see §7.
 | Method | Path | Notes |
 |---|---|---|
 | `PUT` | `/api/spotlight` `[owner]` | The whole ordered list of piece ids, replaced. At most five, no duplicates, and 409 for a waived one. An empty list restores the default. **There is no GET** — `spotlightOrder` rides along on every piece in `GET /api/pieces`, so the band needs no request of its own |
+
+### Curation
+
+| Method | Path | Notes |
+|---|---|---|
+| `PUT` | `/api/curation/pieces` `[owner]` | `{"pieceIds": [...]}`, the gallery first to last, replaced. A piece left out loses its place and waits at the top. 400 for a duplicate or more ids than exhibited pieces, 404 unknown, 409 waived. Answers with the gallery. **No GET** -- `curatedOrder` rides on every piece, for the owner; a visitor gets null, since the gaps a waive leaves would place the withdrawn pieces |
+| `PUT` | `/api/curation/collections` `[owner]` | `{"collectionIds": [...]}`, every collection first to last, drafts included, replaced. The same refusals, bounded by the number of collections. Answers with the owner's full list. `curatedOrder` is owner-only on collections too: numbers counted across drafts would leave gaps where a visitor is told nothing exists |
 
 ### Visits
 
@@ -746,6 +758,21 @@ so most rows are one field rather than three.
 check tested for `://` before prepending `https://`, so `javascript:alert(1)`
 became `https://javascript:alert(1)` -- a perfectly good https url with an
 odd host. The scheme is now judged before anything is rewritten.
+
+**Curation**, 2026-09-19, specified in
+[`context/CURATION.md`](context/CURATION.md). The gallery's order is now
+the owner's, set on `/curate`: a same-size grid of the whole catalogue, with
+drag, pick and place, typed positions and arrow keys, undo, and a pending
+order kept on the device until it is saved. New and restored pieces wait at
+the top. The spotlight's empty slots and the sort row's default, now named
+"Curated", follow it. The migration placed every piece in the old
+newest-first order, so nothing moved when it landed. A wall preview and a
+position chosen at upload followed the same day, then the wall itself
+changed: the masonry now reads across the rows, since a gallery that filled
+down each column made "third" mean a different place on every screen.
+Then "Start from", which reorders the pending list by upload date, year or
+title in one undoable step, and the order of the collections themselves on
+the same page, with drafts ordered alongside the rest.
 
 ### Live data
 

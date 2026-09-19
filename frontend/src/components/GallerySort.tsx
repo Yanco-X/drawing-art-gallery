@@ -1,6 +1,5 @@
 import { useId } from 'react';
 import type { SortDirection, SortKey } from '../lib/sortPieces';
-import { SUBTLE_ACTION } from './form-styles';
 import { SortIcon } from './icons';
 
 const label = (key: SortKey, active: boolean, direction: SortDirection) => {
@@ -14,6 +13,13 @@ const OPTIONS: SortKey[] = ['year', 'title', 'added'];
 const OPTION =
   'cursor-pointer border bg-transparent px-3 py-2 text-[12px] uppercase ' +
   'tracking-btn whitespace-nowrap transition-colors duration-200';
+
+const optionClass = (on: boolean) =>
+  `${OPTION} ${
+    on
+      ? 'border-accent text-accent'
+      : 'border-line text-muted hover:border-accent hover:text-accent'
+  }`;
 
 /*
  * One component rather than the filter's split pair: these two are neighbours
@@ -47,6 +53,16 @@ export const GallerySort = ({
       <div id={id} data-open={open} className="sort-row" inert={!open}>
         <div>
           <div className="flex items-center gap-2 pr-3 whitespace-nowrap">
+            {/* The order the list arrives in: the owner's, for the gallery
+                and for a collection alike. */}
+            <button
+              type="button"
+              onClick={onClear}
+              aria-pressed={!active}
+              className={optionClass(!active)}
+            >
+              Curated
+            </button>
             {OPTIONS.map((option) => {
               const on = sortKey === option;
               return (
@@ -55,21 +71,12 @@ export const GallerySort = ({
                   type="button"
                   onClick={() => onChoose(option)}
                   aria-pressed={on}
-                  className={`${OPTION} ${
-                    on
-                      ? 'border-accent text-accent'
-                      : 'border-line text-muted hover:border-accent hover:text-accent'
-                  }`}
+                  className={optionClass(on)}
                 >
                   {label(option, on, direction)}
                 </button>
               );
             })}
-            {active && (
-              <button type="button" onClick={onClear} className={SUBTLE_ACTION}>
-                Reset
-              </button>
-            )}
           </div>
         </div>
       </div>

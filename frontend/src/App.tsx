@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeProvider';
 import { claimTabVisit } from './lib/visitorId';
 import CollectionPage from './pages/CollectionPage';
 import CollectionsIndexPage from './pages/CollectionsIndexPage';
+import CurationPage from './pages/CurationPage';
 import LandingPage from './pages/LandingPage';
 import MetricsPage from './pages/MetricsPage';
 import PiecePage from './pages/PiecePage';
@@ -30,6 +31,7 @@ function App() {
               <Route path="/piece/:id" element={<PiecePage />} />
               <Route path="/collections" element={<CollectionsIndexPage />} />
               <Route path="/collections/:slug" element={<CollectionPage />} />
+              <Route path="/curate" element={<CurationPage />} />
               <Route path="/waived" element={<WaivedPage />} />
               <Route path="/metrics" element={<MetricsPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />

@@ -5,10 +5,13 @@ import type { Piece } from '../types';
 export const PieceTile = ({
   piece,
   selected = false,
+  whole = false,
   children,
 }: {
   piece: Piece;
   selected?: boolean;
+  /** The whole drawing inside the frame, rather than a crop that fills it. */
+  whole?: boolean;
   children?: ReactNode;
 }) => {
   const [failed, setFailed] = useState(false);
@@ -30,7 +33,7 @@ export const PieceTile = ({
             alt={piece.title}
             loading="lazy"
             onError={() => setFailed(true)}
-            className="h-full w-full object-cover"
+            className={`h-full w-full ${whole ? 'object-contain' : 'object-cover'}`}
           />
         )}
         {children}

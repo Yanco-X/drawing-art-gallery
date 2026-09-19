@@ -63,7 +63,7 @@ def replace_spotlight():
     The whole list, in the order the band should show it.
 
     Set semantics: a piece absent from the body loses its slot. An empty list
-    is how the owner goes back to the default, the newest five.
+    is how the owner goes back to the default, the first five of the gallery.
     """
     ids = _piece_ids(request.get_json(silent=True))
 

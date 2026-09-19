@@ -34,6 +34,11 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
   // The reserve and the counts are the owner's own views; a visitor is not
   // told they exist.
   if (role === 'owner') {
+    items.push({
+      label: 'Curate',
+      to: '/curate',
+      active: pathname.startsWith('/curate'),
+    });
     items.push({ label: 'Waived', to: '/waived', active: inReserve });
     items.push({
       label: 'Metrics',

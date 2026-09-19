@@ -193,7 +193,7 @@ export const SpotlightDialog = ({
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-[13px] text-dim">
                   {picked.length === 0
-                    ? 'Pick up to five, or leave it empty for the newest work.'
+                    ? 'Pick up to five, or leave it empty for the first five of the gallery.'
                     : `${picked.length} of ${SPOTLIGHT_COUNT} picked.`}
                 </p>
                 {picked.length > 0 && (

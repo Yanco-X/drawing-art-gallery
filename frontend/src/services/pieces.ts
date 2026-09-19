@@ -72,6 +72,7 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
   appendIf(form, 'medium', input.medium);
   appendIf(form, 'year', input.year);
   appendIf(form, 'createdDate', input.createdDate);
+  appendIf(form, 'position', input.position);
   // Repeated fields, which is how Flask's request.form.getlist reads a list.
   input.tags.forEach((tag) => form.append('tags', tag));
   input.collectionIds.forEach((id) => form.append('collectionIds', id));
@@ -316,13 +317,38 @@ export const fetchSocials = async (): Promise<Social[]> => {
   return response.json();
 };
 
-// An empty list is how the owner goes back to the default: the newest five,
-// which is stored nowhere.
+// An empty list is how the owner goes back to the default: the first five of
+// the gallery, which is stored nowhere.
 export const setSpotlight = async (pieceIds: string[]): Promise<Piece[]> => {
   const response = await fetch('/api/spotlight', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pieceIds),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// The whole gallery, first to last. Answers with the gallery as it now
+// stands, including anything uploaded since the list was fetched.
+export const setCuratedOrder = async (pieceIds: string[]): Promise<Piece[]> => {
+  const response = await fetch('/api/curation/pieces', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pieceIds }),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// Every collection, drafts included, first to last; answers with the list.
+export const setCollectionOrder = async (
+  collectionIds: string[],
+): Promise<CollectionSummary[]> => {
+  const response = await fetch('/api/curation/collections', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ collectionIds }),
   });
   if (!response.ok) await raise(response);
   return response.json();

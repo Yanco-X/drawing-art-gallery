@@ -45,6 +45,8 @@ export interface Piece {
   tags: Tag[];
   waivedAt: string | null;
   spotlightOrder: number | null;
+  // Null until the owner places it, and always null for a visitor.
+  curatedOrder: number | null;
   // Percentages across and down. Null on both is centre.
   focalX: number | null;
   focalY: number | null;
@@ -87,6 +89,9 @@ export interface CollectionSummary extends CollectionRef {
   // first member as a fallback. The arrange grid has to tell those apart.
   coverPieceId: string | null;
   isPublic: boolean;
+  // Null until the owner places it, and always null for a visitor.
+  curatedOrder: number | null;
+  createdAt: string | null;
 }
 
 export interface Collection extends CollectionSummary {
@@ -100,6 +105,8 @@ export interface NewPiece {
   medium: string;
   year: string;
   createdDate: string;
+  // The raw input, counting from 1. Empty hangs the piece at the top.
+  position: string;
   tags: string[];
   collectionIds: string[];
 }

@@ -16,11 +16,19 @@ from .helpers import bounded_text, parse_uuid
 
 bp = Blueprint("pieces", __name__, url_prefix="/pieces")
 
+# The owner's curated order, with the pieces not placed yet above it, newest
+# first. Postgres puts nulls last on an ascending sort unless told otherwise.
+GALLERY_ORDER = (
+    Piece.curated_order.asc().nulls_first(),
+    Piece.created_at.desc(),
+    Piece.title,
+)
+
 
 @bp.get("")
 def list_pieces():
     """
-    Gallery order, newest first. Also the picker source for curation.
+    Gallery order: the owner's curation. Also the picker source for curation.
 
     Waived pieces are excluded unless the owner asks for them by name.
     """
@@ -36,9 +44,7 @@ def list_pieces():
             Piece.waived_at.desc(), Piece.title
         )
     else:
-        stmt = select(Piece).where(Piece.waived_at.is_(None)).order_by(
-            Piece.created_at.desc(), Piece.title
-        )
+        stmt = select(Piece).where(Piece.waived_at.is_(None)).order_by(*GALLERY_ORDER)
 
     return jsonify([piece_to_dict(p) for p in session.scalars(stmt).all()])
 
@@ -129,6 +135,37 @@ YEAR_MIN, YEAR_MAX = 1900, 2100
 TITLE_MAX, DESCRIPTION_MAX, MEDIUM_MAX = 255, 4000, 100
 
 
+def _parse_position(raw):
+    """A place in the gallery counting from 1, or None for the top."""
+    if raw is None or raw.strip() == "":
+        return None
+    try:
+        position = int(raw)
+    except ValueError:
+        raise ApiError("position must be a whole number.", details={"position": raw})
+    if position < 1:
+        raise ApiError("position counts from 1.", details={"position": raw})
+    return position
+
+
+def _hang_at(session, piece: Piece, position: int) -> None:
+    """
+    Put a new piece at a place in the gallery as it shows now; past the end
+    is the end.
+
+    Numbers the whole gallery, as a save on the curation page would, so the
+    pieces waiting at the top keep their places and stop being unplaced.
+    """
+    others = session.scalars(
+        select(Piece)
+        .where(Piece.waived_at.is_(None), Piece.id != piece.id)
+        .order_by(*GALLERY_ORDER)
+    ).all()
+    at = min(position, len(others) + 1) - 1
+    for index, member in enumerate([*others[:at], piece, *others[at:]]):
+        member.curated_order = index
+
+
 def _parse_year(raw):
     """
     A year from a form string or a JSON number.
@@ -166,7 +203,8 @@ def create_piece():
     Upload a piece.
 
     multipart/form-data: `image` plus title, description, medium, year,
-    createdDate, and repeated `tags` and `collectionIds` fields.
+    createdDate, position, and repeated `tags` and `collectionIds` fields.
+    No position leaves the piece unplaced, at the top of the gallery.
 
     Files are written before the row is committed: orphaned bytes are
     sweepable, a row pointing at nothing is a broken image. The commit is the
@@ -191,6 +229,7 @@ def create_piece():
 
     year = _parse_year(request.form.get("year"))
     created = _parse_created_date(request.form.get("createdDate"))
+    position = _parse_position(request.form.get("position"))
 
     # The id is generated here, before anything is written: every object key
     # derives from it, so it cannot wait for the INSERT to assign one.
@@ -223,6 +262,8 @@ def create_piece():
         # fails the whole thing and the rollback below takes the objects with
         # it. (_join_collections is defined further down, resolved at call time.)
         _join_collections(session, piece, request.form.getlist("collectionIds"))
+        if position is not None:
+            _hang_at(session, piece, position)
         session.commit()
     except Exception:
         session.rollback()
@@ -365,8 +406,10 @@ def waive_piece(piece_id):
     # delete-orphan on the relationship removes the join rows.
     piece.collection_links.clear()
     # Same invariant, one step louder: a piece withdrawn from the gallery
-    # cannot keep a spotlight slot. Restoring does not take it back.
+    # cannot keep a spotlight slot or a place in the curated order. Restoring
+    # takes back neither; the piece returns unplaced, at the top.
     piece.spotlight_order = None
+    piece.curated_order = None
     piece.waived_at = _utcnow()
     session.commit()
 

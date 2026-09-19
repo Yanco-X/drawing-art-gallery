@@ -46,6 +46,11 @@ def piece_to_dict(piece: Piece) -> dict:
     # The slot the owner gave this piece in the spotlight, or null. Sent to
     # everyone: one integer saves the landing page a second request.
         "spotlightOrder": piece.spotlight_order,
+    # The piece's place in the curated gallery, or null when it has not been
+    # placed yet. Owner only: the gaps a waive leaves in the numbering would
+    # tell a visitor where withdrawn pieces hung. The list already arrives in
+    # this order, so nothing a visitor sees needs it.
+        "curatedOrder": piece.curated_order if is_owner() else None,
     # Where a crop should be aimed, in percent. Null is centre.
         "focalX": piece.focal_x,
         "focalY": piece.focal_y,
@@ -127,6 +132,10 @@ def collection_summary_to_dict(collection: Collection) -> dict:
             str(collection.cover_piece_id) if collection.cover_piece_id else None
         ),
         "isPublic": collection.is_public,
+    # Owner only, as on a piece: numbers counted across drafts would leave
+    # gaps where a visitor is not told anything exists.
+        "curatedOrder": collection.curated_order if is_owner() else None,
+        "createdAt": collection.created_at.isoformat() if collection.created_at else None,
     }
 
 

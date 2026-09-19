@@ -76,7 +76,7 @@ export const SpotlightOrder = ({
                 </span>
                 <span className="truncate text-text">{piece.title}</span>
                 <span className="ml-auto shrink-0 text-[11px] uppercase tracking-eyebrow text-faint">
-                  Latest
+                  Curated
                 </span>
               </li>
             );

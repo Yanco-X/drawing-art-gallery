@@ -13,6 +13,8 @@ export {
   waivePiece,
   restorePiece,
   setCollectionPieces,
+  setCuratedOrder,
+  setCollectionOrder,
   setPieceCollections,
   updateCollection,
   updatePiece,

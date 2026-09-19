@@ -11,12 +11,12 @@ export const GRID_DENSITY_LABELS: Record<GridDensity, string> = {
   dense: 'Dense',
 };
 
-// A bare length sets `column-width` and leaves `column-count` auto, so the
-// count follows the window without a media query.
-export const GRID_DENSITY_COLUMNS: Record<GridDensity, string> = {
-  airy: '380px',
-  comfortable: '290px',
-  dense: '230px',
+// The narrowest a column may be. The count is as many as fit, so it follows
+// the window without a media query.
+export const GRID_DENSITY_COLUMNS: Record<GridDensity, number> = {
+  airy: 380,
+  comfortable: 290,
+  dense: 230,
 };
 
 const isGridDensity = (value: unknown): value is GridDensity =>

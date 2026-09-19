@@ -9,8 +9,9 @@ export const pickedIds = (pieces: Piece[]): string[] =>
     .sort((a, b) => (a.spotlightOrder ?? 0) - (b.spotlightOrder ?? 0))
     .map((piece) => piece.id);
 
-// Filling from the top of `pieces` relies on `GET /api/pieces` being
-// newest-first. `override` is what the owner has just saved, ahead of a refetch.
+// Filling from the top of `pieces` makes the empty slots follow the curated
+// order, which `GET /api/pieces` arrives in. `override` is what the owner has
+// just saved, ahead of a refetch.
 export const spotlightSlots = (
   pieces: Piece[],
   override?: string[] | null,
@@ -23,9 +24,9 @@ export const spotlightSlots = (
     .filter((piece): piece is Piece => piece !== undefined);
 
   const taken = new Set(chosen.map((piece) => piece.id));
-  const newest = pieces.filter((piece) => !taken.has(piece.id));
+  const curated = pieces.filter((piece) => !taken.has(piece.id));
 
-  return [...chosen, ...newest].slice(0, SPOTLIGHT_COUNT);
+  return [...chosen, ...curated].slice(0, SPOTLIGHT_COUNT);
 };
 
 export const CENTRE_FOCAL = 50;
