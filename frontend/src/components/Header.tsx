@@ -125,14 +125,27 @@ export const Header = ({
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
-      <div className="mx-auto flex w-full max-w-content items-center justify-between gap-6 px-gutter py-5">
+      {/* Below sm the gap is only the floor between the wordmark and the
+          controls; at 24px a 360px phone scrolls sideways. */}
+      <div className="mx-auto flex w-full max-w-content items-center justify-between gap-2 px-gutter py-5 sm:gap-6">
         {/* leading-none keeps the header its old height; the piece page's
             artwork cap subtracts it as a fixed 72px. */}
         <Link
           to="/home"
-          className="font-serif text-[32px] leading-none tracking-wordmark text-text"
+          className="flex items-center gap-2 font-serif text-[32px] leading-none tracking-wordmark text-text"
         >
-          Yan<span className="italic text-accent">Curations</span>
+          {/* 40px overhangs the 36px row by 2px a side, so the header keeps
+              the height --spacing-header records. A 360px phone has no room. */}
+          <img
+            src="/logo-40.png"
+            srcSet="/logo-40.png 40w, /logo-50.png 50w, /logo-60.png 60w, /logo-80.png 80w, /logo-120.png 120w"
+            sizes="(min-width: 370px) 40px, 32px"
+            alt=""
+            className="size-8 min-[370px]:-my-0.5 min-[370px]:size-10"
+          />
+          <span>
+            Yan<span className="italic text-accent">Curations</span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-[clamp(16px,3vw,36px)] text-[14px] uppercase tracking-nav sm:flex">

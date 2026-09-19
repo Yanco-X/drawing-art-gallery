@@ -105,6 +105,24 @@ So the tokens at or below `muted` were re-derived to hold the exact contrast rat
 
 `danger` was re-derived too, to `#d77868`. Left alone it fell to 4.4:1 and quietly stopped clearing AA, which is not a thing to discover later on the one control that cannot be undone.
 
+### Logo
+
+The owner's drawn figure, arms out. **Added 2026-09-18.** `logos/` holds the files as supplied; the two that are served are copies in `frontend/public/`, so a new version is copied over its copy.
+
+| File | Size | Used for |
+|---|---|---|
+| `favicon.ico` | 16, 32, 48 | Browser tabs, desktop and phone |
+| `favicon-192.png` | 192 | The phone home screen: `apple-touch-icon` on iOS, the 192 icon on Android |
+| `favicon-32.png` | 32 | Not served. The ICO's own 32 frame is the crisper of the two |
+| `favicon-512.png` | 512 | Not served. It is for a web app manifest, which the site does not have |
+| `logo-1024.png` | 977 x 1024 | Not served |
+| `logo.png`, `logo-lines-only.png` | 4648 x 4872 | Masters |
+
+* **The header has its own exports**, `frontend/public/logo-{40,50,60,80,120}.png`: 40px at 1x, 1.25x, 1.5x, 2x and 3x, offered as one `srcset` so each screen fetches the one that matches it. Made from `logos/logo.png` in a single Lanczos resample, the figure at full height on a square canvas. The 192 was tried first and looked soft: the browser shrank an already-shrunk file by an odd factor. A new master means re-exporting all five.
+* **The filled drawing, not the lines-only one.** Every served file is the figure filled white inside its black line. On dark the fill is what carries it: drawn in `text` at header size, the lines alone faded to a faint scribble, while the filled figure still reads as a figure. On light the fill disappears into the paper and the drawing looks as drawn.
+* **Tabs.** On a dark tab strip the 16px figure is a clear white silhouette. On a light one the fill meets the white tab and only its grey edge shows. That comes from the drawing at 16px, not from the markup.
+* **iOS paints a home-screen icon's transparency black.** The white fill keeps the figure legible as a white cut-out on black. A drawing on paper there would take an opaque 180px export on `bg`.
+
 ## Themes & Color
 
 Every colour is a semantic token, defined once per theme. Components never reference a hex directly -- the only literal in component code is the accent, which is shared by both themes.
@@ -252,7 +270,8 @@ All motion must be skipped under `prefers-reduced-motion: reduce`.
 
 Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, bottom border in `line`. Padding `20px` vertical.
 
-* **Wordmark** -- "Yan" in `text` plus "Curations" in accent italic, Instrument Serif 32px. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it.
+* **Wordmark** -- "Yan" in `text` plus "Curations" in accent italic, Instrument Serif 32px. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it. **The mark** stands 8px before it, 40px square, overhanging the 36px row by 2px a side so the header keeps its 77px (**added 2026-09-18**, see Logo). Below 370px it is 32px, the wordmark's own size: a 360px phone has no room for more. The pair is one link.
+* **Row gap** -- 24px from 640px up, 8px below. On a phone it is only the floor between the wordmark and the controls, and a 360px phone needs the 16px to fit the mark.
 * **Nav** -- Gallery / Collections / Socials, 14px uppercase, plus Waived for the owner. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a `space-between` row and is correct.
 * **"Show me some!"** -- a random piece, for visitors and the owner alike. **Added 2026-09-17.** It sits in the row's free space between the nav and the controls on the right, as `ICON_BUTTON_ACCENT`: outlined accent that fills on hover, an invitation rather than the header's one filled action, which is the owner's Upload. A tooltip says where it goes. It draws from the exhibited pieces, never the one already on screen, and arrives with no origin, so that piece walks the whole gallery. From 1024px it is in the row and below 640px in the menu panel; between the two it has no place yet, which is open.
 * **Socials** is a button, not a link, and carries a chevron -- the only thing marking it apart from its neighbours, and what says a click opens rather than goes.

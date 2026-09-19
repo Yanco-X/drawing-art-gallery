@@ -843,13 +843,15 @@ Carried forward deliberately.
   Only the sign-in dialog is lazy. Worth fixing as a **performance** pass —
   lazy chunks hide nothing from anyone looking — and `AUTH.md` §5 is explicit
   that the bundle claim is narrow until it lands.
-- **The owner's header scrolls sideways between 640 and ~860px.** At 768 it
-  wants 848px of content. Four nav items, a wordmark and three controls do
-  not fit once the desktop nav appears at 640. A visitor is fine — fewer nav
-  items and no Upload. The fix is moving the nav and the menu button from
-  `sm` to `lg`, which is three class changes and also changes the visitor's
-  header between 640 and 1024, so it was left as the owner's call rather
-  than done quietly. Raised three times; deferred each time, deliberately.
+- **The header runs out of width.** Recomputed 2026-09-18 from the font
+  files, not measured in a browser, after the 32px wordmark, "Show me some!",
+  Metrics and the logo mark. A visitor's header overflows between 640 and
+  ~750px, by ~95px at 640, and fits from 360px phones up otherwise. The
+  owner's overflows below ~1425px and on every phone: `+ Upload` beside the
+  wordmark does not fit even at 430px. Moving the nav and the menu button
+  from `sm` to `lg` still answers 640 to 1024, in three class changes that
+  also change the visitor's header there; the owner's phone row needs an
+  answer of its own. The owner's call, raised four times now.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill

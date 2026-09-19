@@ -65,6 +65,7 @@ These do not move, and most questions end at one of them.
 | A design token, colour or spacing value | `frontend/src/index.css` |
 | Shared input and button classes | `frontend/src/components/form-styles.ts` |
 | An SVG icon | `frontend/src/components/icons.tsx` |
+| The logo and the favicons | `logos/` as supplied; the served copies and the header's `logo-*.png` exports in `frontend/public/`, linked from `frontend/index.html` and `Header` |
 | URL to page mapping | `frontend/src/App.tsx` |
 | Owner-only enforcement | `backend/app/auth.py` |
 | How a file gets to disk or MinIO | `backend/app/storage.py` |
