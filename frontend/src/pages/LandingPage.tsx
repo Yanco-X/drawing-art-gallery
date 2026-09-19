@@ -71,6 +71,7 @@ const LandingPage = () => {
         error={pieces.status === 'error' ? pieces.message : undefined}
         collections={allCollections}
         sortable
+        settled={collections.status !== 'loading'}
       />
 
       {isOwner && (

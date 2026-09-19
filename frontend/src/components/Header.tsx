@@ -4,7 +4,7 @@ import { useSocials } from '../hooks';
 import { fetchPieces } from '../services';
 import type { Role } from '../types';
 import { ICON_BUTTON_ACCENT } from './form-styles';
-import { SignOutIcon } from './icons';
+import { ShuffleIcon, SignOutIcon } from './icons';
 import { SocialLink, SocialsMenu } from './SocialsMenu';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -85,6 +85,7 @@ const ShowMeSome = ({ className = '' }: { className?: string }) => {
       title="Take me to a random piece from the gallery"
       className={`${ICON_BUTTON_ACCENT} ${className}`}
     >
+      <ShuffleIcon />
       Show me some!
     </button>
   );

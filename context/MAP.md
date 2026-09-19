@@ -39,7 +39,7 @@ you need to change behaviour, not to find code.
 | Gallery filter | landing, collection | `GalleryFilter`, `MultiSelect`, `hooks/useGalleryFilter.ts`, `lib/tags.ts` | -- filters in the browser | `DESIGN.md`, `current-feature.md` |
 | Gallery sort | landing, collection | `GallerySort`, `hooks/useGallerySort.ts`, `lib/sortPieces.ts` | `createdAt` on the piece payload | `DESIGN.md` |
 | List memory | landing, collection | `hooks/useReturnMemory.ts`, `lib/returnMemory.ts` | -- | `DESIGN.md` |
-| Piece page | `pages/PiecePage.tsx` | `PieceWallLabel`, `PieceNav`, `PieceOwnerActions`, `PieceDetailsDialog`, `TagInput`, `FocalPicker`, `hooks/useArrivingPiece.ts`, `lib/origin.ts`, `lib/traverse.ts` | `api/pieces.py` | `project-overview.md` |
+| Piece page | `pages/PiecePage.tsx` | `PieceWallLabel`, `TagShelf`, `PieceNav`, `PieceOwnerActions`, `PieceDetailsDialog`, `TagInput`, `FocalPicker`, `hooks/useArrivingPiece.ts`, `lib/origin.ts`, `lib/traverse.ts` | `api/pieces.py` | `project-overview.md` |
 | Detailed view | piece page | `DetailedView`, `DetailedViewButton`, `PieceTile` | `services/tiles.py`, `scripts/backfill_tiles.py` | `DETAILED-VIEW.md` |
 | Collections | `pages/CollectionsIndexPage.tsx`, `pages/CollectionPage.tsx` | `CollectionGrid`, `CollectionCard`, `CollectionArrange`, `CollectionOwnerActions`, `CollectionDetailsDialog`, `NewCollectionDialog`, `CollectionPicker`, `AddWorkDialog`, `PiecePickerGrid`, `lib/order.ts` | `api/collections.py`, `services/slugs.py` | `COLLECTIONS.md` |
 | Upload | any, owner only | `UploadModal`, `TagInput`, `CollectionPicker`, `YearField`, `lib/year.ts`, `lib/tags.ts` | `POST /api/pieces`, `services/images.py`, `storage.py` | `STORAGE.md` |

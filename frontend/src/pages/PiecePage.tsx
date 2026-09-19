@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Link,
   useLocation,
@@ -12,6 +12,7 @@ import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
 import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
+import { TagShelf } from '../components/TagShelf';
 import { useArrivingPiece, useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
 import { StarIcon } from '../components/icons';
@@ -26,6 +27,7 @@ import {
   sequenceState,
   serialiseTrail,
 } from '../lib/origin';
+import { keyTaken } from '../lib/traverse';
 import {
   fetchCollection,
   fetchPiece,
@@ -33,7 +35,7 @@ import {
   fetchWaivedPieces,
   recordEvent,
 } from '../services';
-import type { Collection, Piece } from '../types';
+import type { Collection, Piece, Tag } from '../types';
 
 const BackLink = ({
   waived = false,
@@ -181,6 +183,43 @@ const PiecePage = () => {
   const target = edited && edited.id === id ? edited : fetched;
   const viewing = params.get(VIEW_PARAM) === '1';
   const piece = useArrivingPiece(target, viewing);
+
+  // Kept after it closes, so the drawer has its list to show while it slides
+  // shut. This page stays mounted from piece to piece, and so does the shelf.
+  const [shelf, setShelf] = useState<{ tag: Tag; open: boolean } | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const shelfId = useId();
+  const shelfOpen = Boolean(
+    shelf?.open &&
+      piece &&
+      !piece.waivedAt &&
+      piece.tags.some((tag) => tag.id === shelf.tag.id),
+  );
+  // Walked on to a piece without the tag: shut it for good, or it would come
+  // back up on the next piece that happened to carry it.
+  if (shelf?.open && piece && !shelfOpen) setShelf({ ...shelf, open: false });
+
+  const toggleShelf = useCallback((tag: Tag, chip: HTMLButtonElement) => {
+    opener.current = chip;
+    setShelf((held) => ({
+      tag,
+      open: !(held?.open && held.tag.id === tag.id),
+    }));
+  }, []);
+
+  const closeShelf = useCallback(() => {
+    setShelf((held) => held && { ...held, open: false });
+    opener.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    if (!shelfOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !keyTaken(event)) closeShelf();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [shelfOpen, closeShelf]);
 
   // Keyed on the state rather than the piece, so refetching one piece does
   // not refetch its siblings.
@@ -362,13 +401,29 @@ const PiecePage = () => {
 
   const picked = piece.spotlightOrder !== null;
 
+  const tagged = (tagId: string) =>
+    gallery.filter((one) => one.tags.some((tag) => tag.id === tagId));
+  // The reserve has no shelf: a waived piece's tags stay plain labels.
+  const exhibited = !piece.waivedAt;
+  const shelved = shelf &&
+    exhibited && {
+      tag: shelf.tag,
+      pieces: tagged(shelf.tag.id),
+      currentId: piece.id,
+      origin: carried,
+    };
+
   return (
     <PageShell>
-      <article className="mx-auto w-full max-w-content px-gutter pt-8 pb-intro-bottom">
+      <article className="mx-auto flex w-full max-w-content items-start px-gutter pt-8 pb-intro-bottom">
         {/* The rows are explicit because the artwork spans both. Left to
             `auto`, grid hands a spanning item's height to every row it crosses,
             which inflated the first to 400-odd pixels of nothing. */}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_1fr] lg:gap-y-0">
+        <div
+          className={`grid min-w-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_1fr] lg:gap-y-0 lg:transition-[grid-template-columns] lg:duration-300 lg:ease-reflow motion-reduce:transition-none ${
+            shelfOpen ? 'xl:grid-cols-[minmax(0,1fr)_272px]' : ''
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-4 lg:col-start-2 lg:row-start-1 lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:border-l lg:border-line lg:pb-6 lg:pl-8">
             {/* Rendered twice rather than placed by grid: the two live in
                 different columns at lg and in one row below it. `hidden` keeps
@@ -418,8 +473,61 @@ const PiecePage = () => {
                 />
               ) : undefined
             }
+            tagShelf={
+              exhibited
+                ? {
+                    shared: new Set(
+                      piece.tags
+                        .filter((tag) => tagged(tag.id).length > 1)
+                        .map((tag) => tag.id),
+                    ),
+                    openId: shelfOpen && shelf ? shelf.tag.id : null,
+                    controls: `${shelfId}-drawer ${shelfId}-row`,
+                    onToggle: toggleShelf,
+                    row: (
+                      <div
+                        data-open={shelfOpen}
+                        inert={!shelfOpen}
+                        className="tag-strip xl:hidden"
+                      >
+                        <div>
+                          {shelved && (
+                            <TagShelf
+                              id={`${shelfId}-row`}
+                              row
+                              onClose={closeShelf}
+                              {...shelved}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  }
+                : undefined
+            }
           />
         </div>
+
+        {/* Up through the article's top padding, to hang from the header.
+            There from the start, shut, so the first opening has somewhere
+            to open from. */}
+        {exhibited && (
+          <div
+            data-open={shelfOpen}
+            inert={!shelfOpen}
+            className="tag-drawer -mt-8 hidden shrink-0 xl:grid"
+          >
+            <div>
+              {shelved && (
+                <TagShelf
+                  id={`${shelfId}-drawer`}
+                  onClose={closeShelf}
+                  {...shelved}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </article>
 
       <DetailedView

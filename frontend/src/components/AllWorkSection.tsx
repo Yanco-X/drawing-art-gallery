@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useGalleryFilter, useGallerySort, useReturnMemory } from '../hooks';
 import { readListState, rememberListState } from '../lib/returnMemory';
@@ -21,9 +21,14 @@ export const AllWorkSection = ({
   collections,
   sortable = false,
   origin,
+  settled = true,
 }: {
   pieces: Piece[];
   loading?: boolean;
+  /** False while something above the wall is still loading and will move
+      it: a return or a handoff that scrolled now would land where the wall
+      used to be. */
+  settled?: boolean;
   error?: string;
   title?: string;
   emptyMessage?: string;
@@ -82,12 +87,19 @@ export const AllWorkSection = ({
     sortOpen,
   ]);
   const rowId = useId() + '-filter';
+  const sectionRef = useRef<HTMLElement>(null);
   // Full height as soon as the pieces render, because the grid reserves each
   // card's height from its stored aspect ratio.
-  const marked = useReturnMemory(!loading && !error && pieces.length > 0);
+  const marked = useReturnMemory(
+    !loading && settled && !error && pieces.length > 0,
+    sectionRef,
+  );
 
   return (
-    <section className="mx-auto w-full max-w-content px-gutter pb-section-lg">
+    <section
+      ref={sectionRef}
+      className="mx-auto w-full max-w-content scroll-mt-header px-gutter pb-section-lg"
+    >
       <SectionHeader title={title}>
         {pieces.length > 0 && (
           <div className="flex items-center gap-3">

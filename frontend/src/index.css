@@ -13,7 +13,12 @@
    Token names match the frontmatter in context/DESIGN.md — keep them in sync.
    ───────────────────────────────────────────────────────────── */
 
+/* `color-scheme` travels with each palette so the browser's own parts --
+   scrollbars, date pickers, checkboxes -- are drawn for the same ground.
+   Undeclared, Chrome guessed dark for the page's scrollbar from its
+   background and drew every inner one light. */
 :root {
+  color-scheme: dark;
   --sa-bg: #202021;
   --sa-bg-translucent: rgba(32, 32, 33, 0.92);
   --sa-surface: #232326;
@@ -41,6 +46,7 @@
    Must precede the explicit blocks below — equal specificity, last wins. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
     --sa-bg: #f6f4ef;
     --sa-bg-translucent: rgba(246, 244, 239, 0.92);
     --sa-surface: #fffdf8;
@@ -66,6 +72,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --sa-bg: #f6f4ef;
   --sa-bg-translucent: rgba(246, 244, 239, 0.92);
   --sa-surface: #fffdf8;
@@ -90,6 +97,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --sa-bg: #202021;
   --sa-bg-translucent: rgba(32, 32, 33, 0.92);
   --sa-surface: #232326;
@@ -147,6 +155,9 @@
   --tracking-eyebrow: 0.24em;
 
   --spacing-gutter: clamp(20px, 5vw, 64px);
+  /* The sticky header's height, measured: `py-5` around its 36px controls,
+     plus the rule. What hangs from it or lands below it uses this. */
+  --spacing-header: 77px;
   --spacing-intro-top: clamp(28px, 4vw, 64px);
   --spacing-intro-bottom: clamp(24px, 3.5vw, 48px);
   --spacing-section-sm: clamp(40px, 6vw, 80px);
@@ -551,10 +562,70 @@
   }
 
   /*
+   * The tag drawer on the piece page: the sort row's sideways reveal at the
+   * scale of the page, so the piece moves over rather than being covered.
+   * It hangs from the header and runs to the window's edge -- the negative
+   * margin hands it the page's right gutter as it opens, which is width the
+   * artwork does not have to give up.
+   *
+   * The element's `hidden xl:grid` agrees with the display set here; as with
+   * the others, nothing else may set one.
+   */
+  .tag-drawer {
+    position: sticky;
+    top: --theme(--spacing-header);
+    height: calc(100vh - --theme(--spacing-header));
+    display: grid;
+    grid-template-columns: 0fr;
+    transition:
+      grid-template-columns 300ms cubic-bezier(0.2, 0, 0, 1),
+      margin-right 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .tag-drawer[data-open='true'] {
+    grid-template-columns: 1fr;
+    @apply -mr-gutter;
+  }
+
+  /* Below `xl` the same list opens under the tags instead: the filter row's
+     reveal, without its un-clipping, since nothing inside drops down. */
+  .tag-strip {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .tag-strip[data-open='true'] {
+    grid-template-rows: 1fr;
+  }
+
+  /* The clippers take no size of their own -- no width, no padding -- and
+     leave it to the shelf inside. Whatever a clipper has is the least its
+     track can be: the first version put 240px on the drawer's, and × left
+     the drawer standing; the row's 16px of padding stayed open as a sliver.
+
+     `relative` so the clip holds for positioned content too. The drawer is
+     sticky, so a screen-reader-only label inside it was positioned from the
+     drawer, escaped the shut clipper and hung 8px past the window's edge:
+     a horizontal scrollbar after the first close. */
+  .tag-drawer > *,
+  .tag-strip > * {
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tag-drawer,
+    .tag-strip {
+      transition: none;
+    }
+  }
+
+  /*
    * OpenSeadragon's navigator, dressed for this gallery.
    *
-   * Mounted into our own element via `navigatorId`, which is what makes this
-   * possible: given an element, OpenSeadragon sets the control anchor to
+   * Mounted into our own element, which is what makes this possible: given
+   * an element, OpenSeadragon sets the control anchor to
    * NONE and skips the inline border and background it would otherwise
    * write onto the container. So the frame below is ours, not an override.
    *

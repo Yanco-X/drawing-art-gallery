@@ -77,6 +77,7 @@ spacing:
   base: 2px
   scale: [2, 4, 8, 10, 12, 16, 20, 24, 28]
   gutter: clamp(20px, 5vw, 64px)
+  header: 77px
   intro-top: clamp(28px, 4vw, 64px)
   intro-bottom: clamp(24px, 3.5vw, 48px)
   section-sm: clamp(40px, 6vw, 80px)
@@ -107,6 +108,8 @@ So the tokens at or below `muted` were re-derived to hold the exact contrast rat
 ## Themes & Color
 
 Every colour is a semantic token, defined once per theme. Components never reference a hex directly -- the only literal in component code is the accent, which is shared by both themes.
+
+**Each theme declares its `color-scheme`**, so the parts the browser draws itself -- scrollbars, date pickers, checkboxes, the focal slider -- are drawn for the same ground. **Added 2026-09-18.** Undeclared, Chrome guessed dark for the page's own scrollbar from its background and drew every scrollbar inside the page light, which the tag drawer's list made plain.
 
 ### Text hierarchy
 
@@ -218,7 +221,7 @@ The motion budget is deliberately small.
 | 200ms | Hover transitions -- border colour and text colour |
 | 300ms | Theme swap (background and colour) |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when the density, the sort or the filter changes -- and, over the same span, a card arriving or leaving fades |
-| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band and the sort options opening and closing -- one axis, nothing else |
+| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band and the sort options opening and closing, and the piece page's tag drawer and tag row -- one axis, nothing else. The drawer's rail narrowing and its title scaling ride the same span |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A menu panel opening and closing -- opacity, and an 8px drop |
 | 200ms | One spotlight slide crossfading into the next -- opacity, nothing else |
@@ -352,7 +355,7 @@ The thumbnail carries a 1px `line` border that goes accent on hover, and its `as
 * **And named, not only drawn.** A ring is colour alone, so the marked card carries a `sr-only` "(last viewed)" after its title. The `faint` token is already documented as failing AA; a marker that exists only as a hairline of gold would be worse.
 * **Coming back returns the reader to where they were.** Opening a piece records the scroll position against the list's pathname, and arriving back spends it. Recorded on the act of opening a piece rather than on every scroll, which is what lets arriving from the header start at the top while arriving back from a piece does not -- a position stored continuously cannot tell those two apart.
 * **The position is spent once; the marker is not.** A second return starts where the reader chose to be, while "which one was I looking at" stays answerable for as long as the list is on screen.
-* **The restore re-asserts for up to half a second**, because the page is not its final height when the grid first paints -- on the landing page the collections row arrives on its own request and adds a band above the grid. It gives up the instant the reader scrolls, wheels or types: someone who has started reading has said where they want to be, and outranks a remembered position.
+* **The restore re-asserts for up to half a second**, because the page is not its final height when the grid first paints -- on the landing page the collections row arrives on its own request and adds a band above the grid. **Since 2026-09-18 the landing page waits for that row before restoring at all**: the tag shelf's handoff lands on the wall's own top, and scrolled before the row arrived it was pushed 173px down the page. It gives up the instant the reader scrolls, wheels or types: someone who has started reading has said where they want to be, and outranks a remembered position.
 
 ### Masonry grid
 
@@ -425,7 +428,7 @@ Ordering the wall, added 2026-09-08. A `Sort` button in the "All work" header, a
 
 Not present in the original handoff -- designed against this system as a **gallery wall label**. The artwork keeps the room; the metadata sits beside it, small and quiet, separated by a hairline rather than boxed in a panel. No new visual vocabulary was introduced.
 
-* **Layout** -- a two-column grid, `minmax(0, 1fr)` for the artwork and a fixed `320px` rail. Below 1024px the two stack and the dividing rule turns from a left border into a top border.
+* **Layout** -- a two-column grid, `minmax(0, 1fr)` for the artwork and a fixed `320px` rail. Below 1024px the two stack and the dividing rule turns from a left border into a top border. From `xl` an open tag drawer adds a third column beside them and the rail narrows to `272px` -- see *A tag another piece shares opens a shelf*, below.
 * **From `lg` the rail is two rows** -- the navigation, then the wall label -- at zero row gap, so their left borders meet and read as one unbroken rule beside the artwork. The rows are explicit, `auto 1fr`, because the artwork spans both of them: against `auto` rows grid hands a spanning item's height to every row it crosses, which inflated the first to some 300px of nothing, dropped the piece title from 215px down the page to 511px, and tore a hole in that rule.
 * **Artwork** -- centred in its column, since the cap often leaves it narrower than the column and hugging one edge would strand the rule. 1px `line` border and the `hatch` behind it, exactly as in the grid.
 * **The height cap covers the artwork and its button together**, not the image alone: `max(320px, 100vh - 226px)` from `lg`, and `100vh - 294px` below it, where the navigation sits back above the drawing and costs another 67px.
@@ -433,12 +436,22 @@ Not present in the original handoff -- designed against this system as a **galle
   It was `78vh`, set when nothing sat beneath the image. A percentage cannot hold that promise once something does -- the chrome around the artwork is a fixed height, header and page padding above, the Detailed view button and its dimensions line below, while `78vh` grows with the window. The two agreed at about a 900px viewport and disagreed everywhere else, which is how the button came to sit five pixels below the fold on a 1080p laptop, on square pieces as much as on tall ones: at the cap the image is the same height whatever shape the piece is.
 
   Subtracting the chrome instead gives the artwork whatever the page does not need -- larger on a big monitor than `78vh` ever allowed, smaller on a short one, and the button always in view. Measured at 20px of slack below the caption at every width from 390px to 1920px and every height from 660px to 986px. The 320px floor stops a landscape phone reducing the drawing to a stamp. **Changed 2026-09-07.**
-* **Wall label** -- title at `clamp(22px, 2.4vw, 32px)` serif, then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
+* **Wall label** -- title at `clamp(22px, min(2.4vw, 11.2cqi), 32px)` serif, measured against the rail. The `cqi` term is 32px at the rail's usual width, so it only bites when the rail narrows for the tag drawer: the title scales down with the column and keeps its line breaks rather than wrapping further. Then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
 * **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
 * **A pick wears a star.** **Added 2026-09-18.** A piece in the spotlight carries a solid five-point star, 28px in `accent`, with "In the Spotlight!" as its tooltip and accessible name. It sits in the artwork's right gutter from `lg`, level with the back link in the left one -- on the frame the drawing hangs in, not on the drawing, which was tried first and put a gold mark on the paper. Below `lg` it goes up into the row above the artwork beside the back link, as the back link itself does. It is the one solid accent mark that is not an action -- a status -- and the one glyph besides the density icons that is filled: an outlined star at that size is a scribble.
 * **Platform marks are the one place this set copies someone else's shape.** They live in `components/platform-icons.tsx`, apart from `icons.tsx`, because they break the house rules on purpose -- Instagram keeps its rounded corners, YouTube its pill. A brand is recognised or it is nothing. Everything else in `icons.tsx` is still square-cornered, unfilled and drawn to this design.
 
-* **Tags render as static bordered chips, not links** -- there is nowhere for a chip to point. Tags filter the gallery through the filter band's Tags dropdown rather than having pages of their own, so a chip could yet become a control that narrows the grid to its tag, never a link to a tag page. Until then it is a plain label: a chip that looks clickable but is not is worse than a plain one.
+* **A tag another piece shares opens a shelf of the pieces that share it.** **Added 2026-09-18.** Chips were static until then, because there was nowhere for one to point and a chip that looks clickable but is not is worse than a plain one. The shelf is the somewhere, and it keeps the reader on the piece: sending them to the gallery was the obvious move, and the owner turned it down. A tag only this piece carries stays a plain label, since its shelf would hold the piece already up. The chips that open one take the accent hover, as the upload modal's do, and the open one wears the accent. There are still no tag pages.
+
+  **From `xl` the shelf is a drawer that pushes the page over.** It is 240px, hangs from the header and runs to the window's edge: its right margin goes out by the gutter as it opens, so the gutter becomes part of its width. The rail narrows from 320px to 272px and the title scales down with it. Measured with the drawer open, no piece lost any width at 1900×920, 1536×730, 1440×800 or 1280×650, square or portrait: the room came out of the gutters beside the artwork, which the height cap leaves wide, and the centred artwork simply moves over. Below 1280px there is not the room -- a drawer there took some 40% off a square piece at 1024px -- so below `xl` the shelf opens under the tags instead, as a row of pieces that scrolls sideways, and the piece does not move at all.
+
+  Pushing rather than covering, because an overlay needs a shadow or a scrim to stand off the page and this system has neither. A column that joins the layout needs only the hairline the rail already has.
+
+  **It is pulled out, not faded in.** The drawer slides out from the window's edge with its contents riding its leading edge, and the rail and the artwork give way over the same 300ms on the same curve -- measured in step to within 1%. The owner asked for exactly that when the first build appeared at full width in one frame while the page moved on its own.
+
+  **A piece picked from the shelf opens in place, and the shelf stays open.** The pick hands on the tag's pieces as the walk, the way a filtered wall does, so prev/next and the arrow keys then step through the tag, and the mark moves down the list with them. Walking on to a piece without the tag closes the shelf for good, not until the next piece that happens to carry it. Escape and the shelf's own × close it and give focus back to the chip.
+
+  **"See all in gallery" hands the reader on**, narrowed to the tag. It wears the gallery glyph, a masonry wall in miniature, and dropped its "the" for it: with the icon, the full phrase broke over two lines in the drawer's 208px. The rest of the filter is cleared so the wall shows what the shelf showed, the sort is kept, the filter band opens to say why, and the page lands on the wall rather than at the top, with the piece they came from marked.
 * **Back sits at the top left of the artwork, and prev/next at the top of the rail.** Not in a row above the artwork. **Moved 2026-09-07**, with the cap above and for the same reason: that row cost 68px off the top of every piece page and helped push the artwork's own action below the fold, while the rail beside it ran half empty. Here they cost the drawing nothing and are still the first thing above the fold. Reclaiming the row alone would not have been enough -- it buys 68px against a 69px overrun, which lands the caption exactly on the fold and only looks fixed on a taller window.
 * **Back is in the artwork's left gutter from `lg`, which costs nothing.** It was in the rail with prev/next for a day, and that put it at the far right of the page -- against the one convention nobody thinks about, which is that back is top left and a cursor goes there by reflex. **Corrected 2026-09-08.** The height cap leaves the artwork much narrower than its column, so the gutter either side of it was already empty; the link sits in it and takes no height at all.
 * **The artwork column is `1fr auto 1fr` from `lg`**, rather than padding wide enough for the link. There is no width to guess at, the outer tracks share the slack evenly so the artwork stays centred on the page instead of being pushed off by whatever the label measures, and a track cannot overlap its neighbour -- a wide piece squeezes the gutters rather than running under the link, which is what absolute positioning would have allowed the first landscape upload to do.

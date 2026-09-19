@@ -212,6 +212,22 @@ export const SortIcon = () => (
   </Glyph>
 );
 
+/** One path is broken where the other crosses it, so the two read as
+    passing over each other rather than meeting. */
+export const ShuffleIcon = () => (
+  <Glyph>
+    <path d="M3 17h4l8-10h6M18 4l3 3-3 3" />
+    <path d="M3 7h4l2.6 3.25M12.4 13.75 15 17h6M18 14l3 3-3 3" />
+  </Glyph>
+);
+
+/** The wall in miniature: two columns of uneven blocks, as the masonry. */
+export const GalleryIcon = () => (
+  <Glyph>
+    <path d="M3 3h7v8H3zM3 15h7v6H3zM14 3h7v5h-7zM14 12h7v9h-7z" />
+  </Glyph>
+);
+
 export const StarIcon = () => (
   <Glyph filled>
     <path d="M12 2.5 14.53 8.52 21.04 9.06 16.09 13.33 17.58 19.69 12 16.3 6.42 19.69 7.91 13.33 2.96 9.06 9.47 8.52Z" />

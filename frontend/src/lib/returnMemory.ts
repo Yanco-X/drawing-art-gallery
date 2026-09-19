@@ -2,7 +2,8 @@ import type { SortDirection, SortKey } from './sortPieces';
 
 // `pendingScroll` is nulled when spent rather than the record deleted, so
 // reads stay pure: React may render twice and the second would find nothing.
-type Visit = { pendingScroll: number | null; pieceId: string };
+// 'list' lands on the list itself, for a reader who has no place on it yet.
+type Visit = { pendingScroll: number | 'list' | null; pieceId: string };
 
 const visits = new Map<string, Visit>();
 
@@ -35,6 +36,24 @@ export const readListState = (key: string): ListState | undefined =>
 
 export const rememberListState = (key: string, state: ListState) => {
   lists.set(key, state);
+};
+
+// A reader handed on from a piece page's tag shelf: the list narrowed to the
+// tag alone, so it shows what the shelf showed, the sort kept, and the piece
+// they came from marked on it.
+export const narrowToTag = (key: string, tagId: string, pieceId: string) => {
+  const held = lists.get(key);
+  lists.set(key, {
+    query: '',
+    years: [],
+    collectionIds: [],
+    tagIds: [tagId],
+    sortKey: held?.sortKey ?? null,
+    sortDirection: held?.sortDirection ?? 'desc',
+    filterOpen: true,
+    sortOpen: held?.sortOpen ?? false,
+  });
+  visits.set(key, { pendingScroll: 'list', pieceId });
 };
 
 // Frames at 60fps. The page is not its final height when the grid first

@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { CollectionRef, Piece } from '../types';
+import type { CollectionRef, Piece, Tag } from '../types';
 
 const Rule = () => <div aria-hidden="true" className="border-t border-line" />;
+
+const CHIP = 'block border px-3 py-1.5 text-[12px] tracking-nav';
 
 const Block = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-3">
@@ -16,11 +18,22 @@ export const PieceWallLabel = ({
   collections,
   actions,
   className = '',
+  tagShelf,
 }: {
   piece: Piece;
   collections: CollectionRef[];
   actions?: ReactNode;
   className?: string;
+  /** Left out, every tag is a plain label. */
+  tagShelf?: {
+    /** Tags another piece carries too; only those have a shelf to open. */
+    shared: Set<string>;
+    openId: string | null;
+    controls: string;
+    onToggle: (tag: Tag, chip: HTMLButtonElement) => void;
+    /** The shelf as a row under the tags, below `xl`. */
+    row: ReactNode;
+  };
 }) => {
   // Nullable on an uploaded piece: only draw the separator between values
   // that are actually there.
@@ -28,7 +41,7 @@ export const PieceWallLabel = ({
 
   return (
     <aside
-      className={`flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8 ${className}`}
+      className={`@container flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8 ${className}`}
     >
       <div className="flex flex-col gap-2">
         {piece.waivedAt && (
@@ -36,7 +49,9 @@ export const PieceWallLabel = ({
             Waived
           </p>
         )}
-        <h1 className="font-serif text-[clamp(22px,2.4vw,32px)] leading-tight font-normal text-text">
+        {/* The `cqi` term only bites when the column narrows for the tag
+            drawer: the title scales down with it and keeps its line breaks. */}
+        <h1 className="font-serif text-[clamp(22px,min(2.4vw,11.2cqi),32px)] leading-tight font-normal text-text">
           {piece.title}
         </h1>
         {meta && <p className="text-[12px] text-faint">{meta}</p>}
@@ -55,16 +70,39 @@ export const PieceWallLabel = ({
         <>
           <Rule />
           <Block label="Tags">
-            <ul className="flex flex-wrap gap-2">
-              {piece.tags.map((tag) => (
-                <li
-                  key={tag.id}
-                  className="border border-line px-3 py-1.5 text-[12px] tracking-nav text-muted"
-                >
-                  {tag.name}
-                </li>
-              ))}
-            </ul>
+            <div>
+              <ul className="flex flex-wrap gap-2">
+                {piece.tags.map((tag) => {
+                  const open = tagShelf?.openId === tag.id;
+                  return (
+                    <li key={tag.id}>
+                      {tagShelf?.shared.has(tag.id) ? (
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={tagShelf.controls}
+                          onClick={(event) =>
+                            tagShelf.onToggle(tag, event.currentTarget)
+                          }
+                          className={`${CHIP} cursor-pointer transition-colors duration-200 ${
+                            open
+                              ? 'border-accent text-accent'
+                              : 'border-line text-muted hover:border-accent hover:text-accent'
+                          }`}
+                        >
+                          {tag.name}
+                        </button>
+                      ) : (
+                        <span className={`${CHIP} border-line text-muted`}>
+                          {tag.name}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              {tagShelf?.row}
+            </div>
           </Block>
         </>
       )}
