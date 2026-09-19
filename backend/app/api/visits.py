@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Blueprint, current_app, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from ..auth import is_owner, require_owner
 from ..db import SessionLocal
@@ -21,6 +21,8 @@ bp = Blueprint("visits", __name__, url_prefix="/visits")
 MAX_EVENT_BYTES = 1024
 MAX_RANGE_DAYS = 366
 MAX_ZONE_NAME = 64
+# 25 months, rounded down: the privacy page promises it -- context/METRICS.md section 7.
+EVENT_RETENTION = timedelta(days=750)
 # Wide, but inside what date arithmetic on either end survives.
 EARLIEST_DAY = date(2000, 1, 1)
 LATEST_DAY = date(2999, 12, 31)
@@ -251,3 +253,8 @@ def _collections(session, events) -> list[dict]:
         for c in found
     ]
     return sorted(collections, key=lambda collection: collection["viewers"], reverse=True)
+
+
+def purge_expired_events(session, now: datetime | None = None) -> int:
+    cutoff = (now or datetime.now(timezone.utc)) - EVENT_RETENTION
+    return session.execute(delete(VisitEvent).where(VisitEvent.created_at < cutoff)).rowcount

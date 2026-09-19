@@ -49,7 +49,8 @@ you need to change behaviour, not to find code.
 | Owner session | hidden | `Keyhole`, `lib/keyhole.ts`, `services/keyhole.ts`, `hooks/useSecretTrigger.ts`, `contexts/SessionProvider.tsx` | `api/session.py`, `auth.py`, `ratelimit.py` | `AUTH.md` |
 | Socials | header | `SocialsMenu`, `SocialsDialog`, `platform-icons`, `contexts/SocialsProvider.tsx` | `api/socials.py` | STATUS.md section 9 |
 | Theme | everywhere | `ThemeToggle`, `contexts/ThemeProvider.tsx`, `index.css` | -- | `DESIGN.md` |
-| Visit metrics | `pages/MetricsPage.tsx`, owner only | `VisitStats`, `DailyVisitsChart`, `MetricsRange`, `MetricsTable`, `lib/visitRange.ts`, `lib/visitorId.ts`, `recordEvent` and `fetchVisitSummary` in `services/pieces.ts`, opt-out in `SiteFooter` | `api/visits.py`, `VisitEvent` in `models.py`, `ratelimit.py` | `METRICS.md` |
+| Visit metrics | `pages/MetricsPage.tsx`, owner only | `VisitStats`, `DailyVisitsChart`, `MetricsRange`, `MetricsTable`, `lib/visitRange.ts`, `lib/visitorId.ts`, `recordEvent` and `fetchVisitSummary` in `services/pieces.ts`, opt-out in `SiteFooter` | `api/visits.py`, `VisitEvent` in `models.py`, `ratelimit.py`, `scripts/purge_visits.py` | `METRICS.md` |
+| Privacy | `pages/PrivacyPage.tsx` | `PrivacyPolicy` (English and Spanish), `lib/siteOwner.ts`, the link and copyright in `SiteFooter` | `scripts/purge_visits.py` keeps the retention it promises | `METRICS.md` section 7 |
 | Page chrome | everywhere | `PageShell`, `Header`, `SiteFooter`, `ScrollToTop`, `SectionHeader`, `SectionState`, `PageMessage`, `ConfirmDialog` | -- | `DESIGN.md` |
 
 ## 3. The fixed points

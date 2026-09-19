@@ -9,7 +9,7 @@ the footer notice and opt-out. Dashboard at `/metrics` built 2026-09-14,
 and the security review of the whole change passed the same day with the
 limiter's eviction reworked on its finding. `AUTH.md` section 1 carries the
 visitor's side. What remains is deployment: `DEPLOYMENT-NOTES.md` 2.9 and
-`VIS-1`, and the yearly export in section 11.
+`VIS-1`, the purge cron in section 7, and the yearly export in section 11.
 
 No third-party script and no new service. Railway's own observability is
 for keeping the site running -- CPU, memory, HTTP logs kept for days and not
@@ -39,8 +39,10 @@ On first load the browser generates `crypto.randomUUID()` and keeps it in
 random, derived from nothing, and is never joined to the owner's user row or
 to anything else.
 
-`localStorage` has no expiry. The same browser sends the same id tomorrow and
-next year, which is what makes a week's or a month's uniques countable.
+The id lives 13 months from minting, recorded beside it under
+`sketchyart.visitor.minted`, and a visit never extends it. Until then the same
+browser sends the same id, which is what makes a week's or a month's uniques
+countable. Section 7 says why 13.
 
 ### When the id is lost
 
@@ -48,6 +50,8 @@ The browser mints a new one and the visitor counts as new. There is no way to
 link the two ids, and that is the point: unlinkable is what makes it
 anonymous. It is lost when:
 
+- **It turns 13 months old.** Every returning visitor becomes new once a
+  year and a month, so a 12-month range still counts each browser once.
 - **Safari goes seven days without seeing the site.** Its tracking prevention
   clears script-written storage. The timer resets on every visit, so a weekly
   visitor keeps their id; one who stays away longer does not.
@@ -247,8 +251,16 @@ typed, anything linking the id to a person.
 presses **Don't count mine** in the footer, which sets
 `sketchyart.visits.off` and removes the id. The same button turns it back on.
 
-The footer carries one line saying the gallery counts anonymous visits, kept
-on this site only, with that button beside it.
+The footer carries one line saying visits are counted with a random id and
+stay on this site, with that button and a link to `/privacy` beside it. Not
+"anonymous": an id that recognises a browser again is pseudonymous in the
+GDPR's terms, and the notice must not claim more.
+
+**Retention.** The id lives 13 months (section 2); events are deleted after
+25 months by `scripts/purge_visits.py`, meant for a daily Railway cron. Those
+are CNIL's conditions for exempting audience measurement from consent, and
+they give Colombia's temporality principle a number. `pages/PrivacyPage.tsx`
+promises both, so changing either means changing the page.
 
 **Browser signals are not honoured**, decided 2026-09-14 after a first pass
 did. Global Privacy Control means "do not sell or share my data", which this
@@ -262,6 +274,14 @@ provided visitors are told and can object for free; the footer does both.
 The EU's strict reading still wants consent for device storage, and France's
 CNIL exempts audience measurement of this shape. Not legal advice -- if a
 consent obligation ever applies, section 2's rejected option is the fallback.
+
+**Colombia is the owner's jurisdiction**, and its Ley 1581 de 2012 has no
+legitimate-interest basis: personal data needs prior, express consent.
+Counting stays opt-out on the reading that the id is not personal data -- it
+is random, derived from nothing, and no IP or User-Agent is stored beside it,
+so no person is determinable from it. Decided by the owner 2026-09-19. Store
+anything that links an id to a person and that reading is gone: consent,
+opt-in, would then be required.
 
 **Visitor contract.** When built, `AUTH.md` section 1 gains a line under "A
 visitor may": send a visit event, which records the random id and what was
@@ -362,8 +382,8 @@ page.
 
 ## 11. Out of scope
 
-Referrers, countries, time spent on a piece, spotlight clicks, a retention
-purge, and new-versus-returning visitors. Each is a column or a query on top
+Referrers, countries, time spent on a piece, spotlight clicks, and
+new-versus-returning visitors. Each is a column or a query on top
 of this table when it is wanted, not before.
 
 ### Pinned for later: the yearly export
@@ -372,9 +392,10 @@ Wanted, not urgent. An automated export of a year of `visit_events`, sent to
 the owner by email, run ahead of each year's end -- plus a manual download
 from the metrics page.
 
-The 366-day cap limits what one dashboard query spans, not what is kept:
-rows are never deleted, so nothing is lost if the export is late. The export
-is the owner's archive, and the prerequisite for any retention purge later.
+Rows are deleted at 25 months (section 7), so a year's export has about a
+year's grace before its oldest rows go. Export **counts, not rows**: an
+archive of raw events carries the visitor ids past the retention the privacy
+page promises. Aggregated, they are anonymous and can be kept forever.
 
 Needs, when picked up: a scheduled job (Railway runs cron services), an
 email provider and its credentials in `backend/.env`, and a file format --

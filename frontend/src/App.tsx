@@ -10,6 +10,7 @@ import CollectionsIndexPage from './pages/CollectionsIndexPage';
 import LandingPage from './pages/LandingPage';
 import MetricsPage from './pages/MetricsPage';
 import PiecePage from './pages/PiecePage';
+import PrivacyPage from './pages/PrivacyPage';
 import WaivedPage from './pages/WaivedPage';
 import { recordEvent } from './services';
 
@@ -43,6 +44,7 @@ function App() {
               />
               <Route path="/waived" element={<WaivedPage />} />
               <Route path="/metrics" element={<MetricsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </BrowserRouter>

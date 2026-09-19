@@ -22,6 +22,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 from app import create_app  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
+from app.api.visits import EVENT_RETENTION, purge_expired_events  # noqa: E402
 from app.models import VisitEvent  # noqa: E402
 from app.ratelimit import AttemptLimiter, WindowCounter  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
@@ -323,6 +324,25 @@ check("the collection is deleted", res.status_code in (200, 204), str(res.status
 check("and its stats went with it", stored(collection_id=uuid.UUID(shown)) == 0,
       str(stored(collection_id=uuid.UUID(shown))))
 
+
+print("\n== retention: 25 months, then gone ==")
+now = datetime.now(timezone.utc)
+session = SessionLocal()
+expired, kept = uuid.uuid4(), uuid.uuid4()
+session.add_all([
+    VisitEvent(visitor_id=expired, kind="visit", device="desktop",
+               created_at=now - EVENT_RETENTION - timedelta(days=1)),
+    VisitEvent(visitor_id=kept, kind="visit", device="desktop",
+               created_at=now - EVENT_RETENTION + timedelta(days=1)),
+])
+session.commit()
+removed = purge_expired_events(session, now)
+session.commit()
+check("the purge removes only the expired row", removed == 1, str(removed))
+check("an event past retention is gone", stored(visitor_id=expired) == 0,
+      str(stored(visitor_id=expired)))
+check("an event inside retention stays", stored(visitor_id=kept) == 1,
+      str(stored(visitor_id=kept)))
 
 passed = sum(1 for _, ok, _ in checks if ok)
 print(f"\n{passed}/{len(checks)} checks passed")
