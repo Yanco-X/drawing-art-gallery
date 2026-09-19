@@ -48,11 +48,18 @@ export const GallerySort = ({
   const id = useId();
 
   return (
-    <div className="flex items-center">
+    // Below sm the pair comes apart: a phone's row has no room beside the
+    // buttons, so the options take a line of their own under them.
+    <div className="contents sm:flex sm:items-center">
       {/* No display utility on this element: `.sort-row` needs its `grid`. */}
-      <div id={id} data-open={open} className="sort-row" inert={!open}>
+      <div
+        id={id}
+        data-open={open}
+        className="sort-row order-last basis-full sm:order-none sm:basis-auto"
+        inert={!open}
+      >
         <div>
-          <div className="flex items-center gap-2 pr-3 whitespace-nowrap">
+          <div className="flex flex-wrap items-center gap-2 pt-3 sm:flex-nowrap sm:pt-0 sm:pr-3 sm:whitespace-nowrap">
             {/* The order the list arrives in: the owner's, for the gallery
                 and for a collection alike. */}
             <button

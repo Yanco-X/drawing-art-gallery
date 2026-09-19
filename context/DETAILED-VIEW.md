@@ -241,7 +241,11 @@ installed. The route was available and went unused.
 ## Pass 3 — done 2026-09-02
 
 The minimap: OpenSeadragon's navigator, mounted into our own element and
-dressed to match the system.
+dressed to match the system. 180px wide from 640px, 112px below it
+(2026-09-19): at 180 on a phone it covered two fifths of the screen's width
+and a third of its height. The height follows the piece's own proportions
+through `aspect-ratio`, so the frame stays the drawing's shape at both
+widths.
 
 Held back from pass 2 rather than folded in, so that how it looks and when
 it appears were decided against a viewer that had been used.

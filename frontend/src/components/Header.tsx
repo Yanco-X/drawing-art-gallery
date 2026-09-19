@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSocials } from '../hooks';
+import { useSocials, useTheme } from '../hooks';
 import { fetchPieces } from '../services';
 import type { Role } from '../types';
 import { ICON_BUTTON_ACCENT } from './form-styles';
 import { ShuffleIcon, SignOutIcon } from './icons';
 import { SocialLink, SocialsMenu } from './SocialsMenu';
 import { ThemeToggle } from './ThemeToggle';
+
+const MENU_ROW =
+  'flex cursor-pointer items-center gap-2 self-start border-none bg-transparent ' +
+  'p-0 text-[14px] uppercase tracking-nav text-muted transition-colors ' +
+  'duration-200 hover:text-accent';
 
 interface NavItem {
   label: string;
@@ -125,8 +130,11 @@ export const Header = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { socials } = useSocials();
+  const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const navItems = buildNavItems(pathname, role);
+  const isOwner = role === 'owner';
+  const isDark = theme === 'dark';
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
@@ -163,16 +171,30 @@ export const Header = ({
         <ShowMeSome className="hidden lg:flex" />
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
+          {/* A phone's row has no room for the wordmark, Upload and this
+              together, so for the owner it waits in the menu there. */}
+          <div className={isOwner ? 'hidden sm:flex' : 'flex'}>
+            <ThemeToggle />
+          </div>
 
-          {role === 'owner' && (
+          {isOwner && (
             <>
               <button
                 type="button"
                 onClick={onUploadClick}
-                className="cursor-pointer border-none bg-accent px-5 py-2.5 text-[13px] uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90"
+                aria-label="Upload"
+                title="Upload"
+                className="flex size-9 cursor-pointer items-center justify-center gap-1.5 border-none bg-accent p-0 text-[13px] whitespace-nowrap uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90 sm:size-auto sm:px-5 sm:py-2.5"
               >
-                + Upload
+                <span
+                  aria-hidden="true"
+                  className="text-[18px] leading-none sm:text-[13px]"
+                >
+                  +
+                </span>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  Upload
+                </span>
               </button>
               <SignOut onSignOut={onSignOut} className="hidden sm:ml-6 sm:flex" />
             </>
@@ -210,15 +232,25 @@ export const Header = ({
             </div>
           )}
 
-          {role === 'owner' && (
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="flex cursor-pointer items-center gap-2 self-start border-none bg-transparent p-0 text-[14px] uppercase tracking-nav text-muted transition-colors duration-200 hover:text-accent"
-            >
-              <SignOutIcon />
-              Sign out
-            </button>
+          {isOwner && (
+            <>
+              {/* Names the theme in force, as the toggle does. */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+                className={MENU_ROW}
+              >
+                <span aria-hidden="true" className="w-4 text-center leading-none">
+                  {isDark ? '☾' : '☀'}
+                </span>
+                {isDark ? 'Dark' : 'Light'}
+              </button>
+              <button type="button" onClick={onSignOut} className={MENU_ROW}>
+                <SignOutIcon />
+                Sign out
+              </button>
+            </>
           )}
         </nav>
       )}

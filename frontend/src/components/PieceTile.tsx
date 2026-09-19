@@ -10,7 +10,8 @@ export const PieceTile = ({
 }: {
   piece: Piece;
   selected?: boolean;
-  /** The whole drawing inside the frame, rather than a crop that fills it. */
+  /** The whole drawing inside a frame that holds its 4:3, rather than a
+      frame that grows to the drawing. */
   whole?: boolean;
   children?: ReactNode;
 }) => {
@@ -33,7 +34,13 @@ export const PieceTile = ({
             alt={piece.title}
             loading="lazy"
             onError={() => setFailed(true)}
-            className={`h-full w-full ${whole ? 'object-contain' : 'object-cover'}`}
+            // In flow, the image's own height floors the frame's and the
+            // aspect ratio loses; taken out of flow, the frame keeps it.
+            className={
+              whole
+                ? 'absolute inset-0 h-full w-full object-contain'
+                : 'h-full w-full object-cover'
+            }
           />
         )}
         {children}

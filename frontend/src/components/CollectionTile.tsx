@@ -25,12 +25,12 @@ export const CollectionTile = ({
           src={collection.coverImageUrl}
           alt=""
           loading="lazy"
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (
         <div
           aria-hidden="true"
-          className="h-full w-full"
+          className="absolute inset-0"
           style={{ background: `var(--sa-swatch-${(index % 4) + 1})` }}
         />
       )}

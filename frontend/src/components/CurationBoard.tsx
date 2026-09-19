@@ -1,11 +1,33 @@
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type {
+  Announcements,
+  DragEndEvent,
+  UniqueIdentifier,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useRef, useState } from 'react';
 import type {
-  DragEvent,
   FormEvent,
   KeyboardEvent,
+  LiHTMLAttributes,
   MouseEvent,
   ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useFlipReflow, usePersistentState } from '../hooks';
 import { GRID_DENSITIES } from '../hooks/useGridDensity';
 import { landingBefore, move, place, sameOrder } from '../lib/order';
@@ -97,6 +119,43 @@ interface Aim {
   after: boolean;
 }
 
+const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
+const SLIDE = { duration: 300, easing: EASE };
+
+// dnd-kit's own settle after a drop would play on top of the board's FLIP,
+// which takes over from where each tile is drawn.
+const noSettle = () => false;
+
+/** A tile the drag library can lift and slide. Only the pointer and touch
+    sensors are in use, so the board's own keys are left alone. */
+const SortableTile = ({
+  id,
+  still,
+  className,
+  children,
+  ...rest
+}: LiHTMLAttributes<HTMLLIElement> & { id: string; still: boolean }) => {
+  const { setNodeRef, listeners, transform, transition } = useSortable({
+    id,
+    transition: still ? null : SLIDE,
+    animateLayoutChanges: noSettle,
+  });
+  return (
+    <li
+      ref={setNodeRef}
+      data-flip-id={id}
+      {...rest}
+      {...listeners}
+      // An image's own drag would swallow the mouse moves the sensor needs.
+      onDragStart={(event) => event.preventDefault()}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={className}
+    >
+      {children}
+    </li>
+  );
+};
+
 export const CurationBoard = <T extends Curated>({
   items,
   noun,
@@ -139,7 +198,7 @@ export const CurationBoard = <T extends Curated>({
   const [history, setHistory] = useState<T[][]>([]);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [anchor, setAnchor] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<ReadonlySet<string> | null>(null);
+  const [lifted, setLifted] = useState<string | null>(null);
   const [aim, setAim] = useState<Aim | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [view, setView] = useState<View>('arrange');
@@ -147,12 +206,29 @@ export const CurationBoard = <T extends Curated>({
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const listRef = useRef<HTMLUListElement>(null);
+  const swallowClick = useRef(false);
 
-  useFlipReflow(listRef, `${density}:${order.map((item) => item.id).join()}`);
+  const settleFromDrawn = useFlipReflow(
+    listRef,
+    `${density}:${order.map((item) => item.id).join()}`,
+  );
+
+  // Mouse: a drag starts past 6px, so a click still picks and places.
+  // Touch: a press held for a quarter second, so a swipe still scrolls.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    }),
+  );
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const dirty = !sameOrder(order, saved);
   const unplaced = order.filter((item) => item.curatedOrder === null).length;
-  const moving = dragging ?? (picked.size > 0 ? picked : null);
+  // Lifting a picked tile carries every picked tile with it.
+  const group =
+    lifted === null ? null : picked.has(lifted) ? picked : new Set([lifted]);
+  const moving = lifted === null && picked.size > 0 ? picked : null;
 
   const show = (next: T[]) => {
     setOrder(next);
@@ -219,6 +295,7 @@ export const CurationBoard = <T extends Curated>({
     );
 
   const onTileClick = (event: MouseEvent<HTMLLIElement>, index: number) => {
+    if (swallowClick.current) return;
     const item = order[index];
     if (event.ctrlKey || event.metaKey) return togglePick(item.id);
     if (event.shiftKey && anchor) return pickRange(item.id);
@@ -227,32 +304,49 @@ export const CurationBoard = <T extends Curated>({
     placeAt(picked, landingBefore(order, picked, before));
   };
 
-  const onDragStart = (event: DragEvent<HTMLLIElement>, item: T) => {
-    setDragging(picked.has(item.id) ? picked : new Set([item.id]));
-    event.dataTransfer.effectAllowed = 'move';
-    // Firefox starts no drag at all without data on the transfer.
-    event.dataTransfer.setData('text/plain', item.id);
-  };
-
-  const onDragOver = (event: DragEvent<HTMLLIElement>, index: number) => {
-    if (!dragging) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    aimAt(index, rightHalf(event));
-  };
-
   const endDrag = () => {
-    setDragging(null);
-    setAim(null);
+    setLifted(null);
+    // The mouse-up that ends a drag also clicks, and a click here picks or
+    // places. Cleared after this turn, so a real click is not lost.
+    swallowClick.current = true;
+    setTimeout(() => {
+      swallowClick.current = false;
+    });
   };
 
-  const onDrop = (event: DragEvent<HTMLLIElement>, index: number) => {
-    event.preventDefault();
-    if (dragging) {
-      const before = index + (rightHalf(event) ? 1 : 0);
-      placeAt(dragging, landingBefore(order, dragging, before));
-    }
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    const carried = group;
     endDrag();
+    if (!over || !carried) return;
+    const from = order.findIndex((item) => item.id === active.id);
+    const to = order.findIndex((item) => item.id === over.id);
+    if (from < 0 || to < 0) return;
+    // The library previewed the lifted tile alone landing at `to`; the rest
+    // of the group gathers round it, in the order it already stood.
+    const previewed = arrayMove(order, from, to);
+    const at = previewed
+      .slice(0, to)
+      .filter((item) => !carried.has(item.id)).length;
+    // The slid tiles are already where they belong: FLIP starts from there.
+    settleFromDrawn();
+    placeAt(carried, at);
+  };
+
+  const nameFor = (id: UniqueIdentifier) => {
+    const item = order.find((candidate) => candidate.id === id);
+    return item ? nameOf(item) : '';
+  };
+
+  // The library's defaults read out raw ids. Where a drop lands is said by
+  // the board's own live line, as for every other move.
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${nameFor(active.id)}.`,
+    onDragOver: ({ over }) =>
+      over
+        ? `Over position ${order.findIndex((item) => item.id === over.id) + 1}.`
+        : undefined,
+    onDragEnd: () => undefined,
+    onDragCancel: ({ active }) => `${nameFor(active.id)} put back.`,
   };
 
   // A moved element loses focus when React reinserts it, so it is handed
@@ -402,6 +496,34 @@ export const CurationBoard = <T extends Curated>({
     </>
   );
 
+  // What rides under the pointer: the tile itself, outlined, carrying its
+  // number and, for a group, how many come with it.
+  const liftedTile = (id: string) => {
+    const index = order.findIndex((item) => item.id === id);
+    if (index < 0) return null;
+    return (
+      <div className="cursor-grabbing bg-bg outline-1 outline-offset-2 outline-accent">
+        {renderTile(
+          order[index],
+          index,
+          true,
+          <>
+            <span className={`${BADGE} top-2 left-2 bg-accent text-on-accent`}>
+              {index + 1}
+            </span>
+            {group && group.size > 1 && (
+              <span
+                className={`${BADGE} top-2 right-2 border border-accent bg-bg text-accent`}
+              >
+                {group.size}
+              </span>
+            )}
+          </>,
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="sticky top-header z-[5] -mx-gutter mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-line bg-bg-translucent px-gutter py-3 backdrop-blur-[12px]">
@@ -488,7 +610,7 @@ export const CurationBoard = <T extends Curated>({
       <p className="mb-6 text-[12px] text-faint">
         {view === 'preview'
           ? previewNote
-          : `Drag a ${one} to move it. Or pick ${many} with their check box, then click the left or right half of another ${one} to put them there. Click a number to type a position. A focused ${one} moves with the left and right arrow keys, and Space picks it.`}
+          : `Drag a ${one} to move it; on a phone, press and hold it first. Or pick ${many} with their check box, then click the left or right half of another ${one} to put them there. Click a number to type a position. A focused ${one} moves with the left and right arrow keys, and Space picks it.`}
       </p>
 
       {error && (
@@ -505,55 +627,87 @@ export const CurationBoard = <T extends Curated>({
         // Look, don't touch: a card here would open its page.
         <div inert>{renderPreview(order, density)}</div>
       ) : (
-        <ul
-          ref={listRef}
-          onPointerLeave={() => setAim(null)}
-          className={`relative grid list-none gap-4 p-0 select-none ${TILE_COLUMNS[density]}`}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          accessibility={{ announcements }}
+          onDragStart={({ active }) => {
+            setLifted(String(active.id));
+            setAim(null);
+            setEditing(null);
+          }}
+          onDragEnd={onDragEnd}
+          onDragCancel={endDrag}
         >
-          {order.map((item, index) => {
-            const isPicked = picked.has(item.id);
-            const lifted = dragging?.has(item.id) ?? false;
-            const target = moving !== null && !moving.has(item.id);
-            const line = target && aim?.index === index ? aim : null;
-            return (
-              <li
-                key={item.id}
-                data-flip-id={item.id}
-                draggable
-                tabIndex={0}
-                aria-label={`${nameOf(item)}, position ${index + 1} of ${order.length}${isPicked ? ', picked' : ''}`}
-                onClick={(event) => onTileClick(event, index)}
-                onPointerMove={(event) => {
-                  if (!dragging && target) aimAt(index, rightHalf(event));
-                }}
-                onDragStart={(event) => onDragStart(event, item)}
-                onDragOver={(event) => onDragOver(event, index)}
-                onDrop={(event) => onDrop(event, index)}
-                onDragEnd={endDrag}
-                onKeyDown={(event) => onTileKey(event, index)}
-                className={`relative transition-opacity duration-200 focus:outline-1 focus:outline-offset-2 focus:outline-accent ${
-                  target ? 'cursor-pointer' : 'cursor-grab'
-                } ${lifted ? 'opacity-40' : ''}`}
-              >
-                {renderTile(
-                  item,
-                  index,
-                  isPicked,
-                  overlays(item, index, isPicked),
-                )}
-
-                {line && (
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute inset-y-0 w-0.5 bg-accent ${
-                      line.after ? '-right-[9px]' : '-left-[9px]'
+          <SortableContext
+            items={order.map((item) => item.id)}
+            strategy={rectSortingStrategy}
+          >
+            <ul
+              ref={listRef}
+              onPointerLeave={() => setAim(null)}
+              className={`relative grid list-none gap-4 p-0 select-none ${TILE_COLUMNS[density]}`}
+            >
+              {order.map((item, index) => {
+                const isPicked = picked.has(item.id);
+                const isLifted = item.id === lifted;
+                const carried = !isLifted && (group?.has(item.id) ?? false);
+                const target = moving !== null && !moving.has(item.id);
+                const line = target && aim?.index === index ? aim : null;
+                return (
+                  <SortableTile
+                    key={item.id}
+                    id={item.id}
+                    still={still}
+                    tabIndex={0}
+                    aria-label={`${nameOf(item)}, position ${index + 1} of ${order.length}${isPicked ? ', picked' : ''}`}
+                    onClick={(event) => onTileClick(event, index)}
+                    onPointerMove={(event) => {
+                      if (lifted === null && target)
+                        aimAt(index, rightHalf(event));
+                    }}
+                    onKeyDown={(event) => onTileKey(event, index)}
+                    // Lifted, the tile leaves an outline where it will land.
+                    className={`relative transition-opacity duration-200 [-webkit-touch-callout:none] focus:outline-1 focus:outline-offset-2 focus:outline-accent ${
+                      lifted !== null
+                        ? 'cursor-grabbing'
+                        : target
+                          ? 'cursor-pointer'
+                          : 'cursor-grab'
+                    } ${isLifted ? 'outline-1 outline-offset-2 outline-accent [&>*]:invisible' : ''} ${
+                      carried ? 'opacity-40' : ''
                     }`}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  >
+                    {renderTile(
+                      item,
+                      index,
+                      isPicked,
+                      overlays(item, index, isPicked),
+                    )}
+
+                    {line && (
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-y-0 w-0.5 bg-accent ${
+                          line.after ? '-right-[9px]' : '-left-[9px]'
+                        }`}
+                      />
+                    )}
+                  </SortableTile>
+                );
+              })}
+            </ul>
+          </SortableContext>
+
+          {/* In the body, so no ancestor's stacking or clipping can catch
+              the lifted tile on its way across the page. */}
+          {createPortal(
+            <DragOverlay dropAnimation={still ? null : SLIDE}>
+              {lifted !== null && liftedTile(lifted)}
+            </DragOverlay>,
+            document.body,
+          )}
+        </DndContext>
       )}
 
       {view === 'arrange' && picked.size > 0 && (

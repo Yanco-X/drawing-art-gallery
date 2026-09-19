@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { SessionProvider } from './contexts/SessionProvider';
@@ -7,12 +7,14 @@ import { ThemeProvider } from './contexts/ThemeProvider';
 import { claimTabVisit } from './lib/visitorId';
 import CollectionPage from './pages/CollectionPage';
 import CollectionsIndexPage from './pages/CollectionsIndexPage';
-import CurationPage from './pages/CurationPage';
 import LandingPage from './pages/LandingPage';
 import MetricsPage from './pages/MetricsPage';
 import PiecePage from './pages/PiecePage';
 import WaivedPage from './pages/WaivedPage';
 import { recordEvent } from './services';
+
+// Its own chunk: it carries the drag library, and only the owner opens it.
+const CurationPage = lazy(() => import('./pages/CurationPage'));
 
 function App() {
   useEffect(() => {
@@ -31,7 +33,14 @@ function App() {
               <Route path="/piece/:id" element={<PiecePage />} />
               <Route path="/collections" element={<CollectionsIndexPage />} />
               <Route path="/collections/:slug" element={<CollectionPage />} />
-              <Route path="/curate" element={<CurationPage />} />
+              <Route
+                path="/curate"
+                element={
+                  <Suspense fallback={null}>
+                    <CurationPage />
+                  </Suspense>
+                }
+              />
               <Route path="/waived" element={<WaivedPage />} />
               <Route path="/metrics" element={<MetricsPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />

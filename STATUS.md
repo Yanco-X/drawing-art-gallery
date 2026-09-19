@@ -476,8 +476,10 @@ already produced one silent bug: `grid` alongside `.menu-panel` beat its
 `display: none`, leaving an invisible sheet of buttons over the control
 beneath it. Put layout on a child, not on the element carrying the class.
 
-**Three things are lazily loaded, and all are owner-facing.** `Keyhole`
-(sign-in), `SocialsDialog` and `SpotlightDialog`. OpenSeadragon is the third lazy chunk.
+**Four things are lazily loaded, and all but one are owner-facing.** `Keyhole`
+(sign-in), `SocialsDialog`, `SpotlightDialog`, and since 2026-09-19 the whole
+Curate page, which carries the drag library. OpenSeadragon, for everyone, is
+the other lazy chunk.
 Everything else — the upload modal, arrange mode, every other dialog — is
 statically imported and ships to visitors; see §11.
 
@@ -492,13 +494,17 @@ colour, and it is spent. Contrast verified AA in every theme. Filled accent
 marks the one action a surface exists for, at most one per screen; outlined
 accent is the interface pointing at something and may repeat.
 
-**Two runtime dependencies, and one is lazy.** React and React Router are
-the bundle. OpenSeadragon is imported dynamically inside `DetailedView`, so
+**Three runtime dependencies beside React, and two are lazy.** React and
+React Router are the bundle. OpenSeadragon is imported dynamically inside `DetailedView`, so
 it builds as a 348 KB chunk that only downloads when the viewer opens —
 `@types/openseadragon` is a devDependency and never ships. `AGENTS.md` §2
 means nothing else gets added without asking: the icons, the platform marks,
-the masonry, the drag-and-drop and the modals are all hand-rolled,
-deliberately. The backend has one addition, Flask-Login, approved on
+the masonry and the modals are all hand-rolled, deliberately. **dnd-kit**
+(`@dnd-kit/core`, `/sortable`, `/utilities`) was approved on 2026-09-19 for
+the Curate board: a lifted tile under the pointer, the grid opening a gap as
+it moves, touch and auto-scroll are what that library is, and hand-building
+the grid case was the costlier path. It loads with the Curate page only, so
+visitors never fetch it; the other arrangers keep native drag. The backend has one addition, Flask-Login, approved on
 2026-09-02.
 
 Full vocabulary in [`context/DESIGN.md`](context/DESIGN.md).
@@ -874,11 +880,11 @@ Carried forward deliberately.
   files, not measured in a browser, after the 32px wordmark, "Show me some!",
   Metrics and the logo mark. A visitor's header overflows between 640 and
   ~750px, by ~95px at 640, and fits from 360px phones up otherwise. The
-  owner's overflows below ~1425px and on every phone: `+ Upload` beside the
-  wordmark does not fit even at 430px. Moving the nav and the menu button
-  from `sm` to `lg` still answers 640 to 1024, in three class changes that
-  also change the visitor's header there; the owner's phone row needs an
-  answer of its own. The owner's call, raised four times now.
+  owner's overflows below ~1425px. Moving the nav and the menu button from
+  `sm` to `lg` still answers 640 to 1024, in three class changes that also
+  change the visitor's header there. The owner's call, raised four times
+  now. **The owner's phone row is fixed** (2026-09-19): below 640px Upload
+  is a "+" square and the owner's theme toggle lives in the menu.
 - **`import-manifest.json` left `medium` and `year` empty** for all 11
   imported pieces, which is why most wall labels are sparse. No longer a
   blocker — `PATCH /api/pieces/<id>` and the Edit details dialog can fill

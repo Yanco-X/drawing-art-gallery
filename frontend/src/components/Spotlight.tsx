@@ -4,6 +4,7 @@ import { useSession, useSpotlight } from '../hooks';
 import { INTERVAL_MS } from '../hooks/useSpotlight';
 import { sequenceState } from '../lib/origin';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
+import { swipeCancel, swipeStart, swipeStep } from '../lib/swipe';
 import { arrowStep } from '../lib/traverse';
 import type { CollectionSummary, Piece } from '../types';
 import { CollectionGrid } from './CollectionGrid';
@@ -235,6 +236,17 @@ export const Spotlight = ({
         onMouseLeave={release}
         onFocus={hold}
         onBlur={release}
+        // On the band only, unlike the keys: a swipe further down the page
+        // is somebody reading the wall, not steering the picks.
+        onTouchStart={(event) => {
+          if (many) swipeStart(event.nativeEvent);
+        }}
+        onTouchCancel={swipeCancel}
+        onTouchEnd={(event) => {
+          const step = swipeStep(event.nativeEvent);
+          if (step > 0) next();
+          else if (step < 0) previous();
+        }}
       >
         {/*
           The slides stack in one grid cell rather than being positioned
@@ -248,7 +260,9 @@ export const Spotlight = ({
           {slides.map((piece, at) => (
             <div
               key={piece.id}
-              className={`col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-2 ${
+              // `content-start`: stretched to the tallest slide, the rows
+              // would share the spare height and open a gap under the image.
+              className={`col-start-1 row-start-1 grid grid-cols-1 content-start transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-2 lg:content-normal ${
                 at === index ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
               aria-hidden={at !== index}

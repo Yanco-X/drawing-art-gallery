@@ -21,8 +21,6 @@ import {
 const MINIMAP_IDLE_MS = 2000;
 const CHROME_IDLE_MS = 3000;
 
-const MINIMAP_WIDTH = 180;
-
 const RailButton = ({
   label,
   onClick,
@@ -365,17 +363,15 @@ export const DetailedView = ({
         <div
           ref={minimapRef}
           aria-hidden="true"
-          className={`sa-minimap sa-fade absolute right-4 top-[72px] transition-opacity duration-300 ${
+          className={`sa-minimap sa-fade absolute right-4 top-[72px] w-28 transition-opacity duration-300 sm:w-45 ${
             zoomed && ready && minimapAwake
               ? 'opacity-100'
               : 'pointer-events-none opacity-0'
           }`}
-          style={{
-            width: MINIMAP_WIDTH,
-            // Matched to the piece, so the frame is the drawing's shape and
-            // OpenSeadragon has no letterboxing to do inside it.
-            height: Math.round(MINIMAP_WIDTH / (piece.aspectRatio || 1)),
-          }}
+          // 112px on a phone, 180 from sm. Matched to the piece, so the frame
+          // is the drawing's shape and OpenSeadragon has no letterboxing to do
+          // inside it.
+          style={{ aspectRatio: piece.aspectRatio || 1 }}
         />
 
         {failed && (

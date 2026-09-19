@@ -76,12 +76,21 @@ interface for either, told by the page what a tile, the preview and the
   control, remembered separately from the gallery's.
 - **Four ways to move**, because a dozen items is easy and two hundred is
   where the interaction matters:
-  1. **Drag**, for short moves. An accent line in the gap shows whether the
-     drop lands before or after the tile under the pointer. Dragging a picked
-     item carries every picked item.
-  2. **Pick and place**, for long moves and for touch, where native drag does
-     not work. The check box picks; Ctrl-click and Shift-click pick one or a
-     range. With items picked, a click on the left or right half of another
+  1. **Drag**, with dnd-kit since 2026-09-19. The tile lifts and follows the
+     pointer, its slot stays as an outline, and the grid slides aside to
+     show where it will land. Mouse lifts past 6px, so a click still picks
+     and places; touch lifts on a quarter-second press, so a swipe still
+     scrolls. Dragging a picked item carries every picked item: the lifted
+     one shows the count, and the rest gather round it on release. The
+     page loads as its own chunk, so the library never reaches a visitor.
+     **The drop hands over to the board's FLIP**, which starts from where
+     each tile is drawn at that moment (`useFlipReflow`'s returned capture):
+     tiles the drag already slid into place stay put, and only what still
+     has to move does. dnd-kit's own settling animation is switched off, so
+     nothing slides twice.
+  2. **Pick and place**, for long moves, and on a phone without holding.
+     The check box picks; Ctrl-click and Shift-click pick one or a range.
+     With items picked, a click on the left or right half of another
      puts them there, in the order they already stood. The bar at the foot
      offers To top, To bottom and To position.
   3. **Type a position**: the badge is a button; Enter moves the item there.

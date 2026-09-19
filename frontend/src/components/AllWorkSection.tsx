@@ -102,7 +102,9 @@ export const AllWorkSection = ({
     >
       <SectionHeader title={title}>
         {pieces.length > 0 && (
-          <div className="flex items-center gap-3">
+          // Below sm the cluster takes the width so the sort options can
+          // wrap under it; no row gap, or a shut row would still leave one.
+          <div className="flex w-full flex-wrap items-center gap-x-3 sm:w-auto sm:flex-nowrap">
             {sortable && (
               <GallerySort
                 sortKey={sort.key}
@@ -124,7 +126,11 @@ export const AllWorkSection = ({
                 total={pieces.length}
               />
             )}
-            <DensityControl value={density} onChange={setDensity} />
+            {/* A phone shows one column at every density, so there it
+                would be a control that does nothing. */}
+            <div className="hidden sm:flex">
+              <DensityControl value={density} onChange={setDensity} />
+            </div>
           </div>
         )}
       </SectionHeader>

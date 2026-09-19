@@ -10,18 +10,24 @@ interface Placement {
   element: HTMLElement;
   x: number;
   y: number;
+  /** The layout width, which a transform playing does not change. */
   width: number;
   /** How far a transform still playing carries it from `x`, `y`. */
   driftX: number;
   driftY: number;
+  /** And how much it is scaling it. */
+  drawn: number;
 }
 
-// `columns` is not an animatable property, so a density change reflows in
-// one frame, and a sort or a filter reorders the cards in one too. This
-// plays each card back from its old offset on `transform` alone; a card that
-// has just arrived fades in, and one that has just left fades out where it
-// stood. Offsets are measured against the container, not the viewport, so a
-// scroll during the reflow cannot skew them.
+// A density change reflows in one frame, and a sort or a filter reorders the
+// cards in one too. This plays each card back from its old offset and size on
+// `transform` alone; a card that has just arrived fades in, and one that has
+// just left fades out where it stood. Offsets are measured against the
+// container, not the viewport, so a scroll during the reflow cannot skew them.
+//
+// One scale for both axes, taken from the width: a caption's height does not
+// follow its image's, and text squeezed on one axis reads worse than text
+// briefly the wrong size.
 export const useFlipReflow = (
   containerRef: RefObject<HTMLElement | null>,
   changeKey: string,
@@ -31,33 +37,45 @@ export const useFlipReflow = (
   const animationsRef = useRef<Animation[]>([]);
 
   // Layout positions: a rect includes whatever transform is mid-flight, so
-  // that is read back off the element and taken out.
-  const measure = useCallback((): Map<string, Placement> => {
-    const placements = new Map<string, Placement>();
-    const container = containerRef.current;
-    if (!container) return placements;
+  // that is read back off the element and taken out -- unless the question
+  // is where the card is drawn, transform and all.
+  const measure = useCallback(
+    (asDrawn = false): Map<string, Placement> => {
+      const placements = new Map<string, Placement>();
+      const container = containerRef.current;
+      if (!container) return placements;
 
-    const base = container.getBoundingClientRect();
-    for (const element of container.querySelectorAll<HTMLElement>(
-      FLIP_SELECTOR,
-    )) {
-      const id = element.dataset.flipId;
-      if (!id) continue;
-      const rect = element.getBoundingClientRect();
-      const transform = getComputedStyle(element).transform;
-      const { e: driftX, f: driftY } =
-        transform === 'none' ? { e: 0, f: 0 } : new DOMMatrix(transform);
-      placements.set(id, {
-        element,
-        x: rect.left - base.left - driftX,
-        y: rect.top - base.top - driftY,
-        width: rect.width,
-        driftX,
-        driftY,
-      });
-    }
-    return placements;
-  }, [containerRef]);
+      const base = container.getBoundingClientRect();
+      for (const element of container.querySelectorAll<HTMLElement>(
+        FLIP_SELECTOR,
+      )) {
+        const id = element.dataset.flipId;
+        if (!id) continue;
+        const rect = element.getBoundingClientRect();
+        const transform = getComputedStyle(element).transform;
+        // The animations scale from the top-left corner, so the translation is
+        // still where that corner has been carried.
+        const {
+          a: drawn,
+          e: driftX,
+          f: driftY,
+        } = asDrawn || transform === 'none'
+          ? { a: 1, e: 0, f: 0 }
+          : new DOMMatrix(transform);
+        placements.set(id, {
+          element,
+          x: rect.left - base.left - driftX,
+          y: rect.top - base.top - driftY,
+          width: element.offsetWidth,
+          driftX,
+          driftY,
+          drawn,
+        });
+      }
+      return placements;
+    },
+    [containerRef],
+  );
 
   // No dependency array: the cache is refreshed after every render, or a
   // change of layout that came without a key change would animate cards in
@@ -102,13 +120,19 @@ export const useFlipReflow = (
 
       const dx = from.x + to.driftX - to.x;
       const dy = from.y + to.driftY - to.y;
+      // The size it is drawn at now, over the size it is settling into.
+      const scale = to.width > 0 ? (from.width * to.drawn) / to.width : 1;
       // Sub-pixel moves aren't worth an animation. Two densities resolving
       // to the same column count land here and animate nothing, correctly.
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(scale - 1) < 0.01)
+        continue;
 
       play(to.element, [
-        { transform: `translate(${dx}px, ${dy}px)` },
-        { transform: 'translate(0, 0)' },
+        {
+          transformOrigin: '0 0',
+          transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+        },
+        { transformOrigin: '0 0', transform: 'translate(0, 0) scale(1)' },
       ]);
     }
 
@@ -158,4 +182,11 @@ export const useFlipReflow = (
     },
     [],
   );
+
+  // Called just before a change that takes away a transform this hook did
+  // not set -- a drag library's slides. The cards then set off from where
+  // they are drawn, not from their old slots, so one already in place stays.
+  return useCallback(() => {
+    placementsRef.current = measure(true);
+  }, [measure]);
 };

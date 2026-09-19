@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { pieceHref, sequenceState } from '../lib/origin';
+import { swipeCancel, swipeStart, swipeStep } from '../lib/swipe';
 import { arrowStep, intendStep } from '../lib/traverse';
 import type { Step as Direction } from '../lib/traverse';
 import type { Piece } from '../types';
@@ -60,18 +61,34 @@ export const PieceNav = ({
 }) => {
   const navigate = useNavigate();
 
+  // The arrow keys, and on a phone a swipe anywhere on the page: both walk
+  // the same way the buttons do, so the arrival slides in from that side.
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const step = arrowStep(event);
-      if (!step) return;
+    const walk = (step: Direction) => {
       const piece = step > 0 ? next : previous;
-      if (!piece) return;
-      event.preventDefault();
+      if (!piece) return false;
       intendStep(piece.id, step);
       navigate(pieceHref(piece.id, origin), { state: sequenceState(sequence) });
+      return true;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const step = arrowStep(event);
+      if (step && walk(step)) event.preventDefault();
+    };
+    const onTouchEnd = (event: TouchEvent) => {
+      const step = swipeStep(event);
+      if (step) walk(step);
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('touchstart', swipeStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', swipeCancel, { passive: true });
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('touchstart', swipeStart);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', swipeCancel);
+    };
   }, [previous, next, origin, sequence, navigate]);
 
   return (
