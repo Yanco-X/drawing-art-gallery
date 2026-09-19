@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -11,15 +12,18 @@ import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
 import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
-import { useAsync, useSession } from '../hooks';
+import { useArrivingPiece, useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
+import { StarIcon } from '../components/icons';
 import {
   HOME_ORIGIN,
   ORIGIN_PARAM,
   behind,
   collectionHref,
   nearestStep,
+  readSequence,
   readTrail,
+  sequenceState,
   serialiseTrail,
 } from '../lib/origin';
 import {
@@ -105,10 +109,24 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
       alt={piece.title}
       onError={() => setFailed(true)}
       style={{ aspectRatio: piece.aspectRatio }}
-      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain lg:max-h-[max(320px,calc(100vh_-_226px))]"
+      // Named, so a view transition carries the old drawing into the new
+      // one's place rather than crossfading it with the whole page.
+      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain [view-transition-name:artwork] lg:max-h-[max(320px,calc(100vh_-_226px))]"
     />
   );
 };
+
+// The same height as the bordered links it sits level with.
+const SpotlightMark = () => (
+  <span
+    role="img"
+    aria-label="In the Spotlight"
+    title="In the Spotlight!"
+    className="flex items-center py-1 text-accent [&>svg]:size-7"
+  >
+    <StarIcon />
+  </span>
+);
 
 const adjacent = (pieces: Piece[], id: string) => {
   const index = pieces.findIndex((candidate) => candidate.id === id);
@@ -117,6 +135,12 @@ const adjacent = (pieces: Piece[], id: string) => {
     previous: index > 0 ? pieces[index - 1] : undefined,
     next: index < pieces.length - 1 ? pieces[index + 1] : undefined,
   };
+};
+
+// Pieces waived or deleted since the list was shown drop out of it.
+const inSequence = (pieces: Piece[], ids: string[]) => {
+  const byId = new Map(pieces.map((piece) => [piece.id, piece]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
 };
 
 const NO_SIBLINGS = async (): Promise<Piece[]> => [];
@@ -133,6 +157,7 @@ const VIEW_PARAM = 'view';
 const PiecePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
 
   /*
@@ -140,14 +165,22 @@ const PiecePage = () => {
    * listing by design, so deriving this page from it would make the reserve
    * unreachable. `edited` is trusted only while it matches the route.
    */
-  const loadPiece = useMemo(() => () => fetchPiece(id ?? ''), [id]);
+  // The answer carries the id it was asked about: the last piece's stays in
+  // `load` until this one's lands, and must not be taken for it.
+  const loadPiece = useMemo(
+    () => () => fetchPiece(id ?? '').then((answer) => ({ id, answer })),
+    [id],
+  );
   const load = useAsync(loadPiece);
   const [edited, setEdited] = useState<Piece | null>(null);
   const { role } = useSession();
 
-  const answer = load.status === 'ready' ? load.data : null;
+  const answer =
+    load.status === 'ready' && load.data.id === id ? load.data.answer : null;
   const fetched = answer?.state === 'found' ? answer.piece : null;
-  const piece = edited && edited.id === id ? edited : fetched;
+  const target = edited && edited.id === id ? edited : fetched;
+  const viewing = params.get(VIEW_PARAM) === '1';
+  const piece = useArrivingPiece(target, viewing);
 
   // Keyed on the state rather than the piece, so refetching one piece does
   // not refetch its siblings.
@@ -183,7 +216,10 @@ const PiecePage = () => {
   );
   const carried = inSet ? (rawTrail ?? undefined) : undefined;
 
-  const viewing = params.get(VIEW_PARAM) === '1';
+  // On a set's terms: a waived piece walks the reserve however it was reached.
+  const shownAs = readSequence(location.state);
+  const sequence =
+    piece && !piece.waivedAt && shownAs?.includes(piece.id) ? shownAs : undefined;
 
   /*
    * The search string, rebuilt rather than replaced. `setParams` writes the
@@ -207,8 +243,8 @@ const PiecePage = () => {
 
   const openViewer = useCallback(() => {
     pushedView.current = true;
-    setParams(queryWith(true));
-  }, [setParams, queryWith]);
+    setParams(queryWith(true), { state: sequenceState(sequence) });
+  }, [setParams, queryWith, sequence]);
 
   const closeViewer = useCallback(() => {
     if (pushedView.current) {
@@ -216,8 +252,8 @@ const PiecePage = () => {
       navigate(-1);
       return;
     }
-    setParams(queryWith(false), { replace: true });
-  }, [navigate, setParams, queryWith]);
+    setParams(queryWith(false), { replace: true, state: sequenceState(sequence) });
+  }, [navigate, setParams, queryWith, sequence]);
 
   // Moving between pieces inside the viewer replaces rather than pushes, so a
   // browsing session is not buried under one entry per piece.
@@ -226,9 +262,12 @@ const PiecePage = () => {
       const query = new URLSearchParams();
       if (carried) query.set(ORIGIN_PARAM, carried);
       query.set(VIEW_PARAM, '1');
-      navigate(`/piece/${neighbour.id}?${query}`, { replace: true });
+      navigate(`/piece/${neighbour.id}?${query}`, {
+        replace: true,
+        state: sequenceState(sequence),
+      });
     },
-    [navigate, carried],
+    [navigate, carried, sequence],
   );
 
   const refresh = useCallback((updated: Piece) => setEdited(updated), []);
@@ -241,7 +280,7 @@ const PiecePage = () => {
 
   // A piece that does not exist cannot be viewed, and leaving the parameter
   // behind would put the page one refresh away from opening an empty viewer.
-  const missing = load.status === 'ready' && piece === null;
+  const missing = answer !== null && answer.state !== 'found';
   useEffect(() => {
     if (missing && viewing) setParams(queryWith(false), { replace: true });
   }, [missing, viewing, setParams, queryWith]);
@@ -257,18 +296,6 @@ const PiecePage = () => {
   useEffect(() => {
     if (viewedId) recordEvent({ kind: 'detailed_view', pieceId: viewedId });
   }, [viewedId]);
-
-  if (load.status === 'loading') {
-    return (
-      <PageShell>
-        <section className="mx-auto w-full max-w-content px-gutter pt-intro-top pb-section-lg">
-          <p className="text-[12px] uppercase tracking-eyebrow text-faint">
-            Loading
-          </p>
-        </section>
-      </PageShell>
-    );
-  }
 
   if (load.status === 'error') {
     return (
@@ -294,7 +321,7 @@ const PiecePage = () => {
     );
   }
 
-  if (piece === null) {
+  if (answer?.state === 'missing') {
     return (
       <PageShell>
         <Message eyebrow="Not found" headline="That piece isn't here." />
@@ -302,11 +329,25 @@ const PiecePage = () => {
     );
   }
 
-  const walk = inSet
-    ? (fromSet?.pieces ?? [])
-    : siblings.status === 'ready'
-      ? siblings.data
-      : [];
+  // Nothing up yet: the first piece is still on its way, image included.
+  if (piece === null) {
+    return (
+      <PageShell>
+        <section className="mx-auto w-full max-w-content px-gutter pt-intro-top pb-section-lg">
+          <p className="text-[12px] uppercase tracking-eyebrow text-faint">
+            Loading
+          </p>
+        </section>
+      </PageShell>
+    );
+  }
+
+  const gallery = siblings.status === 'ready' ? siblings.data : [];
+  const walk = sequence
+    ? inSequence(gallery, sequence)
+    : inSet
+      ? (fromSet?.pieces ?? [])
+      : gallery;
   const { previous, next } = adjacent(walk, piece.id);
 
   // One element, two homes: the stacked row below lg and the artwork's left
@@ -319,6 +360,8 @@ const PiecePage = () => {
     />
   );
 
+  const picked = piece.spotlightOrder !== null;
+
   return (
     <PageShell>
       <article className="mx-auto w-full max-w-content px-gutter pt-8 pb-intro-bottom">
@@ -330,8 +373,16 @@ const PiecePage = () => {
             {/* Rendered twice rather than placed by grid: the two live in
                 different columns at lg and in one row below it. `hidden` keeps
                 the unused copy out of the tab order as well as off screen. */}
-            <span className="lg:hidden">{backLink}</span>
-            <PieceNav previous={previous} next={next} origin={carried} />
+            <span className="flex items-center gap-3 lg:hidden">
+              {backLink}
+              {picked && <SpotlightMark />}
+            </span>
+            <PieceNav
+              previous={previous}
+              next={next}
+              origin={carried}
+              sequence={sequence}
+            />
           </div>
 
           {/*
@@ -345,8 +396,13 @@ const PiecePage = () => {
             {/* `w-fit` so the column shrinks to the artwork: the button then
                 spans the drawing exactly rather than the whole grid cell. */}
             <div className="flex w-fit flex-col items-stretch">
-              <PieceImage piece={piece} />
+              <PieceImage key={piece.id} piece={piece} />
               <DetailedViewButton piece={piece} onOpen={openViewer} />
+            </div>
+            {/* The right gutter, the mirror of the back link's: a mark on
+                the frame the drawing hangs in, not on the drawing. */}
+            <div className="hidden lg:flex lg:justify-end">
+              {picked && <SpotlightMark />}
             </div>
           </figure>
           <PieceWallLabel

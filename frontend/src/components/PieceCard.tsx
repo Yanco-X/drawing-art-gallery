@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { pieceHref } from '../lib/origin';
+import { pieceHref, sequenceState } from '../lib/origin';
 import { rememberVisit } from '../lib/returnMemory';
 import type { Piece } from '../types';
 
@@ -8,10 +8,17 @@ interface PieceCardProps {
   piece: Piece;
   origin?: string;
   marked?: boolean;
+  sequence?: string[];
 }
 
-export const PieceCard = ({ piece, origin, marked = false }: PieceCardProps) => {
+export const PieceCard = ({
+  piece,
+  origin,
+  marked = false,
+  sequence,
+}: PieceCardProps) => {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   // Both are optional on an uploaded piece, so the separator is only
   // drawn between values that exist.
   const meta = [piece.medium, piece.year].filter(Boolean).join(' · ');
@@ -44,8 +51,11 @@ export const PieceCard = ({ piece, origin, marked = false }: PieceCardProps) => 
             src={piece.thumbnailUrl ?? piece.imageUrl}
             alt={piece.title}
             loading="lazy"
+            onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
-            className="h-full w-full object-cover"
+            className={`h-full w-full object-cover transition-opacity duration-300 ease-reflow ${
+              loaded ? 'opacity-100' : 'opacity-0'
+            }`}
           />
         )}
       </div>
@@ -68,6 +78,7 @@ export const PieceCard = ({ piece, origin, marked = false }: PieceCardProps) => 
   return (
     <Link
       to={pieceHref(piece.id, origin)}
+      state={sequenceState(sequence)}
       // Written as the piece is opened rather than on every scroll: that is
       // what lets arriving from the header start at the top while coming
       // back from a piece does not.

@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSocials } from '../hooks';
+import { fetchPieces } from '../services';
 import type { Role } from '../types';
+import { ICON_BUTTON_ACCENT } from './form-styles';
 import { SignOutIcon } from './icons';
 import { SocialLink, SocialsMenu } from './SocialsMenu';
 import { ThemeToggle } from './ThemeToggle';
@@ -65,6 +67,29 @@ const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   </Link>
 );
 
+const ShowMeSome = ({ className = '' }: { className?: string }) => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const goSomewhere = async () => {
+    const current = pathname.startsWith('/piece/') ? pathname.slice(7) : null;
+    const pool = (await fetchPieces()).filter((piece) => piece.id !== current);
+    if (pool.length === 0) return;
+    navigate(`/piece/${pool[Math.floor(Math.random() * pool.length)].id}`);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={goSomewhere}
+      title="Take me to a random piece from the gallery"
+      className={`${ICON_BUTTON_ACCENT} ${className}`}
+    >
+      Show me some!
+    </button>
+  );
+};
+
 const SignOut = ({
   onSignOut,
   className = '',
@@ -100,11 +125,13 @@ export const Header = ({
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
       <div className="mx-auto flex w-full max-w-content items-center justify-between gap-6 px-gutter py-5">
+        {/* leading-none keeps the header its old height; the piece page's
+            artwork cap subtracts it as a fixed 72px. */}
         <Link
           to="/home"
-          className="font-serif text-[24px] tracking-wordmark text-text"
+          className="font-serif text-[32px] leading-none tracking-wordmark text-text"
         >
-          Sketchy<span className="italic text-accent">Art</span>
+          Yan<span className="italic text-accent">Curations</span>
         </Link>
 
         <nav className="hidden items-center gap-[clamp(16px,3vw,36px)] text-[14px] uppercase tracking-nav sm:flex">
@@ -113,6 +140,8 @@ export const Header = ({
           ))}
           <SocialsMenu />
         </nav>
+
+        <ShowMeSome className="hidden lg:flex" />
 
         <div className="flex items-center gap-4">
           <ThemeToggle />
@@ -153,6 +182,7 @@ export const Header = ({
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
+          <ShowMeSome />
           {socials.length > 0 && (
             <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col border-t border-line pt-2">
               {socials.map((social) => (

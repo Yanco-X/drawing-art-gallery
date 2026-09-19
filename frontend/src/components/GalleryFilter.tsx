@@ -1,4 +1,4 @@
-import type { CollectionSummary } from '../types';
+import type { CollectionSummary, Tag } from '../types';
 import { FIELD, ICON_BUTTON, LABEL } from './form-styles';
 import { CloseIcon, FilterIcon } from './icons';
 import { MultiSelect } from './MultiSelect';
@@ -59,6 +59,9 @@ export const GalleryFilterRow = ({
   collections,
   collectionIds,
   onToggleCollection,
+  tags,
+  tagIds,
+  onToggleTag,
   showing,
   total,
   active,
@@ -74,6 +77,9 @@ export const GalleryFilterRow = ({
   collections: CollectionSummary[];
   collectionIds: string[];
   onToggleCollection: (id: string) => void;
+  tags: Tag[];
+  tagIds: string[];
+  onToggleTag: (id: string) => void;
   showing: number;
   total: number;
   active: boolean;
@@ -124,6 +130,17 @@ export const GalleryFilterRow = ({
             selected={collectionIds}
             onToggle={onToggleCollection}
             summarise={(count) => `${count} collections`}
+          />
+        )}
+
+        {tags.length > 0 && (
+          <MultiSelect
+            label="Tags"
+            placeholder="Any tag"
+            options={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
+            selected={tagIds}
+            onToggle={onToggleTag}
+            summarise={(count) => `${count} tags`}
           />
         )}
 

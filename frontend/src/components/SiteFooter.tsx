@@ -35,7 +35,7 @@ export const SiteFooter = ({ onMark }: { onMark?: () => void }) => (
     <div className="mx-auto flex w-full max-w-content flex-wrap items-center justify-between gap-4 px-gutter py-7">
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
         <span className="text-[12px] uppercase tracking-btn text-faint">
-          SketchyArt Gallery — the silent curator
+          YanCurations — the silent curator
         </span>
         <span className="text-[12px] text-faint">
           <CountingNotice />

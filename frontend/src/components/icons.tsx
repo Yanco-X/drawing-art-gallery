@@ -211,3 +211,9 @@ export const SortIcon = () => (
     <path d="M4 6h16M4 12h10M4 18h5" />
   </Glyph>
 );
+
+export const StarIcon = () => (
+  <Glyph filled>
+    <path d="M12 2.5 14.53 8.52 21.04 9.06 16.09 13.33 17.58 19.69 12 16.3 6.42 19.69 7.91 13.33 2.96 9.06 9.47 8.52Z" />
+  </Glyph>
+);

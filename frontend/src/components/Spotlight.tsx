@@ -1,8 +1,10 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import type { KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession, useSpotlight } from '../hooks';
+import { INTERVAL_MS } from '../hooks/useSpotlight';
+import { sequenceState } from '../lib/origin';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
+import { arrowStep } from '../lib/traverse';
 import type { CollectionSummary, Piece } from '../types';
 import { CollectionGrid } from './CollectionGrid';
 import { ICON_BUTTON, ICON_BUTTON_ACCENT, SUBTLE_ACTION } from './form-styles';
@@ -33,6 +35,7 @@ const SpotlightArtwork = ({
   priority: boolean;
 }) => {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const framing = framePiece(piece);
 
   return (
@@ -50,6 +53,7 @@ const SpotlightArtwork = ({
             alt={piece.title}
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : 'auto'}
+            onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
             /* Continuous per-piece values, so they cannot be static classes.
                See the inline-style exceptions in DESIGN.md. */
@@ -59,7 +63,9 @@ const SpotlightArtwork = ({
               transformOrigin: framing.position,
               transform: `scale(${framing.scale})`,
             }}
-            className="h-full w-full"
+            className={`h-full w-full transition-opacity duration-300 ease-reflow ${
+              loaded ? 'opacity-100' : 'opacity-0'
+            }`}
           />
         )
       )}
@@ -72,11 +78,14 @@ const SpotlightLabel = ({
   position,
   total,
   collections,
+  sequence,
 }: {
   piece: Piece;
   position: number;
   total: number;
   collections: CollectionSummary[];
+  /** The band's order, so the piece page walks the picks and not the wall. */
+  sequence: string[];
 }) => {
   const meta = [piece.medium, piece.year].filter(Boolean).join(' · ');
 
@@ -114,6 +123,7 @@ const SpotlightLabel = ({
 
         <Link
           to={`/piece/${piece.id}`}
+          state={sequenceState(sequence)}
           className={`${ICON_BUTTON_ACCENT} w-fit`}
         >
           View piece
@@ -190,37 +200,41 @@ export const Spotlight = ({
     );
   }, [index, slides.length]);
 
+  // On the page, not on the band: the arrows step the picks wherever the
+  // focus is, as they step the pieces on a piece page.
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const step = arrowStep(event);
+      if (!step) return;
+      event.preventDefault();
+      if (step > 0) next();
+      else previous();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [slides.length, next, previous]);
+
   if (slides.length === 0) return null;
 
   const many = slides.length > 1;
-
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      previous();
-    }
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      next();
-    }
-  };
+  const order = slides.map((slide) => slide.id);
 
   /*
    * The dialog is a sibling of the band, not a child. However the top layer
-   * paints it, a child is still a DOM descendant, so its events bubble: an
-   * arrow key typed in its search field would advance the carousel behind it.
+   * paints it, a child is still a DOM descendant, so its events bubble, and
+   * the band's own handlers would hear its clicks and keys.
    */
   return (
     <>
       <section
         aria-roledescription="carousel"
         aria-label="Featured work"
-        className="border-b border-line"
+        className="arrives border-b border-line"
         onMouseEnter={hold}
         onMouseLeave={release}
         onFocus={hold}
         onBlur={release}
-        onKeyDown={many ? onKeyDown : undefined}
       >
         {/*
           The slides stack in one grid cell rather than being positioned
@@ -250,6 +264,7 @@ export const Spotlight = ({
                 position={at + 1}
                 total={slides.length}
                 collections={collections}
+                sequence={order}
               />
             </div>
           ))}
@@ -269,13 +284,25 @@ export const Spotlight = ({
                       aria-current={at === index}
                       className="group flex-1 cursor-pointer border-none bg-transparent px-0 py-3"
                     >
+                      {/* The fill is a clock for the slide. Held or paused,
+                          the timer restarts on release, so the line shows
+                          full rather than a progress it would not keep. */}
                       <span
-                        className={`block h-px w-full transition-colors duration-200 ${
-                          at === index
-                            ? 'bg-accent'
-                            : 'bg-line group-hover:bg-accent'
+                        className={`block h-px w-full bg-line transition-colors duration-200 ${
+                          at === index ? '' : 'group-hover:bg-accent'
                         }`}
-                      />
+                      >
+                        {at === index &&
+                          (running ? (
+                            <span
+                              key="filling"
+                              className="spotlight-fill block h-full w-full bg-accent"
+                              style={{ animationDuration: `${INTERVAL_MS}ms` }}
+                            />
+                          ) : (
+                            <span key="full" className="block h-full w-full bg-accent" />
+                          ))}
+                      </span>
                     </button>
                   ))}
                 </div>

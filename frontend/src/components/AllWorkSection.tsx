@@ -55,12 +55,16 @@ export const AllWorkSection = ({
     remembered && { key: remembered.sortKey, direction: remembered.sortDirection },
   );
   const shown = sortable ? sort.sorted : narrowed;
+  // Only when narrowed or sorted. Otherwise the piece page finds the same
+  // order itself, and a piece restored from the reserve would keep walking it.
+  const walkShown = (filtering && filter.active) || (sortable && sort.active);
 
   useEffect(() => {
     rememberListState(pathname, {
       query: filter.query,
       years: filter.years,
       collectionIds: filter.collectionIds,
+      tagIds: filter.tagIds,
       sortKey: sort.key,
       sortDirection: sort.direction,
       filterOpen,
@@ -71,6 +75,7 @@ export const AllWorkSection = ({
     filter.query,
     filter.years,
     filter.collectionIds,
+    filter.tagIds,
     sort.key,
     sort.direction,
     filterOpen,
@@ -124,6 +129,9 @@ export const AllWorkSection = ({
           collections={collections}
           collectionIds={filter.collectionIds}
           onToggleCollection={filter.toggleCollection}
+          tags={filter.availableTags}
+          tagIds={filter.tagIds}
+          onToggleTag={filter.toggleTag}
           showing={shown.length}
           total={pieces.length}
           active={filter.active}
@@ -153,6 +161,7 @@ export const AllWorkSection = ({
           density={density}
           origin={origin}
           marked={marked}
+          sequence={walkShown ? shown.map((piece) => piece.id) : undefined}
         />
       )}
     </section>

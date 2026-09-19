@@ -34,3 +34,11 @@ export const pieceHref = (id: string, from?: string) =>
 
 export const collectionHref = (slug: string, from?: string) =>
   from ? `/collections/${slug}?${ORIGIN_PARAM}=${from}` : `/collections/${slug}`;
+
+export const sequenceState = (sequence: string[] | undefined) =>
+  sequence ? { sequence } : undefined;
+
+export const readSequence = (state: unknown): string[] | undefined => {
+  const held = (state as { sequence?: unknown } | null)?.sequence;
+  return Array.isArray(held) ? held : undefined;
+};

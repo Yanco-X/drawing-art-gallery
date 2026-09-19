@@ -119,6 +119,8 @@
   --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
+  --ease-reflow: cubic-bezier(0.2, 0, 0, 1);
+
   --color-bg: var(--sa-bg);
   --color-bg-translucent: var(--sa-bg-translucent);
   --color-surface: var(--sa-surface);
@@ -291,6 +293,144 @@
     .menu-panel {
       transition: none;
       translate: none;
+    }
+  }
+
+  /*
+   * A popover rather than an absolute menu: both dialogs scroll their body,
+   * which would clip the list at the footer. The top layer is outside it.
+   */
+  .tag-field {
+    anchor-scope: --tag-field;
+  }
+
+  .tag-field-input {
+    anchor-name: --tag-field;
+  }
+
+  .tag-suggestions {
+    position-anchor: --tag-field;
+    inset: auto;
+    top: anchor(bottom);
+    left: anchor(left);
+    width: anchor-size(width);
+    margin: 8px 0 0;
+    position-try-fallbacks: flip-block;
+    opacity: 0;
+    translate: 0 -8px;
+    transition:
+      opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+      translate 200ms cubic-bezier(0.2, 0, 0, 1),
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
+  }
+
+  .tag-suggestions:popover-open {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .tag-suggestions:popover-open {
+      opacity: 0;
+      translate: 0 -8px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tag-suggestions {
+      transition: none;
+      translate: none;
+    }
+  }
+
+  /* Fades in as it is inserted: `@starting-style` is what makes a
+     transition run from the first frame. */
+  .arrives {
+    transition: opacity 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  @starting-style {
+    .arrives {
+      opacity: 0;
+    }
+  }
+
+  /* The spotlight's indicator filling over the slide's time. Linear, because
+     it is a clock: an eased fill would say the slide slows down. No
+     reduced-motion rule: it renders only while the band autoplays, and
+     reduced motion never starts the autoplay. */
+  @keyframes spotlight-fill {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  .spotlight-fill {
+    transform-origin: left;
+    animation: spotlight-fill linear both;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* A stepped move: the old drawing leaves the way the reader is not going
+     and the new one comes in from where they are. The root carries the
+     direction for the length of the transition. */
+  @keyframes traverse-out {
+    to {
+      opacity: 0;
+      translate: var(--traverse-out) 0;
+    }
+  }
+
+  @keyframes traverse-in {
+    from {
+      opacity: 0;
+      translate: var(--traverse-in) 0;
+    }
+  }
+
+  :root[data-traverse='next'] {
+    --traverse-out: -128px;
+    --traverse-in: 128px;
+  }
+
+  :root[data-traverse='previous'] {
+    --traverse-out: 128px;
+    --traverse-in: -128px;
+  }
+
+  :root[data-traverse]::view-transition-old(artwork) {
+    animation-name: traverse-out;
+  }
+
+  :root[data-traverse]::view-transition-new(artwork) {
+    animation-name: traverse-in;
+  }
+
+  /* The button is captured as a flat rectangle (its label is named apart),
+     so it can be stretched to the box without harm. Left at `block-size:
+     auto` each capture keeps its own proportions as the box widens, the
+     taller one overhangs the box, and the overhang fades. */
+  ::view-transition-old(detailed-view),
+  ::view-transition-new(detailed-view) {
+    block-size: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .arrives {
+      transition: none;
+    }
+
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none;
     }
   }
 

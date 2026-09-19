@@ -15,9 +15,20 @@ export const DetailedViewButton = ({
 
   return (
     <div className="mt-6 flex w-full flex-col items-center gap-2">
-      <button type="button" onClick={onOpen} className={PAGE_ACTION}>
-        <ExpandIcon />
-        Detailed view
+      {/* Named, so a view transition stretches the box to the new width
+          rather than cutting to it. The label is named apart from it: a
+          named descendant is left out of its parent's capture, so the box
+          is a flat rectangle that stretches cleanly while the label stays
+          sharp and only re-centres. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className={PAGE_ACTION + ' [view-transition-name:detailed-view]'}
+      >
+        <span className="flex items-center gap-2.5 [view-transition-name:detailed-view-label]">
+          <ExpandIcon />
+          Detailed view
+        </span>
       </button>
       <p className="text-[12px] text-faint">
         {measured

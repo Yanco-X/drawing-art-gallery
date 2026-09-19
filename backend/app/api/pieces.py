@@ -67,7 +67,7 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     """
     tags: list[Tag] = []
     for raw in names:
-        name = (raw or "").strip()
+        name = (raw or "").strip().lower()
         if not name:
             continue
         slug = slugify(name)

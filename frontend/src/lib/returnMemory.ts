@@ -21,6 +21,7 @@ export type ListState = {
   query: string;
   years: number[];
   collectionIds: string[];
+  tagIds: string[];
   sortKey: SortKey | null;
   sortDirection: SortDirection;
   filterOpen: boolean;

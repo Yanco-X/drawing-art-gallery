@@ -235,6 +235,9 @@ retagged = client.patch(f"/api/pieces/{pid}", headers=OWNER,
 check("tags replaced wholesale, not merged",
       sorted(t["slug"] for t in retagged["tags"]) == ["ink", "study"],
       str([t["slug"] for t in retagged["tags"]]))
+check("tag names are stored lowercase",
+      sorted(t["name"] for t in retagged["tags"]) == ["ink", "study"],
+      str([t["name"] for t in retagged["tags"]]))
 session = SessionLocal()
 check("dropped tags survive as rows, since other pieces may use them",
       {"charcoal", "portrait"} <= {t.slug for t in session.scalars(select(Tag)).all()})

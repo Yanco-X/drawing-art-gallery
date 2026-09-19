@@ -1,16 +1,23 @@
 import { useMemo, useState } from 'react';
+import { tagsInUse } from '../lib/tags';
 import type { CollectionSummary, Piece } from '../types';
 
 export const useGalleryFilter = (
   pieces: Piece[],
   collections: CollectionSummary[],
-  initial?: { query: string; years: number[]; collectionIds: string[] },
+  initial?: {
+    query: string;
+    years: number[];
+    collectionIds: string[];
+    tagIds: string[];
+  },
 ) => {
   const [query, setQuery] = useState(initial?.query ?? '');
   const [years, setYears] = useState<number[]>(initial?.years ?? []);
   const [collectionIds, setCollectionIds] = useState<string[]>(
     initial?.collectionIds ?? [],
   );
+  const [tagIds, setTagIds] = useState<string[]>(initial?.tagIds ?? []);
 
   const availableYears = useMemo(() => {
     const present = new Set<number>();
@@ -19,6 +26,10 @@ export const useGalleryFilter = (
     }
     return [...present].sort((a, b) => b - a);
   }, [pieces]);
+
+  // From the pieces rather than the tags table, so an option never leads to
+  // an empty wall.
+  const availableTags = useMemo(() => tagsInUse(pieces), [pieces]);
 
   const namesByPiece = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -71,10 +82,12 @@ export const useGalleryFilter = (
       if (wanted.size > 0 && (piece.year === null || !wanted.has(piece.year)))
         return false;
       if (members && !members.has(piece.id)) return false;
+      if (tagIds.length > 0 && !piece.tags.some((tag) => tagIds.includes(tag.id)))
+        return false;
       if (needle && !haystacks.get(piece.id)?.includes(needle)) return false;
       return true;
     });
-  }, [pieces, collections, query, years, collectionIds, haystacks]);
+  }, [pieces, collections, query, years, collectionIds, tagIds, haystacks]);
 
   const toggleYear = (year: number) =>
     setYears((held) =>
@@ -86,13 +99,22 @@ export const useGalleryFilter = (
       held.includes(id) ? held.filter((one) => one !== id) : [...held, id],
     );
 
+  const toggleTag = (id: string) =>
+    setTagIds((held) =>
+      held.includes(id) ? held.filter((one) => one !== id) : [...held, id],
+    );
+
   const active =
-    query.trim() !== '' || years.length > 0 || collectionIds.length > 0;
+    query.trim() !== '' ||
+    years.length > 0 ||
+    collectionIds.length > 0 ||
+    tagIds.length > 0;
 
   const clear = () => {
     setQuery('');
     setYears([]);
     setCollectionIds([]);
+    setTagIds([]);
   };
 
   return {
@@ -103,6 +125,9 @@ export const useGalleryFilter = (
     availableYears,
     collectionIds,
     toggleCollection,
+    tagIds,
+    availableTags,
+    toggleTag,
     filtered,
     active,
     clear,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const INTERVAL_MS = 8000;
+export const INTERVAL_MS = 8000;
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 // Subscribed rather than read once: turning motion down while the page is
