@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
 import {
   CENTRE_FOCAL,
   ZOOM_MAX,
@@ -11,6 +11,9 @@ import type { Piece } from '../types';
 import { LABEL, SUBTLE_ACTION } from './form-styles';
 
 const BAND_RATIO = '3 / 2';
+// The stacked band is the full width over `clamp(320px, 52vh, 500px)`, which
+// lands near 8:9 on any phone held upright.
+const PHONE_BAND_RATIO = '8 / 9';
 /* The same shape as a number. Only used to park the slider where an
    unsized piece already sits, so that first drag does not jump. Nothing
    stored depends on it: the band is this shape at some window sizes and
@@ -19,6 +22,36 @@ const BAND_RATIO = '3 / 2';
 const BAND_ASPECT = 3 / 2;
 
 const clamp = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
+
+const BandPreview = ({
+  label,
+  ratio,
+  src,
+  framing,
+}: {
+  label: string;
+  ratio: string;
+  src: string;
+  framing: CSSProperties;
+}) => (
+  <figure className="flex flex-col gap-1">
+    <figcaption className="text-[11px] uppercase tracking-eyebrow text-faint">
+      {label}
+    </figcaption>
+    <div
+      style={{ aspectRatio: ratio }}
+      className="w-full overflow-hidden border border-line bg-bg"
+    >
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        style={framing}
+        className="h-full w-full"
+      />
+    </div>
+  </figure>
+);
 
 export const FocalPicker = ({
   piece,
@@ -99,7 +132,7 @@ export const FocalPicker = ({
   };
 
   const shown = framePiece({ focalX: x, focalY: y, focalZoom: zoom });
-  const framing = {
+  const framing: CSSProperties = {
     objectFit: shown.fit,
     objectPosition: shown.position,
     transformOrigin: shown.position,
@@ -165,16 +198,19 @@ export const FocalPicker = ({
             <span className="text-[12px] text-faint">
               Drag to choose what the band keeps.
             </span>
-            <div
-              style={{ aspectRatio: BAND_RATIO }}
-              className="hatch w-full overflow-hidden border border-line"
-            >
-              <img
+            {/* 27:16 is 3:2 against 8:9, so the two frames share one height. */}
+            <div className="grid grid-cols-[minmax(0,27fr)_minmax(0,16fr)] gap-2">
+              <BandPreview
+                label="Desktop"
+                ratio={BAND_RATIO}
                 src={piece.imageUrl}
-                alt=""
-                draggable={false}
-                style={framing}
-                className="h-full w-full"
+                framing={framing}
+              />
+              <BandPreview
+                label="Phone"
+                ratio={PHONE_BAND_RATIO}
+                src={piece.imageUrl}
+                framing={framing}
               />
             </div>
 

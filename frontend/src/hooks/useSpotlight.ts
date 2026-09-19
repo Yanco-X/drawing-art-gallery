@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { Step } from '../lib/traverse';
 
 export const INTERVAL_MS = 8000;
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -27,6 +28,7 @@ const useReducedMotion = () => {
 export const useSpotlight = (count: number, suspended = false) => {
   const reducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState<Step>(1);
   const [playing, setPlaying] = useState(true);
   const [held, setHeld] = useState(false);
 
@@ -37,19 +39,21 @@ export const useSpotlight = (count: number, suspended = false) => {
 
   useEffect(() => {
     if (!running) return;
-    const timer = window.setInterval(
-      () => setIndex((at) => (at + 1) % count),
-      INTERVAL_MS,
-    );
+    const timer = window.setInterval(() => {
+      setDirection(1);
+      setIndex((at) => (at + 1) % count);
+    }, INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [running, count]);
 
+  // Taken before wrapping, so stepping past the last piece still moves on.
   const go = useCallback(
     (to: number) => {
       setPlaying(false);
+      setDirection(to < safeIndex ? -1 : 1);
       setIndex(((to % count) + count) % count);
     },
-    [count],
+    [count, safeIndex],
   );
 
   const next = useCallback(() => go(safeIndex + 1), [go, safeIndex]);
@@ -57,6 +61,7 @@ export const useSpotlight = (count: number, suspended = false) => {
 
   return {
     index: safeIndex,
+    direction,
     playing,
     running,
     reducedMotion,

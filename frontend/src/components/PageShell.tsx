@@ -31,7 +31,9 @@ export const PageShell = ({
         onUploadClick={() => setUploadOpen(true)}
         onSignOut={signOut}
       />
-      <main className="flex flex-1 flex-col">{children}</main>
+      {/* A swiped page slides past the edge, and a phone would widen the
+          page to hold it. `clip` rather than `hidden`, so sticky still sticks. */}
+      <main className="flex flex-1 flex-col overflow-x-clip">{children}</main>
       <SiteFooter onMark={onMark} />
 
       {isOwner && (

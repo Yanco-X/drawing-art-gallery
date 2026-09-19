@@ -1,10 +1,28 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type { TouchEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession, useSpotlight } from '../hooks';
 import { INTERVAL_MS } from '../hooks/useSpotlight';
 import { sequenceState } from '../lib/origin';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
-import { swipeCancel, swipeStart, swipeStep } from '../lib/swipe';
+import {
+  TURN,
+  carry,
+  swipeCancel,
+  swipeDrag,
+  swipeStart,
+  swipeStep,
+  turnSlides,
+  turnsWhole,
+} from '../lib/swipe';
 import { arrowStep } from '../lib/traverse';
 import type { CollectionSummary, Piece } from '../types';
 import { CollectionGrid } from './CollectionGrid';
@@ -30,7 +48,7 @@ const SpotlightArtwork = ({
   priority,
 }: {
   piece: Piece;
-  /** Held back until the slide is current or next, so five full-size
+  /** Held back until the slide is current or beside it, so five full-size
       renditions do not download on first paint. */
   load: boolean;
   priority: boolean;
@@ -41,7 +59,7 @@ const SpotlightArtwork = ({
 
   return (
     <div
-      className={`hatch flex items-center justify-center overflow-hidden ${BAND}`}
+      className={`flex items-center justify-center overflow-hidden bg-bg ${BAND}`}
     >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
@@ -176,6 +194,7 @@ export const Spotlight = ({
 
   const {
     index,
+    direction,
     playing,
     running,
     reducedMotion,
@@ -189,17 +208,37 @@ export const Spotlight = ({
 
   // Grows and never shrinks: a slide keeps its src once asked for, so
   // stepping back does not fetch the same rendition twice.
+  // Both neighbours, because a finger drags either one into view.
   const [wanted, setWanted] = useState([0, 1]);
 
   useEffect(() => {
     if (slides.length === 0) return;
     const after = (index + 1) % slides.length;
+    const before = (index - 1 + slides.length) % slides.length;
     setWanted((now) =>
-      now.includes(index) && now.includes(after)
+      [index, after, before].every((at) => now.includes(at))
         ? now
-        : [...new Set([...now, index, after])],
+        : [...new Set([...now, index, after, before])],
     );
   }, [index, slides.length]);
+
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const shownAt = useRef(index);
+  // Null until a sideways stroke takes hold of the band.
+  const carried = useRef<number | null>(null);
+  // Where a swipe let go, so the turn carries on from under the finger.
+  const letGo = useRef(0);
+
+  useLayoutEffect(() => {
+    const from = shownAt.current;
+    const offset = letGo.current;
+    shownAt.current = index;
+    letGo.current = 0;
+    if (from === index || reducedMotion) return;
+    const leaving = slideRefs.current[from];
+    const arriving = slideRefs.current[index];
+    if (leaving && arriving) turnSlides(leaving, arriving, direction, offset);
+  }, [index, direction, reducedMotion]);
 
   // On the page, not on the band: the arrows step the picks wherever the
   // focus is, as they step the pieces on a piece page.
@@ -221,6 +260,65 @@ export const Spotlight = ({
   const many = slides.length > 1;
   const order = slides.map((slide) => slide.id);
 
+  const beside = (dx: number) =>
+    (index + (dx < 0 ? 1 : -1) + slides.length) % slides.length;
+
+  const letBandGo = () => {
+    for (const slide of slideRefs.current) if (slide) carry(slide, null);
+    release();
+  };
+
+  const follow = (event: TouchEvent) => {
+    const dx = swipeDrag(event.nativeEvent);
+    if (dx === null || !many || !turnsWhole()) return;
+    if (carried.current === null) hold();
+    carried.current = dx;
+    const width = slideRefs.current[index]?.offsetWidth ?? 0;
+    const neighbour = beside(dx);
+    slideRefs.current.forEach((slide, at) => {
+      if (!slide) return;
+      if (at === index) carry(slide, dx);
+      else if (at === neighbour) carry(slide, dx + (dx < 0 ? width : -width), true);
+      else carry(slide, null);
+    });
+  };
+
+  const springBack = (from: number) => {
+    const current = slideRefs.current[index];
+    const neighbour = slideRefs.current[beside(from)];
+    if (!current || !neighbour) return;
+    const side = from < 0 ? current.offsetWidth : -current.offsetWidth;
+    current.animate([{ translate: `${from}px` }, { translate: '0px' }], TURN);
+    neighbour.animate(
+      [
+        { translate: `${from + side}px`, opacity: 1 },
+        { translate: `${side}px`, opacity: 1 },
+      ],
+      TURN,
+    );
+  };
+
+  const finish = (event: TouchEvent) => {
+    const step = swipeStep(event.nativeEvent);
+    const from = carried.current;
+    carried.current = null;
+    if (from !== null) letBandGo();
+    if (step) {
+      letGo.current = from ?? 0;
+      if (step > 0) next();
+      else previous();
+    } else if (from !== null) springBack(from);
+  };
+
+  const abandon = () => {
+    swipeCancel();
+    const from = carried.current;
+    carried.current = null;
+    if (from === null) return;
+    letBandGo();
+    springBack(from);
+  };
+
   /*
    * The dialog is a sibling of the band, not a child. However the top layer
    * paints it, a child is still a DOM descendant, so its events bubble, and
@@ -231,7 +329,7 @@ export const Spotlight = ({
       <section
         aria-roledescription="carousel"
         aria-label="Featured work"
-        className="arrives border-b border-line"
+        className="arrives touch-pan-y touch-pinch-zoom border-b border-line"
         onMouseEnter={hold}
         onMouseLeave={release}
         onFocus={hold}
@@ -241,29 +339,30 @@ export const Spotlight = ({
         onTouchStart={(event) => {
           if (many) swipeStart(event.nativeEvent);
         }}
-        onTouchCancel={swipeCancel}
-        onTouchEnd={(event) => {
-          const step = swipeStep(event.nativeEvent);
-          if (step > 0) next();
-          else if (step < 0) previous();
-        }}
+        onTouchMove={follow}
+        onTouchCancel={abandon}
+        onTouchEnd={finish}
       >
         {/*
-          The slides stack in one grid cell rather than being positioned
-          absolutely, so the band takes the height of the tallest and the
-          stacked layout below 1024px needs no fixed height of its own.
+          The slides stack in one grid cell, so from 1024px the band takes the
+          height of the tallest. Below it the hidden slides leave the flow and
+          the band fits the one on show: a label without a collection would
+          otherwise sit over a gap as tall as the card it lacks.
         */}
         <div
-          className="mx-auto grid w-full max-w-content"
+          className="relative mx-auto grid w-full max-w-content overflow-hidden"
           aria-live={running ? 'off' : 'polite'}
         >
           {slides.map((piece, at) => (
             <div
               key={piece.id}
-              // `content-start`: stretched to the tallest slide, the rows
-              // would share the spare height and open a gap under the image.
-              className={`col-start-1 row-start-1 grid grid-cols-1 content-start transition-opacity duration-200 motion-reduce:transition-none lg:grid-cols-2 lg:content-normal ${
-                at === index ? 'opacity-100' : 'pointer-events-none opacity-0'
+              ref={(slide) => {
+                slideRefs.current[at] = slide;
+              }}
+              className={`col-start-1 row-start-1 grid grid-cols-1 lg:grid-cols-2 ${
+                at === index
+                  ? 'opacity-100'
+                  : 'pointer-events-none opacity-0 max-lg:absolute max-lg:inset-x-0 max-lg:top-0'
               }`}
               aria-hidden={at !== index}
               inert={at !== index}

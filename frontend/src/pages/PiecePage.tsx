@@ -182,7 +182,8 @@ const PiecePage = () => {
   const fetched = answer?.state === 'found' ? answer.piece : null;
   const target = edited && edited.id === id ? edited : fetched;
   const viewing = params.get(VIEW_PARAM) === '1';
-  const piece = useArrivingPiece(target, viewing);
+  const pageRef = useRef<HTMLElement>(null);
+  const piece = useArrivingPiece(target, viewing, pageRef);
 
   // Kept after it closes, so the drawer has its list to show while it slides
   // shut. This page stays mounted from piece to piece, and so does the shelf.
@@ -415,7 +416,10 @@ const PiecePage = () => {
 
   return (
     <PageShell>
-      <article className="mx-auto flex w-full max-w-content items-start px-gutter pt-8 pb-intro-bottom">
+      <article
+        ref={pageRef}
+        className="mx-auto flex w-full max-w-content touch-pan-y touch-pinch-zoom items-start px-gutter pt-8 pb-intro-bottom"
+      >
         {/* The rows are explicit because the artwork spans both. Left to
             `auto`, grid hands a spanning item's height to every row it crosses,
             which inflated the first to 400-odd pixels of nothing. */}
@@ -437,6 +441,7 @@ const PiecePage = () => {
               next={next}
               origin={carried}
               sequence={sequence}
+              page={pageRef}
             />
           </div>
 
