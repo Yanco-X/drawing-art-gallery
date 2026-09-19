@@ -129,6 +129,13 @@ check(
     dupe.get_json()["slug"] == "night-calls-2",
     dupe.get_json()["slug"],
 )
+reserved = client.post("/api/collections", json={"name": "About"}, headers=OWNER)
+check(
+    "a name that is a trail sentinel is suffixed too",
+    reserved.get_json()["slug"] == "about-2",
+    reserved.get_json()["slug"],
+)
+client.delete(f"/api/collections/{reserved.get_json()['id']}", headers=OWNER)
 
 print("\n== validation ==")
 check(

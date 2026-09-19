@@ -1,4 +1,5 @@
 import type {
+  About,
   Collection,
   CollectionPatch,
   CollectionSummary,
@@ -333,6 +334,36 @@ export const setSpotlight = async (pieceIds: string[]): Promise<Piece[]> => {
 // stands, including anything uploaded since the list was fetched.
 export const setCuratedOrder = async (pieceIds: string[]): Promise<Piece[]> => {
   const response = await fetch('/api/curation/pieces', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pieceIds }),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+export const fetchAbout = async (): Promise<About> => {
+  const response = await fetch('/api/about');
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// A language left out keeps its words.
+export const setAboutText = async (
+  text: Partial<Pick<About, 'body' | 'bodyEs'>>,
+): Promise<About> => {
+  const response = await fetch('/api/about/text', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(text),
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// The cover first. Answers with the page as it now stands.
+export const setAboutPieces = async (pieceIds: string[]): Promise<About> => {
+  const response = await fetch('/api/about/pieces', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pieceIds }),

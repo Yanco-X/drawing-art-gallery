@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session
 
 _NON_WORD = re.compile(r"[^a-z0-9]+")
 
+# The piece page reads these in its `?from=` trail as the landing page and the
+# about page. A collection holding one would be taken for the page.
+RESERVED = {"home", "about"}
+
 
 def slugify(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
@@ -28,7 +32,7 @@ def unique_slug(session: Session, model, desired: str, exclude_id=None) -> str:
         stmt = select(model.id).where(model.slug == candidate)
         if exclude_id is not None:
             stmt = stmt.where(model.id != exclude_id)
-        if session.execute(stmt).first() is None:
+        if candidate not in RESERVED and session.execute(stmt).first() is None:
             return candidate
         candidate = f"{base}-{suffix}"
         suffix += 1

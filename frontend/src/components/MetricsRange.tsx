@@ -35,7 +35,9 @@ export const MetricsRange = ({
               type="button"
               aria-pressed={active}
               onClick={() => onChange(lastDays(preset.days))}
-              className={`${ICON_BUTTON} ${active ? 'border-accent text-accent' : ''}`}
+              // Variants, not plain classes: ICON_BUTTON already sets the
+              // border and text colour, and a second plain class loses to it.
+              className={`${ICON_BUTTON} aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-on-accent`}
             >
               {preset.label}
             </button>

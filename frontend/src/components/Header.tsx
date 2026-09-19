@@ -13,6 +13,11 @@ const MENU_ROW =
   'p-0 text-[14px] uppercase tracking-nav text-muted transition-colors ' +
   'duration-200 hover:text-accent';
 
+const SQUARE_ACCENT =
+  'flex size-9 cursor-pointer items-center justify-center border border-accent ' +
+  'bg-transparent text-accent transition-colors duration-200 ' +
+  'hover:bg-accent hover:text-on-accent active:bg-accent active:text-on-accent';
+
 interface NavItem {
   label: string;
   to: string;
@@ -34,6 +39,7 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
       to: '/collections',
       active: pathname.startsWith('/collections'),
     },
+    { label: 'Yanco', to: '/about', active: pathname.startsWith('/about') },
   ];
 
   // The reserve and the counts are the owner's own views; a visitor is not
@@ -77,15 +83,29 @@ const NavItemLink = ({ item, extra }: { item: NavItem; extra?: string }) => (
   </Link>
 );
 
-const ShowMeSome = ({ className = '' }: { className?: string }) => {
+const ShowMeSome = ({
+  className = '',
+  compact = false,
+}: {
+  className?: string;
+  /** The glyph alone, in a 36px square, for a phone's row. */
+  compact?: boolean;
+}) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // Filled until the piece opens, so a tap is seen to have landed.
+  const [going, setGoing] = useState(false);
 
   const goSomewhere = async () => {
-    const current = pathname.startsWith('/piece/') ? pathname.slice(7) : null;
-    const pool = (await fetchPieces()).filter((piece) => piece.id !== current);
-    if (pool.length === 0) return;
-    navigate(`/piece/${pool[Math.floor(Math.random() * pool.length)].id}`);
+    setGoing(true);
+    try {
+      const current = pathname.startsWith('/piece/') ? pathname.slice(7) : null;
+      const pool = (await fetchPieces()).filter((piece) => piece.id !== current);
+      if (pool.length === 0) return;
+      navigate(`/piece/${pool[Math.floor(Math.random() * pool.length)].id}`);
+    } finally {
+      setGoing(false);
+    }
   };
 
   return (
@@ -93,10 +113,12 @@ const ShowMeSome = ({ className = '' }: { className?: string }) => {
       type="button"
       onClick={goSomewhere}
       title="Take me to a random piece from the gallery"
-      className={`${ICON_BUTTON_ACCENT} ${className}`}
+      aria-label={compact ? 'Show me some!' : undefined}
+      data-going={going || undefined}
+      className={`${compact ? SQUARE_ACCENT : ICON_BUTTON_ACCENT} data-going:bg-accent data-going:text-on-accent ${className}`}
     >
       <ShuffleIcon />
-      Show me some!
+      {!compact && 'Show me some!'}
     </button>
   );
 };
@@ -161,19 +183,25 @@ export const Header = ({
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-[clamp(16px,3vw,36px)] text-[14px] uppercase tracking-nav sm:flex">
+        <nav className="hidden items-center gap-[clamp(16px,3vw,36px)] text-[14px] uppercase tracking-nav lg:flex">
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} />
           ))}
           <SocialsMenu />
         </nav>
 
-        <ShowMeSome className="hidden lg:flex" />
+        {/* Its label only from 1280px: with Yanco in the nav, the row
+            beside it has no room for the words below that. */}
+        <ShowMeSome compact className="hidden lg:flex xl:hidden" />
+        <ShowMeSome className="hidden xl:flex" />
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Three 36px squares fit beside the wordmark from 390px; a
+              narrower phone keeps it in the menu panel. */}
+          <ShowMeSome compact className="hidden min-[390px]:flex lg:hidden" />
           {/* A phone's row has no room for the wordmark, Upload and this
               together, so for the owner it waits in the menu there. */}
-          <div className={isOwner ? 'hidden sm:flex' : 'flex'}>
+          <div className={isOwner ? 'hidden lg:flex' : 'flex'}>
             <ThemeToggle />
           </div>
 
@@ -184,19 +212,19 @@ export const Header = ({
                 onClick={onUploadClick}
                 aria-label="Upload"
                 title="Upload"
-                className="flex size-9 cursor-pointer items-center justify-center gap-1.5 border-none bg-accent p-0 text-[13px] whitespace-nowrap uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90 sm:size-auto sm:px-5 sm:py-2.5"
+                className="flex size-9 cursor-pointer items-center justify-center gap-1.5 border-none bg-accent p-0 text-[13px] whitespace-nowrap uppercase tracking-btn text-on-accent transition-opacity duration-200 hover:opacity-90 lg:size-auto lg:px-5 lg:py-2.5"
               >
                 <span
                   aria-hidden="true"
-                  className="text-[18px] leading-none sm:text-[13px]"
+                  className="text-[18px] leading-none lg:text-[13px]"
                 >
                   +
                 </span>
-                <span aria-hidden="true" className="hidden sm:inline">
+                <span aria-hidden="true" className="hidden lg:inline">
                   Upload
                 </span>
               </button>
-              <SignOut onSignOut={onSignOut} className="hidden sm:ml-6 sm:flex" />
+              <SignOut onSignOut={onSignOut} className="hidden lg:ml-6 lg:flex" />
             </>
           )}
 
@@ -206,7 +234,7 @@ export const Header = ({
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             aria-label="Menu"
-            className="flex cursor-pointer flex-col justify-center gap-[4px] border border-line px-3 py-2 text-muted transition-colors duration-200 hover:border-accent hover:text-accent sm:hidden"
+            className="flex size-9 cursor-pointer flex-col items-center justify-center gap-[4px] border border-line text-muted transition-colors duration-200 hover:border-accent hover:text-accent lg:hidden"
           >
             <span aria-hidden="true" className="block h-px w-4 bg-current" />
             <span aria-hidden="true" className="block h-px w-4 bg-current" />
@@ -218,12 +246,12 @@ export const Header = ({
       {menuOpen && (
         <nav
           id="mobile-nav"
-          className="flex flex-col items-start gap-4 border-t border-line px-gutter py-5 text-[14px] uppercase tracking-nav sm:hidden"
+          className="flex flex-col items-start gap-4 border-t border-line px-gutter py-5 text-[14px] uppercase tracking-nav lg:hidden"
         >
           {navItems.map((item) => (
             <NavItemLink key={item.label} item={item} extra="self-start" />
           ))}
-          <ShowMeSome />
+          <ShowMeSome className="min-[390px]:hidden" />
           {socials.length > 0 && (
             <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col border-t border-line pt-2">
               {socials.map((social) => (

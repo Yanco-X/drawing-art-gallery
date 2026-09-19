@@ -19,18 +19,33 @@ import { ICON_BUTTON, ICON_BUTTON_INERT } from './form-styles';
 const Step = ({
   piece,
   step,
-  display,
+  word,
+  short,
   name,
   origin,
   sequence,
 }: {
   piece?: Piece;
   step: Direction;
-  display: string;
+  word: string;
+  /** Below 640px, so the steps share one row with the back link and star. */
+  short?: string;
   name: string;
   origin?: string;
   sequence?: string[];
 }) => {
+  const arrow = step > 0 ? '→' : '←';
+  const label = (text: string) =>
+    step > 0 ? `${text} ${arrow}` : `${arrow} ${text}`;
+  const display = short ? (
+    <>
+      <span className="sm:hidden">{label(short)}</span>
+      <span className="hidden sm:inline">{label(word)}</span>
+    </>
+  ) : (
+    label(word)
+  );
+
   // Rendered disabled rather than omitted so the row does not reflow at
   // the first and last piece.
   if (!piece) {
@@ -142,7 +157,8 @@ export const PieceNav = ({
       <Step
         piece={previous}
         step={-1}
-        display="← Previous"
+        word="Previous"
+        short="Prev"
         name="Previous piece"
         origin={origin}
         sequence={sequence}
@@ -150,7 +166,7 @@ export const PieceNav = ({
       <Step
         piece={next}
         step={1}
-        display="Next →"
+        word="Next"
         name="Next piece"
         origin={origin}
         sequence={sequence}

@@ -40,11 +40,13 @@ export const ICON_BUTTON =
 export const ICON_BUTTON_DANGER =
   ICON_BUTTON_INTERACTIVE + ' hover:border-danger hover:text-danger';
 
-// Outlined, and fills on hover. See PAGE_ACTION for the filled one.
+// Outlined, and fills on hover -- or, on a touch screen, which never hovers,
+// while pressed. See PAGE_ACTION for the filled one.
 export const ICON_BUTTON_ACCENT =
   ICON_BUTTON_SHELL +
   ' cursor-pointer border-accent text-accent hover:bg-accent ' +
-  'hover:text-on-accent disabled:cursor-not-allowed disabled:opacity-40';
+  'hover:text-on-accent active:bg-accent active:text-on-accent ' +
+  'disabled:cursor-not-allowed disabled:opacity-40';
 
 // Kept in the layout rather than omitted so the row does not reflow at the
 // ends of the gallery. No `cursor-pointer`: it cannot be clicked.

@@ -2,6 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSecretTrigger, useSession } from '../hooks';
 import type { Piece } from '../types';
+import { BackToTop } from './BackToTop';
 import { Header } from './Header';
 import { SiteFooter } from './SiteFooter';
 import { UploadModal } from './UploadModal';
@@ -33,7 +34,10 @@ export const PageShell = ({
       />
       {/* A swiped page slides past the edge, and a phone would widen the
           page to hold it. `clip` rather than `hidden`, so sticky still sticks. */}
-      <main className="flex flex-1 flex-col overflow-x-clip">{children}</main>
+      <main className="flex flex-1 flex-col overflow-x-clip">
+        {children}
+        <BackToTop />
+      </main>
       <SiteFooter onMark={onMark} />
 
       {isOwner && (

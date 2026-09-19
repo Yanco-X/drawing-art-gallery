@@ -17,6 +17,7 @@ import { useArrivingPiece, useAsync, useSession } from '../hooks';
 import { ICON_BUTTON } from '../components/form-styles';
 import { StarIcon } from '../components/icons';
 import {
+  ABOUT_ORIGIN,
   HOME_ORIGIN,
   ORIGIN_PARAM,
   behind,
@@ -41,17 +42,21 @@ const BackLink = ({
   waived = false,
   from,
   trail = [],
+  about = false,
 }: {
   waived?: boolean;
   from?: Collection | null;
   trail?: string[];
+  about?: boolean;
 }) => {
   const to = from
     ? collectionHref(from.slug, serialiseTrail(trail) || undefined)
-    : waived
-      ? '/waived'
-      : '/home';
-  const label = from ? from.name : waived ? 'Waived' : 'All work';
+    : about
+      ? '/about'
+      : waived
+        ? '/waived'
+        : '/home';
+  const label = from ? from.name : about ? 'Yanco' : waived ? 'Waived' : 'All work';
   return (
     <Link to={to} className={`${ICON_BUTTON} w-fit`}>
       ← {label}
@@ -113,7 +118,7 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
       style={{ aspectRatio: piece.aspectRatio }}
       // Named, so a view transition carries the old drawing into the new
       // one's place rather than crossfading it with the whole page.
-      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain [view-transition-name:artwork] lg:max-h-[max(320px,calc(100vh_-_226px))]"
+      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain [view-transition-name:artwork] wide:max-h-[max(320px,calc(100vh_-_226px))] flat:max-h-[calc(100svh_-_var(--spacing-header)_-_7rem)]"
     />
   );
 };
@@ -237,10 +242,13 @@ const PiecePage = () => {
   // neighbours at all.
   const rawTrail = params.get(ORIGIN_PARAM);
   const trail = useMemo(() => readTrail(rawTrail), [rawTrail]);
-  // The nearest step is the list this piece belongs to. `home` is a place,
-  // not a set, so it names no collection to walk.
+  // The nearest step is the list this piece belongs to. `home` and `about`
+  // are places, not sets, so they name no collection to walk.
   const openedFrom = nearestStep(trail);
-  const setSlug = openedFrom === HOME_ORIGIN ? undefined : openedFrom;
+  const setSlug =
+    openedFrom === HOME_ORIGIN || openedFrom === ABOUT_ORIGIN
+      ? undefined
+      : openedFrom;
   const loadOrigin = useMemo(
     () => (setSlug ? () => fetchCollection(setSlug) : NO_ORIGIN),
     [setSlug],
@@ -254,7 +262,10 @@ const PiecePage = () => {
       !piece.waivedAt &&
       fromSet?.pieces.some((member) => member.id === piece.id),
   );
-  const carried = inSet ? (rawTrail ?? undefined) : undefined;
+  // Carried on to the neighbours, so walking the about page's picks keeps
+  // the way back to it.
+  const fromAbout = openedFrom === ABOUT_ORIGIN && Boolean(piece && !piece.waivedAt);
+  const carried = inSet || fromAbout ? (rawTrail ?? undefined) : undefined;
 
   // On a set's terms: a waived piece walks the reserve however it was reached.
   const shownAs = readSequence(location.state);
@@ -397,6 +408,7 @@ const PiecePage = () => {
       waived={Boolean(piece.waivedAt)}
       from={inSet ? fromSet : null}
       trail={behind(trail)}
+      about={fromAbout}
     />
   );
 
@@ -424,15 +436,15 @@ const PiecePage = () => {
             `auto`, grid hands a spanning item's height to every row it crosses,
             which inflated the first to 400-odd pixels of nothing. */}
         <div
-          className={`grid min-w-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_1fr] lg:gap-y-0 lg:transition-[grid-template-columns] lg:duration-300 lg:ease-reflow motion-reduce:transition-none ${
+          className={`grid min-w-0 flex-1 gap-8 wide:grid-cols-[minmax(0,1fr)_320px] wide:grid-rows-[auto_1fr] wide:gap-y-0 wide:transition-[grid-template-columns] wide:duration-300 wide:ease-reflow motion-reduce:transition-none ${
             shelfOpen ? 'xl:grid-cols-[minmax(0,1fr)_272px]' : ''
           }`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 lg:col-start-2 lg:row-start-1 lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:border-l lg:border-line lg:pb-6 lg:pl-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 wide:col-start-2 wide:row-start-1 wide:flex-col wide:items-start wide:justify-start wide:gap-3 wide:border-l wide:border-line wide:pb-6 wide:pl-8">
             {/* Rendered twice rather than placed by grid: the two live in
                 different columns at lg and in one row below it. `hidden` keeps
                 the unused copy out of the tab order as well as off screen. */}
-            <span className="flex items-center gap-3 lg:hidden">
+            <span className="flex items-center gap-3 wide:hidden">
               {backLink}
               {picked && <SpotlightMark />}
             </span>
@@ -451,8 +463,8 @@ const PiecePage = () => {
             neighbour -- a wide piece squeezes the gutters instead of running
             under the back link.
           */}
-          <figure className="flex justify-center lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-start lg:gap-4">
-            <div className="hidden lg:block">{backLink}</div>
+          <figure className="flex justify-center wide:col-start-1 wide:row-start-1 wide:row-span-2 wide:grid wide:grid-cols-[1fr_auto_1fr] wide:items-start wide:gap-4">
+            <div className="hidden wide:block">{backLink}</div>
             {/* `w-fit` so the column shrinks to the artwork: the button then
                 spans the drawing exactly rather than the whole grid cell. */}
             <div className="flex w-fit flex-col items-stretch">
@@ -461,12 +473,12 @@ const PiecePage = () => {
             </div>
             {/* The right gutter, the mirror of the back link's: a mark on
                 the frame the drawing hangs in, not on the drawing. */}
-            <div className="hidden lg:flex lg:justify-end">
+            <div className="hidden wide:flex wide:justify-end">
               {picked && <SpotlightMark />}
             </div>
           </figure>
           <PieceWallLabel
-            className="lg:col-start-2 lg:row-start-2"
+            className="wide:col-start-2 wide:row-start-2"
             piece={piece}
             collections={piece.collections ?? []}
             actions={

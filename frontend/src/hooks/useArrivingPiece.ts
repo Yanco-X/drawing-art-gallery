@@ -1,22 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import { flushSync } from 'react-dom';
+import { whenDecoded } from '../lib/decode';
 import { comeBack, turnIn, turnsWhole } from '../lib/swipe';
 import { takeStep } from '../lib/traverse';
 import type { Piece } from '../types';
-
-// Past this the reader has waited long enough: the piece goes up and its
-// image lands when it can.
-const IMAGE_WAIT_MS = 800;
-
-const whenDecoded = (url: string) => {
-  const image = new Image();
-  image.src = url;
-  return Promise.race([
-    image.decode().catch(() => undefined),
-    new Promise<void>((resolve) => setTimeout(resolve, IMAGE_WAIT_MS)),
-  ]);
-};
 
 // The piece on the wall. The next one is held back until its image has
 // decoded, then the two are swapped inside a view transition, so moving

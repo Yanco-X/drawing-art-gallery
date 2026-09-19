@@ -58,6 +58,15 @@ export interface Piece {
   tileSource?: TileSource | null;
 }
 
+// The artist's page: the owner's words, and the pieces beside them, the
+// first of which is the cover.
+export interface About {
+  body: string;
+  // The same words in Spanish, behind the page's language toggle.
+  bodyEs: string;
+  pieces: Piece[];
+}
+
 export interface TileSource {
   // Tiles live at `${base}/${level}/${column}_${row}.webp`.
   base: string;

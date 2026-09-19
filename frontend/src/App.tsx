@@ -5,6 +5,7 @@ import { SessionProvider } from './contexts/SessionProvider';
 import { SocialsProvider } from './contexts/SocialsProvider';
 import { ThemeProvider } from './contexts/ThemeProvider';
 import { claimTabVisit } from './lib/visitorId';
+import AboutPage from './pages/AboutPage';
 import CollectionPage from './pages/CollectionPage';
 import CollectionsIndexPage from './pages/CollectionsIndexPage';
 import LandingPage from './pages/LandingPage';
@@ -34,6 +35,7 @@ function App() {
               <Route path="/piece/:id" element={<PiecePage />} />
               <Route path="/collections" element={<CollectionsIndexPage />} />
               <Route path="/collections/:slug" element={<CollectionPage />} />
+              <Route path="/about" element={<AboutPage />} />
               <Route
                 path="/curate"
                 element={

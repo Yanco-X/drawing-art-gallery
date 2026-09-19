@@ -41,7 +41,7 @@ export const PieceWallLabel = ({
 
   return (
     <aside
-      className={`@container flex flex-col gap-6 border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8 ${className}`}
+      className={`@container flex flex-col gap-6 border-t border-line pt-8 wide:border-t-0 wide:border-l wide:pt-0 wide:pl-8 ${className}`}
     >
       <div className="flex flex-col gap-2">
         {piece.waivedAt && (

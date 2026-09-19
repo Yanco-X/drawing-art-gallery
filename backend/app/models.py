@@ -115,6 +115,10 @@ class Piece(Base):
     # ones. Cleared by a waive, for the same invariant as the spotlight slot.
     curated_order: Mapped[int | None] = mapped_column(Integer)
 
+    # Its place on the about page, from zero; the first is the cover. Null is
+    # not shown there. Cleared by a waive, as the spotlight slot is.
+    about_order: Mapped[int | None] = mapped_column(Integer)
+
     # Where to aim a crop, as percentages across and down the image. Null on
     # both is dead centre, which is what a browser does unasked.
     focal_x: Mapped[int | None] = mapped_column(Integer)
@@ -202,6 +206,28 @@ class Social(Base):
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class AboutPage(Base):
+    """
+    The artist's own page: the words, which the owner writes on the page.
+
+    One row, id 1, seeded by its migration. The pieces beside the words are
+    `Piece.about_order`, so a waive takes one off the page with no second
+    place to remember.
+    """
+
+    __tablename__ = "about_page"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # The same words in Spanish, behind the page's language toggle.
+    body_es: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )

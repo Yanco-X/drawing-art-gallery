@@ -69,7 +69,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report c4e8a1d2b7f5
+alembic upgrade head          # should report d2a9c5e7f1b3
 flask --app app run --port 5000
 ```
 
@@ -166,13 +166,22 @@ too: a missing grant fails here, not in production.
 
 ## 3. Data model
 
-Nine tables: `pieces`, `collections`, `collection_pieces`, `tags`,
-`piece_tags`, `users`, `socials`, `visit_events`, `alembic_version`.
+Ten tables: `pieces`, `collections`, `collection_pieces`, `tags`,
+`piece_tags`, `users`, `socials`, `visit_events`, `about_page`,
+`alembic_version`.
 
 **`pieces`** — id (UUID), title, description, `original_ext`, `byte_size`,
 medium, year, width, height, `created_date`, `user_id`, `created_at`,
 `updated_at`, `waived_at`, `tiles_ready`, `spotlight_order`,
-`curated_order`, `focal_x`, `focal_y`, `focal_zoom`.
+`curated_order`, `about_order`, `focal_x`, `focal_y`, `focal_zoom`.
+
+**`about_order`** places a piece on the about page, from zero, the first
+as its cover; null is not on the page. The spotlight's shape exactly, for
+the spotlight's reasons, and cleared by a waive the same way.
+**`about_page`** is one row, id 1: the page's `body` in English and
+`body_es` in Spanish, plain text the owner writes on the page itself,
+paragraphs split by blank lines. Each seeded with a first draft by its
+migration. Added 2026-09-19.
 
 **`spotlight_order`** is the slot a piece holds in the landing page band,
 counting from zero, or null for one the owner never picked. It is the
@@ -246,7 +255,7 @@ keeps them. [`context/METRICS.md`](context/METRICS.md) holds the design.
 
 ### Migrations
 
-Fourteen revisions, head `c4e8a1d2b7f5`. History is immutable — add a
+Sixteen revisions, head `d2a9c5e7f1b3`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -264,6 +273,8 @@ d1f4a7b93c26  focal_zoom becomes a multiple of fit
 a6d0f3b8e217  lowercase tag names
 9b3d6e2f1a74  add pieces.curated_order, placed newest first
 c4e8a1d2b7f5  add collections.curated_order, placed newest first
+b8e3f6a1c9d2  add the about page: about_page, pieces.about_order
+d2a9c5e7f1b3  add about_page.body_es, seeded in Spanish
 ```
 
 ### Two model notes worth carrying
@@ -390,6 +401,14 @@ credential is still configured — see §7.
 |---|---|---|
 | `PUT` | `/api/curation/pieces` `[owner]` | `{"pieceIds": [...]}`, the gallery first to last, replaced. A piece left out loses its place and waits at the top. 400 for a duplicate or more ids than exhibited pieces, 404 unknown, 409 waived. Answers with the gallery. **No GET** -- `curatedOrder` rides on every piece, for the owner; a visitor gets null, since the gaps a waive leaves would place the withdrawn pieces |
 | `PUT` | `/api/curation/collections` `[owner]` | `{"collectionIds": [...]}`, every collection first to last, drafts included, replaced. The same refusals, bounded by the number of collections. Answers with the owner's full list. `curatedOrder` is owner-only on collections too: numbers counted across drafts would leave gaps where a visitor is told nothing exists |
+
+### About
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/about` | Public, the same for everyone. `{body, bodyEs, pieces}`: the text in English and Spanish, and the placed pieces in order, the cover first, waived ones filtered out even with a place |
+| `PUT` | `/api/about/text` `[owner]` | `{"body": "...", "bodyEs": "..."}`, either or both; a language left out keeps its words. Each trimmed, CRLF made plain, at most 6000 characters, 400 for a NUL or a lone surrogate, 400 when neither is sent. Answers with the page |
+| `PUT` | `/api/about/pieces` `[owner]` | `{"pieceIds": [...]}`, the cover first, replaced. At most 12, no duplicates, 404 unknown, 409 waived; empty takes every piece off. Answers with the page |
 
 ### Visits
 

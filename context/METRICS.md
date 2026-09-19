@@ -230,6 +230,10 @@ visitors per device, so they can sum to slightly more than `unique`.
 - Range presets -- today, 7 days, 30 days, 12 months -- and two native
   `<input type="date">` for anything else. The browser's
   `Intl.DateTimeFormat().resolvedOptions().timeZone` is sent as `tz`.
+  The preset in force is filled in accent, as the density control's is;
+  dates that match no preset leave all four outlined. Fixed 2026-09-19: the
+  selected colours were plain classes on top of `ICON_BUTTON`, which already
+  sets both, and lost to it, so no preset ever looked selected.
 - A headline row: unique visitors, visits, returning ratio, device split.
   Each beside the previous period: "412, up 37% on the previous 30 days".
 - A daily chart of unique visitors and visits. Plain SVG, no chart library.

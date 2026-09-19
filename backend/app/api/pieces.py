@@ -410,6 +410,7 @@ def waive_piece(piece_id):
     # takes back neither; the piece returns unplaced, at the top.
     piece.spotlight_order = None
     piece.curated_order = None
+    piece.about_order = None
     piece.waived_at = _utcnow()
     session.commit()
 

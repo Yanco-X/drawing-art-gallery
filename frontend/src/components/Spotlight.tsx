@@ -2,6 +2,7 @@ import {
   Suspense,
   lazy,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -27,13 +28,20 @@ import { arrowStep } from '../lib/traverse';
 import type { CollectionSummary, Piece } from '../types';
 import { CollectionGrid } from './CollectionGrid';
 import { ICON_BUTTON, ICON_BUTTON_ACCENT, SUBTLE_ACTION } from './form-styles';
-import { ChevronLeftIcon, ChevronRightIcon, GearIcon } from './icons';
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  GearIcon,
+} from './icons';
 
 // Lazy, and owner-only. STATUS.md carries "the owner surface still ships to
 // every visitor" as a known gap; a new owner dialog should not add to it.
 const SpotlightDialog = lazy(() => import('./SpotlightDialog'));
 
-const BAND = 'h-[clamp(320px,52vh,500px)] lg:h-[clamp(440px,72vh,780px)]';
+const BAND =
+  'h-[clamp(320px,52vh,500px)] wide:h-[clamp(440px,72vh,780px)] ' +
+  'flat:h-[calc(100svh-var(--spacing-header))]';
 
 /*
  * Spelled out rather than derived from BAND: a Tailwind class exists only if
@@ -46,19 +54,26 @@ const SpotlightArtwork = ({
   piece,
   load,
   priority,
+  sequence,
 }: {
   piece: Piece;
   /** Held back until the slide is current or beside it, so five full-size
       renditions do not download on first paint. */
   load: boolean;
   priority: boolean;
+  sequence: string[];
 }) => {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const framing = framePiece(piece);
 
+  // The way in on a phone, where View piece gives its place to the
+  // collections toggle; on a desktop a second way beside the button.
   return (
-    <div
+    <Link
+      to={`/piece/${piece.id}`}
+      state={sequenceState(sequence)}
+      aria-label={`View ${piece.title}`}
       className={`flex items-center justify-center overflow-hidden bg-bg ${BAND}`}
     >
       {failed ? (
@@ -88,7 +103,7 @@ const SpotlightArtwork = ({
           />
         )
       )}
-    </div>
+    </Link>
   );
 };
 
@@ -111,13 +126,17 @@ const SpotlightLabel = ({
   const holding = collections.filter((collection) =>
     collection.pieceIds.includes(piece.id),
   );
+  // Below 1024px the cards sit between the artwork and the wall, so they
+  // wait behind a toggle rather than pushing the pieces down.
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const collectionsId = useId();
 
   return (
     <div
-      className={`flex flex-col gap-8 px-gutter py-10 lg:py-12 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
+      className={`flex flex-col px-gutter py-10 wide:gap-8 wide:py-12 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
     >
       <div
-        className={`flex min-w-0 flex-col justify-start gap-4 lg:justify-center 2xl:flex-1 ${
+        className={`flex min-w-0 flex-col justify-start gap-4 wide:justify-center 2xl:flex-1 ${
           holding.length > 0 ? '2xl:max-w-[26rem]' : ''
         }`}
       >
@@ -140,14 +159,40 @@ const SpotlightLabel = ({
           </p>
         )}
 
-        <Link
-          to={`/piece/${piece.id}`}
-          state={sequenceState(sequence)}
-          className={`${ICON_BUTTON_ACCENT} w-fit`}
+        <div
+          className={`flex flex-wrap items-center gap-3 ${
+            holding.length > 0 ? '' : 'narrow:hidden'
+          }`}
         >
-          View piece
-          <ChevronRightIcon />
-        </Link>
+          <Link
+            to={`/piece/${piece.id}`}
+            state={sequenceState(sequence)}
+            className={`${ICON_BUTTON_ACCENT} w-fit narrow:hidden`}
+          >
+            View piece
+            <ChevronRightIcon />
+          </Link>
+          {holding.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setCollectionsOpen((open) => !open)}
+              aria-expanded={collectionsOpen}
+              aria-controls={collectionsId}
+              className={`${ICON_BUTTON} wide:hidden`}
+            >
+              {holding.length === 1
+                ? 'In a collection'
+                : `In ${holding.length} collections`}
+              <span
+                className={`flex transition-transform duration-300 ease-reflow motion-reduce:transition-none ${
+                  collectionsOpen ? 'rotate-180' : ''
+                }`}
+              >
+                <ChevronDownIcon />
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/*
@@ -155,18 +200,33 @@ const SpotlightLabel = ({
         refuses to shrink and overflows the band -- measured at 2492px of cards
         spilling out of a 637px band.
       */}
+      {/*
+        Below `lg` a grid-row reveal, invisible once shut so its links leave
+        the tab order; from `lg` the two inner wrappers are `contents` and the
+        eyebrow and scroller are the column's own children again.
+      */}
       {holding.length > 0 && (
-        <div className="flex flex-col gap-3 2xl:w-[40%] 2xl:max-w-[340px] 2xl:min-w-[220px] 2xl:min-h-0 2xl:shrink-0 2xl:justify-center">
-          <span className="shrink-0 text-[12px] uppercase tracking-eyebrow text-faint">
-            {holding.length === 1 ? 'In a collection' : 'In collections'}
-          </span>
-          {/*
-            Three regimes, three caps: stacked and unbounded under `lg`, a
-            viewport cap from `lg` where the artwork is fixed and the label is
-            not, and from `2xl` the flex box caps it instead.
-          */}
-          <div className="lg:max-h-[clamp(180px,32vh,420px)] lg:overflow-y-auto 2xl:max-h-none 2xl:min-h-0">
-            <CollectionGrid collections={holding} />
+        <div
+          id={collectionsId}
+          data-open={collectionsOpen}
+          className={`narrow:grid narrow:grid-rows-[0fr] narrow:transition-[grid-template-rows,visibility] narrow:duration-300 narrow:ease-reflow narrow:data-[open=true]:grid-rows-[1fr] motion-reduce:transition-none wide:flex wide:flex-col wide:gap-3 2xl:w-[40%] 2xl:max-w-[340px] 2xl:min-w-[220px] 2xl:min-h-0 2xl:shrink-0 2xl:justify-center ${
+            collectionsOpen ? '' : 'narrow:invisible'
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden wide:contents">
+            <div className="flex flex-col gap-3 pt-6 wide:contents">
+              <span className="hidden shrink-0 text-[12px] uppercase tracking-eyebrow text-faint wide:block">
+                {holding.length === 1 ? 'In a collection' : 'In collections'}
+              </span>
+              {/*
+                Three regimes, three caps: stacked and unbounded under `lg`, a
+                viewport cap from `lg` where the artwork is fixed and the label
+                is not, and from `2xl` the flex box caps it instead.
+              */}
+              <div className="wide:max-h-[clamp(180px,32vh,420px)] wide:overflow-y-auto 2xl:max-h-none 2xl:min-h-0">
+                <CollectionGrid collections={holding} />
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -359,10 +419,10 @@ export const Spotlight = ({
               ref={(slide) => {
                 slideRefs.current[at] = slide;
               }}
-              className={`col-start-1 row-start-1 grid grid-cols-1 lg:grid-cols-2 ${
+              className={`col-start-1 row-start-1 grid grid-cols-1 wide:grid-cols-2 ${
                 at === index
                   ? 'opacity-100'
-                  : 'pointer-events-none opacity-0 max-lg:absolute max-lg:inset-x-0 max-lg:top-0'
+                  : 'pointer-events-none opacity-0 narrow:absolute narrow:inset-x-0 narrow:top-0'
               }`}
               aria-hidden={at !== index}
               inert={at !== index}
@@ -371,6 +431,7 @@ export const Spotlight = ({
                 piece={piece}
                 load={wanted.includes(at)}
                 priority={at === 0}
+                sequence={order}
               />
               <SpotlightLabel
                 piece={piece}

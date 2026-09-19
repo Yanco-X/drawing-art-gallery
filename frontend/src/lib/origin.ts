@@ -4,6 +4,9 @@ export const ORIGIN_PARAM = 'from';
 // collide with the sentinel.
 export const HOME_ORIGIN = 'home';
 
+// The about page, whose pieces a reader can open and come back from.
+export const ABOUT_ORIGIN = 'about';
+
 const MAX_TRAIL = 4;
 
 // Segments are filtered to slug shape rather than encoded: %2F decodes
