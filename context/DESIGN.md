@@ -246,7 +246,11 @@ The motion budget is deliberately small.
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | The wall and the spotlight arriving, on first paint and on a return, and each drawing arriving in its frame as it loads -- opacity, nothing else |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | One piece giving way to the next on the piece page: a view transition, the artwork carried into the next one's place and the Detailed view button resized with it, while the rest crossfades. Stepped -- Previous, Next or an arrow key -- the old drawing also moves 64px the way the reader is leaving, and the new one arrives from the other side |
 
+| 300ms `cubic-bezier(0.2, 0, 0, 1)` | The privacy page's language toggle: its accent block glides to the chosen language, and the text in that language arrives -- opacity, nothing else, through `.arrives` |
+
 No stagger and no scale. Motion acknowledges an action and gets out of the way.
+
+**A control's own marker may travel between its options**, added 2026-09-19 at the owner's request for the language toggle. The block moves within the control's border and nothing around it does, so it is feedback on the press, not content sliding -- the rule below still holds for content.
 
 **A carousel does not license a slide.** The spotlight crossfades because there is no horizontal translate anywhere in this table, and adding one for the sake of a familiar pattern is exactly the drift this section exists to prevent. Opacity was already the sanctioned way for one surface to replace another.
 
