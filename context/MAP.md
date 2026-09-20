@@ -52,7 +52,7 @@ you need to change behaviour, not to find code.
 | Theme | everywhere | `ThemeToggle`, `contexts/ThemeProvider.tsx`, `index.css` | -- | `DESIGN.md` |
 | Visit metrics | `pages/MetricsPage.tsx`, owner only | `VisitStats`, `DailyVisitsChart`, `MetricsRange`, `MetricsTable`, `lib/visitRange.ts`, `lib/visitorId.ts`, `recordEvent` and `fetchVisitSummary` in `services/pieces.ts`, opt-out in `SiteFooter` | `api/visits.py`, `VisitEvent` in `models.py`, `ratelimit.py`, `scripts/purge_visits.py` | `METRICS.md` |
 | Privacy | `pages/PrivacyPage.tsx` | `PrivacyPolicy` (English and Spanish), `LanguageToggle`, `lib/siteOwner.ts`, the link and copyright in `SiteFooter` | `scripts/purge_visits.py` keeps the retention it promises | `METRICS.md` section 7 |
-| Page chrome | everywhere | `PageShell`, `Header`, `SiteFooter`, `ScrollToTop`, `BackToTop`, `SectionHeader`, `SectionState`, `PageMessage`, `ConfirmDialog` | -- | `DESIGN.md` |
+| Page chrome | everywhere | `PageShell`, `Header`, `hooks/useHidingHeader.ts`, `SiteFooter`, `ScrollToTop`, `BackToTop`, `SectionHeader`, `SectionState`, `PageMessage`, `ConfirmDialog` | -- | `DESIGN.md` |
 
 ## 3. The fixed points
 

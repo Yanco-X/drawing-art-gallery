@@ -27,6 +27,16 @@
 
 @custom-variant flat (@media (width >= 40rem) and (height < 32rem) and (orientation: landscape));
 
+/* A phone either way up: the narrow width, or on its side. */
+@custom-variant phone {
+  @media (width < 40rem) {
+    @slot;
+  }
+  @media (width >= 40rem) and (height < 32rem) and (orientation: landscape) {
+    @slot;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Theme palettes
 

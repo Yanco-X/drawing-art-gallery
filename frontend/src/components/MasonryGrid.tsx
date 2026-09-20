@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFlipReflow } from '../hooks/useFlipReflow';
-import { GRID_DENSITY_COLUMNS } from '../hooks/useGridDensity';
-import { columnCount, layMasonry } from '../lib/masonry';
+import { GRID_DENSITIES, GRID_DENSITY_COLUMNS } from '../hooks/useGridDensity';
+import { layMasonry, steppedColumnCount } from '../lib/masonry';
 import type { GridDensity, Piece } from '../types';
 import { PieceCard } from './PieceCard';
 
@@ -80,7 +80,13 @@ export const MasonryGrid = ({
     return () => observer.unobserve(node);
   }, []);
 
-  const count = columnCount(width, GRID_DENSITY_COLUMNS[density], GAP);
+  const count = steppedColumnCount(
+    width,
+    GAP,
+    GRID_DENSITIES.slice(0, GRID_DENSITIES.indexOf(density) + 1).map(
+      (step) => GRID_DENSITY_COLUMNS[step],
+    ),
+  );
   const columnWidth = (width - GAP * (count - 1)) / count;
   // A height measured at another width is stale, and an estimate from the
   // stored proportions is closer than it.

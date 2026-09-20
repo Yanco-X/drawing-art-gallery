@@ -6,6 +6,7 @@ export { useGallerySort } from './useGallerySort';
 export { useDismissable } from './useDismissable';
 export { useReturnMemory } from './useReturnMemory';
 export { useArrivingPiece } from './useArrivingPiece';
+export { useHidingHeader } from './useHidingHeader';
 export { useFlipReflow } from './useFlipReflow';
 export { usePersistentState } from './usePersistentState';
 export { useTheme } from './useTheme';

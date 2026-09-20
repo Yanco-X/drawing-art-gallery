@@ -12,7 +12,7 @@ import type { TouchEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession, useSpotlight } from '../hooks';
 import { INTERVAL_MS } from '../hooks/useSpotlight';
-import { sequenceState } from '../lib/origin';
+import { HOME_ORIGIN, sequenceState } from '../lib/origin';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
 import {
   TURN,
@@ -74,7 +74,7 @@ const SpotlightArtwork = ({
       to={`/piece/${piece.id}`}
       state={sequenceState(sequence)}
       aria-label={`View ${piece.title}`}
-      className={`flex items-center justify-center overflow-hidden bg-bg ${BAND}`}
+      className={`flex touch-pan-y touch-pinch-zoom items-center justify-center overflow-hidden bg-bg ${BAND}`}
     >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
@@ -133,10 +133,10 @@ const SpotlightLabel = ({
 
   return (
     <div
-      className={`flex flex-col px-gutter py-10 wide:gap-8 wide:py-12 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
+      className={`flex flex-col px-gutter py-10 wide:py-12 flat:py-6 lg:gap-8 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
     >
       <div
-        className={`flex min-w-0 flex-col justify-start gap-4 wide:justify-center 2xl:flex-1 ${
+        className={`flex min-w-0 touch-pan-y touch-pinch-zoom flex-col justify-start gap-4 wide:justify-center 2xl:flex-1 ${
           holding.length > 0 ? '2xl:max-w-[26rem]' : ''
         }`}
       >
@@ -161,13 +161,13 @@ const SpotlightLabel = ({
 
         <div
           className={`flex flex-wrap items-center gap-3 ${
-            holding.length > 0 ? '' : 'narrow:hidden'
+            holding.length > 0 ? '' : 'max-lg:hidden'
           }`}
         >
           <Link
             to={`/piece/${piece.id}`}
             state={sequenceState(sequence)}
-            className={`${ICON_BUTTON_ACCENT} w-fit narrow:hidden`}
+            className={`${ICON_BUTTON_ACCENT} w-fit max-lg:hidden`}
           >
             View piece
             <ChevronRightIcon />
@@ -178,7 +178,7 @@ const SpotlightLabel = ({
               onClick={() => setCollectionsOpen((open) => !open)}
               aria-expanded={collectionsOpen}
               aria-controls={collectionsId}
-              className={`${ICON_BUTTON} wide:hidden`}
+              className={`${ICON_BUTTON} lg:hidden`}
             >
               {holding.length === 1
                 ? 'In a collection'
@@ -209,13 +209,13 @@ const SpotlightLabel = ({
         <div
           id={collectionsId}
           data-open={collectionsOpen}
-          className={`narrow:grid narrow:grid-rows-[0fr] narrow:transition-[grid-template-rows,visibility] narrow:duration-300 narrow:ease-reflow narrow:data-[open=true]:grid-rows-[1fr] motion-reduce:transition-none wide:flex wide:flex-col wide:gap-3 2xl:w-[40%] 2xl:max-w-[340px] 2xl:min-w-[220px] 2xl:min-h-0 2xl:shrink-0 2xl:justify-center ${
-            collectionsOpen ? '' : 'narrow:invisible'
+          className={`max-lg:grid max-lg:grid-rows-[0fr] max-lg:transition-[grid-template-rows,visibility] max-lg:duration-300 max-lg:ease-reflow max-lg:data-[open=true]:grid-rows-[1fr] motion-reduce:transition-none lg:flex lg:flex-col lg:gap-3 2xl:w-[40%] 2xl:max-w-[340px] 2xl:min-w-[220px] 2xl:min-h-0 2xl:shrink-0 2xl:justify-center ${
+            collectionsOpen ? '' : 'max-lg:invisible'
           }`}
         >
-          <div className="min-h-0 overflow-hidden wide:contents">
-            <div className="flex flex-col gap-3 pt-6 wide:contents">
-              <span className="hidden shrink-0 text-[12px] uppercase tracking-eyebrow text-faint wide:block">
+          <div className="min-h-0 overflow-hidden lg:contents">
+            <div className="flex flex-col gap-3 pt-6 lg:contents">
+              <span className="hidden shrink-0 text-[12px] uppercase tracking-eyebrow text-faint lg:block">
                 {holding.length === 1 ? 'In a collection' : 'In collections'}
               </span>
               {/*
@@ -223,8 +223,14 @@ const SpotlightLabel = ({
                 viewport cap from `lg` where the artwork is fixed and the label
                 is not, and from `2xl` the flex box caps it instead.
               */}
-              <div className="wide:max-h-[clamp(180px,32vh,420px)] wide:overflow-y-auto 2xl:max-h-none 2xl:min-h-0">
-                <CollectionGrid collections={holding} />
+              <div className="lg:max-h-[clamp(180px,32vh,420px)] lg:overflow-y-auto 2xl:max-h-none 2xl:min-h-0">
+                {/* The band is the landing page's, so its collections
+                    offer the way back to it, as the row below them does. */}
+                <CollectionGrid
+                  collections={holding}
+                  origin={HOME_ORIGIN}
+                  row="inset"
+                />
               </div>
             </div>
           </div>
@@ -389,10 +395,28 @@ export const Spotlight = ({
       <section
         aria-roledescription="carousel"
         aria-label="Featured work"
-        className="arrives touch-pan-y touch-pinch-zoom border-b border-line"
-        onMouseEnter={hold}
-        onMouseLeave={release}
-        onFocus={hold}
+        /*
+          `touch-pan-y` sits on the artwork and the label's words rather than
+          here: a browser intersects touch-action down the tree, so a band
+          that forbids sideways panning forbids it for the collections row
+          inside it too, and the row would not scroll.
+        */
+        className="arrives border-b border-line"
+        /*
+          A finger is not a hover, and a tap is not keyboard focus. A phone
+          synthesises both from a tap, and pausing there swaps the indicator
+          mid-tap -- a browser then spends that tap on the hover and drops the
+          click, so the first tap on a control in the band did nothing.
+        */
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') hold();
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType === 'mouse') release();
+        }}
+        onFocus={(event) => {
+          if (event.target.matches(':focus-visible')) hold();
+        }}
         onBlur={release}
         // On the band only, unlike the keys: a swipe further down the page
         // is somebody reading the wall, not steering the picks.
@@ -405,9 +429,10 @@ export const Spotlight = ({
       >
         {/*
           The slides stack in one grid cell, so from 1024px the band takes the
-          height of the tallest. Below it the hidden slides leave the flow and
-          the band fits the one on show: a label without a collection would
-          otherwise sit over a gap as tall as the card it lacks.
+          height of the tallest. Below it, either way up, the hidden slides
+          leave the flow and the band fits the one on show: a label without a
+          collection -- or with its collections shut -- would otherwise sit
+          over a gap as tall as the card it lacks.
         */}
         <div
           className="relative mx-auto grid w-full max-w-content overflow-hidden"
@@ -422,7 +447,7 @@ export const Spotlight = ({
               className={`col-start-1 row-start-1 grid grid-cols-1 wide:grid-cols-2 ${
                 at === index
                   ? 'opacity-100'
-                  : 'pointer-events-none opacity-0 narrow:absolute narrow:inset-x-0 narrow:top-0'
+                  : 'pointer-events-none opacity-0 max-lg:absolute max-lg:inset-x-0 max-lg:top-0'
               }`}
               aria-hidden={at !== index}
               inert={at !== index}

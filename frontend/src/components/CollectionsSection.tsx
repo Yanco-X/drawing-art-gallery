@@ -30,7 +30,7 @@ export const CollectionsSection = ({
     ) : collections.length === 0 ? (
       <SectionState message="No collections yet." />
     ) : (
-      <CollectionGrid collections={collections} origin={origin} row />
+      <CollectionGrid collections={collections} origin={origin} row="edge" />
     )}
   </section>
 );

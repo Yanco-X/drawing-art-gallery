@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSocials, useTheme } from '../hooks';
+import { useHidingHeader, useSocials, useTheme } from '../hooks';
 import { fetchPieces } from '../services';
 import type { Role } from '../types';
 import { ICON_BUTTON_ACCENT } from './form-styles';
@@ -151,6 +151,9 @@ export const Header = ({
   onSignOut?: () => void;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { hidden, reveal } = useHidingHeader(menuOpen);
+  // Never away with its menu open, or with the focus inside it.
+  const away = hidden && !menuOpen;
   const { socials } = useSocials();
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
@@ -159,7 +162,12 @@ export const Header = ({
   const isDark = theme === 'dark';
 
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px]">
+    <header
+      onFocus={reveal}
+      className={`sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px] transition-transform duration-300 ease-reflow motion-reduce:transition-none ${
+        away ? '-translate-y-full' : ''
+      }`}
+    >
       {/* Below sm the gap is only the floor between the wordmark and the
           controls; at 24px a 360px phone scrolls sideways. */}
       <div className="mx-auto flex w-full max-w-content items-center justify-between gap-2 px-gutter py-5 sm:gap-6">

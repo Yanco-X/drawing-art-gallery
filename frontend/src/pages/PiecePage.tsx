@@ -118,7 +118,7 @@ const PieceImage = ({ piece }: { piece: Piece }) => {
       style={{ aspectRatio: piece.aspectRatio }}
       // Named, so a view transition carries the old drawing into the new
       // one's place rather than crossfading it with the whole page.
-      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain [view-transition-name:artwork] wide:max-h-[max(320px,calc(100vh_-_226px))] flat:max-h-[calc(100svh_-_var(--spacing-header)_-_7rem)]"
+      className="hatch max-h-[max(320px,calc(100vh_-_294px))] w-auto max-w-full border border-line object-contain [view-transition-name:artwork] wide:max-h-[max(320px,calc(100vh_-_226px))] flat:max-h-[calc(100svh_-_2.5rem)]"
     />
   );
 };
@@ -430,21 +430,23 @@ const PiecePage = () => {
     <PageShell>
       <article
         ref={pageRef}
-        className="mx-auto flex w-full max-w-content touch-pan-y touch-pinch-zoom items-start px-gutter pt-8 pb-intro-bottom"
+        className="mx-auto flex w-full max-w-content touch-pan-y touch-pinch-zoom items-start px-gutter pt-8 pb-intro-bottom flat:pt-4"
       >
         {/* The rows are explicit because the artwork spans both. Left to
             `auto`, grid hands a spanning item's height to every row it crosses,
             which inflated the first to 400-odd pixels of nothing. */}
         <div
-          className={`grid min-w-0 flex-1 gap-8 wide:grid-cols-[minmax(0,1fr)_320px] wide:grid-rows-[auto_1fr] wide:gap-y-0 wide:transition-[grid-template-columns] wide:duration-300 wide:ease-reflow motion-reduce:transition-none ${
+          className={`grid min-w-0 flex-1 gap-8 wide:grid-cols-[minmax(0,1fr)_320px] wide:grid-rows-[auto_1fr] wide:gap-y-0 wide:transition-[grid-template-columns] wide:duration-300 wide:ease-reflow flat:grid-cols-[minmax(0,1fr)_260px] flat:gap-x-5 motion-reduce:transition-none ${
             shelfOpen ? 'xl:grid-cols-[minmax(0,1fr)_272px]' : ''
           }`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 wide:col-start-2 wide:row-start-1 wide:flex-col wide:items-start wide:justify-start wide:gap-3 wide:border-l wide:border-line wide:pb-6 wide:pl-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 wide:col-start-2 wide:row-start-1 wide:flex-col wide:items-start wide:justify-start wide:gap-3 wide:border-l wide:border-line wide:pb-6 wide:pl-8 flat:pl-5">
             {/* Rendered twice rather than placed by grid: the two live in
-                different columns at lg and in one row below it. `hidden` keeps
-                the unused copy out of the tab order as well as off screen. */}
-            <span className="flex items-center gap-3 wide:hidden">
+                different columns when wide and in one row when stacked. A
+                phone on its side keeps this copy, in the rail, and gives the
+                artwork the gutters. `hidden` keeps the unused copy out of the
+                tab order as well as off screen. */}
+            <span className="flex items-center gap-3 wide:hidden flat:flex">
               {backLink}
               {picked && <SpotlightMark />}
             </span>
@@ -455,6 +457,11 @@ const PiecePage = () => {
               sequence={sequence}
               page={pageRef}
             />
+            {/* Beside the artwork on a phone on its side, which then has the
+                whole height to itself. */}
+            <div className="hidden w-full flat:block">
+              <DetailedViewButton piece={piece} onOpen={openViewer} />
+            </div>
           </div>
 
           {/*
@@ -463,17 +470,19 @@ const PiecePage = () => {
             neighbour -- a wide piece squeezes the gutters instead of running
             under the back link.
           */}
-          <figure className="flex justify-center wide:col-start-1 wide:row-start-1 wide:row-span-2 wide:grid wide:grid-cols-[1fr_auto_1fr] wide:items-start wide:gap-4">
-            <div className="hidden wide:block">{backLink}</div>
+          <figure className="flex justify-center wide:col-start-1 wide:row-start-1 wide:row-span-2 wide:grid wide:grid-cols-[1fr_auto_1fr] wide:items-start wide:gap-4 flat:flex">
+            <div className="hidden wide:block flat:hidden">{backLink}</div>
             {/* `w-fit` so the column shrinks to the artwork: the button then
                 spans the drawing exactly rather than the whole grid cell. */}
             <div className="flex w-fit flex-col items-stretch">
               <PieceImage key={piece.id} piece={piece} />
-              <DetailedViewButton piece={piece} onOpen={openViewer} />
+              <div className="flat:hidden">
+                <DetailedViewButton piece={piece} onOpen={openViewer} />
+              </div>
             </div>
             {/* The right gutter, the mirror of the back link's: a mark on
                 the frame the drawing hangs in, not on the drawing. */}
-            <div className="hidden wide:flex wide:justify-end">
+            <div className="hidden wide:flex wide:justify-end flat:hidden">
               {picked && <SpotlightMark />}
             </div>
           </figure>
