@@ -74,7 +74,7 @@ const SpotlightArtwork = ({
       to={`/piece/${piece.id}`}
       state={sequenceState(sequence)}
       aria-label={`View ${piece.title}`}
-      className={`flex touch-pan-y touch-pinch-zoom items-center justify-center overflow-hidden bg-bg ${BAND}`}
+      className={`flex touch-manipulation items-center justify-center overflow-hidden bg-bg ${BAND}`}
     >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
@@ -136,7 +136,7 @@ const SpotlightLabel = ({
       className={`flex flex-col px-gutter py-10 wide:py-12 flat:py-6 lg:gap-8 2xl:flex-row 2xl:gap-x-10 ${LABEL_BAND}`}
     >
       <div
-        className={`flex min-w-0 touch-pan-y touch-pinch-zoom flex-col justify-start gap-4 wide:justify-center 2xl:flex-1 ${
+        className={`flex min-w-0 touch-manipulation flex-col justify-start gap-4 wide:justify-center 2xl:flex-1 ${
           holding.length > 0 ? '2xl:max-w-[26rem]' : ''
         }`}
       >
@@ -396,10 +396,13 @@ export const Spotlight = ({
         aria-roledescription="carousel"
         aria-label="Featured work"
         /*
-          `touch-pan-y` sits on the artwork and the label's words rather than
-          here: a browser intersects touch-action down the tree, so a band
-          that forbids sideways panning forbids it for the collections row
-          inside it too, and the row would not scroll.
+          The artwork and the label's words carry `touch-manipulation`, never
+          a touch-action that forbids an axis. Chromium drops the click on the
+          first tap anywhere on the page for about a second after a stroke
+          that began on a surface with `pan-y` or `none` -- measured on
+          Android and in desktop device mode, where `auto` and `manipulation`
+          are clean and `pan-y` and `none` are not. A swipe then read as a
+          turn cost the next tap on any button in the header.
         */
         className="arrives border-b border-line"
         /*

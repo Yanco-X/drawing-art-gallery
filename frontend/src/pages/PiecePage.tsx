@@ -430,7 +430,7 @@ const PiecePage = () => {
     <PageShell>
       <article
         ref={pageRef}
-        className="mx-auto flex w-full max-w-content touch-pan-y touch-pinch-zoom items-start px-gutter pt-8 pb-intro-bottom flat:pt-4"
+        className="mx-auto flex w-full max-w-content touch-manipulation items-start px-gutter pt-8 pb-intro-bottom flat:pt-4"
       >
         {/* The rows are explicit because the artwork spans both. Left to
             `auto`, grid hands a spanning item's height to every row it crosses,

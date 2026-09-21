@@ -185,6 +185,9 @@ loaded automatically; everything below is a menu, not a reading list.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
 - [`context/project-overview.md`](context/project-overview.md) contains full in depth description of the project, its goals, and context.
 - [`context/DESIGN.md`](context/DESIGN.md) contains the design guidelines and rules.
+- [`context/TOUCH.md`](context/TOUCH.md) contains the one rule about `touch-action`
+  on a swipe surface, and how to diagnose a touch bug that only a real finger shows.
+  Open it before putting `touch-action` on anything.
 - [`context/STORAGE.md`](context/STORAGE.md) contains how data and image files are stored, the upload pipeline, and the storage adapter.
 - [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) contains the two-stage removal flow: waiving a piece out of the gallery, restoring it, and the delete guard.
 - [`context/AUTH.md`](context/AUTH.md) contains the session design, the visitor contract, and how the owner signs in without the gallery showing a login.
