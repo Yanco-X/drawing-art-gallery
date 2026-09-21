@@ -5,6 +5,12 @@ images.
 
 ## Status
 
+**Paused 2026-09-20**, before the platform steps, for a round of UI work the
+owner wanted in ahead of the first public request: the hand-drawn asset kit.
+Nothing below is withdrawn -- the plan, the decisions and the open questions
+all stand, and the work resumes at *Pass 1: the work*. What was built in the
+meantime is in `DESIGN.md` under *Rules and dividers*.
+
 **Decided 2026-09-12, work starting 2026-09-15.** Pass 1 is the production
 shape: the frontend and backend built and served as one thing, settings that
 fail loudly rather than quietly, and the images moved from MinIO to R2 by
@@ -148,3 +154,16 @@ inherited from a development default.
   dashboard at `/metrics`, and a `client_ip()` helper shared with the
   sign-in limit.
 - **2026-09-15**: This file cleared for the deployment feature.
+- **2026-09-20**: **The hand-drawn asset kit, pass 1.** The owner's own
+  pencil strokes replace the 1px hairline on every structural line: the
+  header, the footer, the spotlight's bottom edge, the landing page's break
+  between Collections and All work, the wall label's edge and inner rules,
+  and the tag drawer's two. A `pencil-stroke` utility masks a stroke over
+  `currentColor`, so one file serves both themes. Dialogs, chips and the
+  owner's tools keep their hairlines deliberately.
+- **2026-09-20**: Favicons became a head-only crop, carrying every size
+  Windows asks for, and the header's mark grew to 48px. The loader built on
+  the animated logo was reverted to be done properly later; its two GIFs are
+  staged in `frontend/public/brand/anim/`.
+- **2026-09-20**: The spotlight's artwork answers a hover, and a piece
+  opened from the band is shown again on return.

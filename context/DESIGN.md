@@ -107,21 +107,53 @@ So the tokens at or below `muted` were re-derived to hold the exact contrast rat
 
 ### Logo
 
-The owner's drawn figure, arms out. **Added 2026-09-18.** `logos/` holds the files as supplied; the two that are served are copies in `frontend/public/`, so a new version is copied over its copy.
+The owner's drawn figure, arms out. **Added 2026-09-18.** `logos/` holds the files as supplied. The header's exports are copies in `frontend/public/`; the favicons are derived and live in `frontend/public/brand/`, per the asset kit's layout.
 
 | File | Size | Used for |
 |---|---|---|
-| `favicon.ico` | 16, 32, 48 | Browser tabs, desktop and phone |
-| `favicon-192.png` | 192 | The phone home screen: `apple-touch-icon` on iOS, the 192 icon on Android |
-| `favicon-32.png` | 32 | Not served. The ICO's own 32 frame is the crisper of the two |
-| `favicon-512.png` | 512 | Not served. It is for a web app manifest, which the site does not have |
+| `brand/favicon.ico` | 16, 20, 24, 32, 40, 48, 64 | Browser tabs, desktop and phone |
+| `brand/favicon-192.png` | 192 | The phone home screen: `apple-touch-icon` on iOS, the 192 icon on Android |
+| `brand/favicon-32.png` | 32 | Served as an explicit PNG candidate beside the ICO |
+| `logos/favicon-*.png`, `favicon.ico` | as named | The kit's full-body exports. Superseded, kept as supplied |
 | `logo-1024.png` | 977 x 1024 | Not served |
 | `logo.png`, `logo-lines-only.png` | 4648 x 4872 | Masters |
 
-* **The header has its own exports**, `frontend/public/logo-{40,50,60,80,120}.png`: 40px at 1x, 1.25x, 1.5x, 2x and 3x, offered as one `srcset` so each screen fetches the one that matches it. Made from `logos/logo.png` in a single Lanczos resample, the figure at full height on a square canvas. The 192 was tried first and looked soft: the browser shrank an already-shrunk file by an odd factor. A new master means re-exporting all five.
+* **The favicons are the head alone, not the figure. Changed 2026-09-20.** The full-body mark loses the face at 16-32px and reads as a grey smudge, which the kit's brief names as a known limitation. The crop is measured off the alpha channel rather than judged by eye: the head occupies x 979-4161 and y 36-2700, and the arms do not enter until y 2850, so there is a 150px band below the jaw to cut in. Two earlier attempts failed there and are worth not repeating -- one cut at y 2646, straight along the jaw stroke, which left the chin with no outline; the next squared the frame by cropping 191px off each side, which sliced the curved silhouette flat and read as damage. The head is 3182 wide by 2754 tall, so a square has roughly 15% vertical slack that nothing can fill without cutting the outline or pulling the arms in. It is padded, not cropped.
+* **The ICO carries every size Windows asks for**, which is 16px times the display scale: 20 at 125%, 24 at 150%, 32 at 200%. With only 16/32/48 in the file a scaled monitor made the browser resample an already-tiny bitmap, and that is what read as blurry. It is declared `sizes="any"`, not `32x32` -- the latter tells a browser the file holds one image.
+* **Each size is reduced in two steps with its contrast restored afterwards.** A single resample from the master lands thin lineart as mid-grey. The same treatment is wrong for the header's exports, where the figure is small in frame and the adjustment thins the strokes instead of deepening them.
+
+* **The header has its own exports**, `frontend/public/logo-{40,50,60,80,120}.png`, offered as one `srcset` so each screen fetches the one that matches it. The mark is 48px since 2026-09-20, so 1x takes the 50 and 1.5x the 80; only a 3x phone comes up short and stretches the 120. Made from `logos/logo.png` in a single Lanczos resample, the figure at full height on a square canvas. The 192 was tried first and looked soft: the browser shrank an already-shrunk file by an odd factor. A new master means re-exporting all five.
 * **The filled drawing, not the lines-only one.** Every served file is the figure filled white inside its black line. On dark the fill is what carries it: drawn in `text` at header size, the lines alone faded to a faint scribble, while the filled figure still reads as a figure. On light the fill disappears into the paper and the drawing looks as drawn.
 * **Tabs.** On a dark tab strip the 16px figure is a clear white silhouette. On a light one the fill meets the white tab and only its grey edge shows. That comes from the drawing at 16px, not from the markup.
 * **iOS paints a home-screen icon's transparency black.** The white fill keeps the figure legible as a white cut-out on black. A drawing on paper there would take an opaque 180px export on `bg`.
+
+### Rules and dividers
+
+The owner's own pencil strokes, photographed and extracted, standing in for the hairline on the page's structural lines. **Added 2026-09-20.** Eleven freehand strokes and their rotations live in `pencil-lines/` as supplied; the ones a page actually uses are copies in `frontend/public/brand/lines/`. [`context/docs/yancurations-ui-assets.md`](docs/yancurations-ui-assets.md) is the kit's own brief and binds anything new -- height limits, the variation policy, and what must never be done to a stroke.
+
+**Masked, never painted.** `@utility pencil-stroke` in `index.css` fills an element with `currentColor` and masks it with the stroke's PNG. One file therefore serves both themes and picks up whatever text colour its surface defines; each use sets `--stroke-src` and its own height and opacity. As an `<img>` or a `background-image` each stroke would need a second file for the dark theme and could not be toned per surface.
+
+**Three weights, and they are a hierarchy.** Page chrome is 8px at `.8`, section boundaries 6px at `.7`, dividers inside a component 4-5px at `.65`. Below 4px the graphite grain flattens into plain grey and the asset stops earning its bytes; above about 14px a stroke reads as a smear rather than a line.
+
+| Where | Stroke |
+|---|---|
+| Header, bottom | `rule-1`, the heaviest -- one structural line per page |
+| Footer, top | `rule-5`, mirrored |
+| Spotlight, bottom | `rule-6` |
+| Landing page, Collections to All work | `rule-7`, mirrored |
+| Wall label's edge, stacked | `rule-3` |
+| Wall label's edge, beside the artwork | `divider-v-3`, down the whole column |
+| Wall label's inner rules | `divider-4`, the lightest |
+| Tag drawer's edge | `divider-v-2` |
+| Tag drawer's header | `divider-3` |
+
+**No stroke appears twice within one viewport.** That is the reason the kit holds eleven rather than one: a repeated wobble reads as a texture, which is the failure a hand-drawn rule exists to avoid. A new rule takes an unused stroke, or an existing one mirrored with `scaleX(-1)`. The vertical strokes are lossless 90-degree rotations of the horizontal ones, so `rule-3` and `rule-v-3` are the same wobble and count as the same stroke -- though at the compressions they are used at, perpendicular, they do not read as one.
+
+**A rule straddles the boundary it marks**, half above it and half below, so it reads as drawn *on* the edge rather than resting above it. This is why `--spacing-header` is 76px and not 77: the header's rule hangs outside its box and is no longer part of its height.
+
+**Between two sections a rule sits inside the gap they already leave.** `SectionRule` pulls up by `--spacing-rule-gap`, exactly half a section gap at every width, and gives the other half back, so adding one costs no vertical space at all. Its gutter is on a wrapper: a mask paints across padding, so padding on the stroke itself would stretch it rather than inset it.
+
+**Everything else keeps its hairline.** Dialogs, chips, form fields, table rows, the curation board. The rule is one system per *surface*, not one system everywhere -- a page-structural rule and a chip border sit at different altitudes, and the kit has no corner strokes to draw a box with. A stroke is never a focus indicator either: the taper thins it at the ends and the irregular edge cannot hold the contrast a focus ring has to.
 
 ## Themes & Color
 
@@ -226,7 +258,9 @@ There are two breakpoints in the system, and no others:
 
 There is no elevation model. **No shadows anywhere.**
 
-Depth comes from exactly two devices: a 1px `line` border, and the `surface` against `bg` split. Every border in the UI is `1px solid` in the `line` token -- there are no 2px borders, no coloured borders except the accent on hover, and no dividers that are not this.
+Depth comes from exactly two devices: a 1px `line` border, and the `surface` against `bg` split. Within a component that still holds absolutely -- every border is `1px solid` in the `line` token, with no 2px borders and no coloured borders except the accent on hover.
+
+**The page's structural lines are the exception, since 2026-09-20**, and they are drawn rather than ruled: the header's and footer's edges, a section boundary, the rule beside a wall label. Those are pencil strokes -- see *Rules and dividers*. The two do not mix on one surface.
 
 ## Shapes
 
@@ -274,9 +308,9 @@ All motion must be skipped under `prefers-reduced-motion: reduce`.
 
 ### Header
 
-Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, bottom border in `line`. Padding `20px` vertical.
+Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, and a `rule-1` pencil stroke straddling its bottom edge. Padding `20px` vertical.
 
-* **Wordmark** -- "Yan" in `text` plus "Curations" in accent italic, Instrument Serif 32px. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it. **The mark** stands 8px before it, 40px square, overhanging the 36px row by 2px a side so the header keeps its 77px (**added 2026-09-18**, see Logo). Below 370px it is 32px, the wordmark's own size: a 360px phone has no room for more. The pair is one link.
+* **Wordmark** -- "Yan" in `text` plus "Curations" in accent italic, Instrument Serif 32px. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it. **The mark** stands 8px before it, 48px square since 2026-09-20 (40px when **added 2026-09-18**, see Logo), overhanging the 36px row by 6px a side. The overhang sits inside the row's own 20px padding, so the header keeps its 76px either way. Below 370px it is 32px, the wordmark's own size: a 360px phone has no room for more. The pair is one link.
 * **Row gap** -- 24px from 640px up, 8px below. On a phone it is only the floor between the wordmark and the controls, and a 360px phone needs the 16px to fit the mark.
 * **Nav** -- Gallery / Collections / Yanco / Socials, 14px uppercase, plus Curate, Waived and Metrics for the owner. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a `space-between` row and is correct.
 * **"Show me some!"** -- a random piece, for visitors and the owner alike. **Added 2026-09-17.** It sits in the row's free space between the nav and the controls on the right, as `ICON_BUTTON_ACCENT`: outlined accent that fills on hover, an invitation rather than the header's one filled action, which is the owner's Upload. A tooltip says where it goes. It draws from the exhibited pieces, never the one already on screen, and arrives with no origin, so that piece walks the whole gallery. From 1280px it is in the row with its label; **from 1024px to 1280px it is the 36px square**, since Yanco joined the nav on 2026-09-19 and took the room the label needed -- measured from the fonts, the visitor's row keeps 84px to spare at 1024px. **Below 1024px, since 2026-09-19**, it is a 36px accent-outlined square carrying only the shuffle glyph, first of the controls on the right, from 390px up; a narrower phone has no room beside the wordmark and keeps it in the menu panel. Up to 1024px, where the menu button holds the nav, it keeps that square in the row -- which closed the gap it once had between 640px and 1024px. A touch screen never hovers, so it fills while pressed and stays filled until the random piece opens, which is also what tells a tap on a slow connection that it landed.
@@ -341,6 +375,9 @@ The band above the intro on the landing page: the first five pieces of the galle
 * **Full bleed, inner content capped.** The section spans the viewport; the grid inside it is capped at 2400px and centred. This is the header and footer rule, not the content-region rule, and it is the one place a *content* region takes it -- recorded under Deviations.
 * **Split 50/50**, collapsing to one column below 1024px. No new breakpoint. It went 55/45, then 66/34 to give the artwork more room, and back to 50/50 on 2026-09-07 -- because a wider panel is a *wider frame*, and a wide frame beside a tall portrait is more empty ground, not less. At 50/50 the band's frame lands within a whisker of the picker's 3:2 preview at a typical window (1.485 against 1.502), so the hatch the owner sees while choosing is the hatch the page shows. What the half gives up in artwork width it gets back in a label panel with room for the collections block.
 * **The ground around a letterboxed piece is the page's own**, `bg`, not the hatch. **Changed 2026-09-19** on the owner's call: a zoomed piece sits on the page rather than in a striped frame. The focal picker's previews use the same ground, inside a hairline so their edge still reads on the dialog's surface.
+* **The artwork answers a hover**, added 2026-09-20. Its link fills the whole band, so that page-coloured ground around a letterboxed piece is clickable with nothing to show for it -- a pointer cursor over what looks like empty page. It takes the accent border the grid's cards take, on `focus-visible` as well, since a hover-only affordance leaves a keyboard with no equivalent.
+* **The band's bottom edge is a `rule-6` pencil stroke**, added 2026-09-20, replacing the hairline that was there. See *Rules and dividers*.
+* **A piece opened from the band is shown again on return**, added 2026-09-20. Both ways out record the slide -- the artwork and *View piece* -- and the band opens on that piece when the reader comes back, once per visit, so turning it by hand afterwards sticks. It keeps its own map in `lib/returnMemory.ts`: the wall below stores a piece and a scroll position under the same key, and the two would overwrite each other. The restore goes through `show` rather than `go`, because `go` clears `playing` -- it is what a person pressing an arrow calls -- and restoring through it would have paused the band on every return.
 * **Cover, aimed by a per-piece focal point.** `object-fit: cover` at `clamp(440px, 72vh, 780px)` beside the label and `clamp(320px, 52vh, 500px)` above it, with `object-position` from the piece's stored focal point. The artwork fills its half outright; nothing is letterboxed.
 
   This replaced contain plus a zoom on 2026-09-06, and the reasoning is worth keeping, because contain looked like the safer choice. Every piece here is portrait or square while the panel is wider than it is tall, so a contained fit was limited by height and left hatch bars down both sides. Scaling past the fit did not close them: it ate the axis that was already full. Measured, a 1.14 scale cost 12.3% of the height -- heads and feet -- and took nothing off the bars. **No zoom value fills a bar**, because the slack and the crop are on different axes.
@@ -508,15 +545,15 @@ Ordering the wall, added 2026-09-08. A `Sort` button in the "All work" header, a
 
 Not present in the original handoff -- designed against this system as a **gallery wall label**. The artwork keeps the room; the metadata sits beside it, small and quiet, separated by a hairline rather than boxed in a panel. No new visual vocabulary was introduced.
 
-* **Layout** -- a two-column grid, `minmax(0, 1fr)` for the artwork and a fixed `320px` rail. Below 1024px the two stack and the dividing rule turns from a left border into a top border. From `xl` an open tag drawer adds a third column beside them and the rail narrows to `272px` -- see *A tag another piece shares opens a shelf*, below.
-* **From `lg` the rail is two rows** -- the navigation, then the wall label -- at zero row gap, so their left borders meet and read as one unbroken rule beside the artwork. The rows are explicit, `auto 1fr`, because the artwork spans both of them: against `auto` rows grid hands a spanning item's height to every row it crosses, which inflated the first to some 300px of nothing, dropped the piece title from 215px down the page to 511px, and tore a hole in that rule.
+* **Layout** -- a two-column grid, `minmax(0, 1fr)` for the artwork and a fixed `320px` rail. Below 1024px the two stack and the dividing rule moves from the rail's left edge to its top, taking a different stroke with it -- `divider-v-3` beside, `rule-3` above. From `xl` an open tag drawer adds a third column beside them and the rail narrows to `272px` -- see *A tag another piece shares opens a shelf*, below.
+* **From `lg` the rail is two rows** -- the navigation, then the wall label -- at zero row gap, so the edge beside the artwork reads as one unbroken rule. It is literally one since 2026-09-20: a grid item spanning both rows carries a single stroke, rather than each row carrying its own. Two strokes stacked would meet taper to taper and thin the line over some 70px in the middle of the column. Spanning the rows also leaves the track arithmetic to grid, which is what keeps the rule in step with the rail's animated width when the tag drawer opens. The rows are explicit, `auto 1fr`, because the artwork spans both of them: against `auto` rows grid hands a spanning item's height to every row it crosses, which inflated the first to some 300px of nothing, dropped the piece title from 215px down the page to 511px, and tore a hole in that rule.
 * **Artwork** -- centred in its column, since the cap often leaves it narrower than the column and hugging one edge would strand the rule. 1px `line` border and the `hatch` behind it, exactly as in the grid.
 * **The height cap covers the artwork and its button together**, not the image alone: `max(320px, 100vh - 226px)` from `lg`, and `100vh - 294px` below it, where the navigation sits back above the drawing and costs another 67px.
 
   It was `78vh`, set when nothing sat beneath the image. A percentage cannot hold that promise once something does -- the chrome around the artwork is a fixed height, header and page padding above, the Detailed view button and its dimensions line below, while `78vh` grows with the window. The two agreed at about a 900px viewport and disagreed everywhere else, which is how the button came to sit five pixels below the fold on a 1080p laptop, on square pieces as much as on tall ones: at the cap the image is the same height whatever shape the piece is.
 
   Subtracting the chrome instead gives the artwork whatever the page does not need -- larger on a big monitor than `78vh` ever allowed, smaller on a short one, and the button always in view. Measured at 20px of slack below the caption at every width from 390px to 1920px and every height from 660px to 986px. The 320px floor stops a landscape phone reducing the drawing to a stamp. **Changed 2026-09-07.**
-* **Wall label** -- title at `clamp(22px, min(2.4vw, 11.2cqi), 32px)` serif, measured against the rail. The `cqi` term is 32px at the rail's usual width, so it only bites when the rail narrows for the tag drawer: the title scales down with the column and keeps its line breaks rather than wrapping further. Then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `line` rules: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
+* **Wall label** -- title at `clamp(22px, min(2.4vw, 11.2cqi), 32px)` serif, measured against the rail. The `cqi` term is 32px at the rail's usual width, so it only bites when the rail narrows for the tag drawer: the title scales down with the column and keeps its line breaks rather than wrapping further. Then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `divider-4` strokes -- the lightest in the kit, because a heavy one repeated four times down a rail turns it into a ledger: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
 * **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
 * **A pick wears a star.** **Added 2026-09-18.** A piece in the spotlight carries a solid five-point star, 28px in `accent`, with "In the Spotlight!" as its tooltip and accessible name. It sits in the artwork's right gutter from `lg`, level with the back link in the left one -- on the frame the drawing hangs in, not on the drawing, which was tried first and put a gold mark on the paper. Below `lg` it goes up into the row above the artwork beside the back link, as the back link itself does. It is the one solid accent mark that is not an action -- a status -- and the one glyph besides the density icons that is filled: an outlined star at that size is a scribble.
 * **Platform marks are the one place this set copies someone else's shape.** They live in `components/platform-icons.tsx`, apart from `icons.tsx`, because they break the house rules on purpose -- Instagram keeps its rounded corners, YouTube its pill. A brand is recognised or it is nothing. Everything else in `icons.tsx` is still square-cornered, unfilled and drawn to this design.
@@ -641,7 +678,7 @@ Deleting a piece removes the row, the original, and both renditions, with no und
 
 ### Footer
 
-Top border in `line`, 28px vertical padding, content split left and right and allowed to wrap. Both strings are 12px `faint`. Beside the wordmark, in the same 12px `faint`, a sentence says anonymous visits are counted and carries the opt-out as an underlined `SUBTLE_ACTION` -- the notice and objection `METRICS.md` section 7 requires. It wraps under the wordmark before the row itself wraps.
+A `rule-5` pencil stroke, mirrored, straddling its top edge; 28px vertical padding; content split left and right and allowed to wrap. Both strings are 12px `faint`. Beside the wordmark, in the same 12px `faint`, a sentence says anonymous visits are counted and carries the opt-out as an underlined `SUBTLE_ACTION` -- the notice and objection `METRICS.md` section 7 requires. It wraps under the wordmark before the row itself wraps.
 
 ## Implementation Notes
 

@@ -951,6 +951,7 @@ Read in this order:
 | [`context/MAP.md`](context/MAP.md) | Where every feature lives. **Read before searching.** |
 | [`context/project-overview.md`](context/project-overview.md) | The product and its data model |
 | [`context/DESIGN.md`](context/DESIGN.md) | Tokens, type, spacing, component patterns |
+| [`context/docs/yancurations-ui-assets.md`](context/docs/yancurations-ui-assets.md) | The hand-drawn asset kit's brief: pencil rules, the animated logo, favicons. Binding on anything that touches them |
 | [`context/STORAGE.md`](context/STORAGE.md) | Keys, buckets, adapters, derivatives |
 | [`context/WAIVED-PIECES.md`](context/WAIVED-PIECES.md) | The most complete feature spec in the repository |
 | [`context/COLLECTIONS.md`](context/COLLECTIONS.md) | Viewing and editing collections; the private-draft rules |

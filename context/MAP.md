@@ -25,6 +25,7 @@ Grepping fails when the code calls a thing something else. It calls them these.
 | zoom view, lightbox | **detailed view** | The full-window viewer, backed by pre-cut **tiles** |
 | grid size, columns | **density** | How many columns the masonry grid uses |
 | admin, logged in | **owner** | The only privileged role. Everyone else is a **visitor** |
+| hand-drawn line, hairline, `hr` | **stroke** | A pencil rule or divider from the owner's asset kit, masked over `currentColor` by the `pencil-stroke` utility |
 | analytics, stats, tracking | **visits** / **metrics** | `visits` are the counted events and their API; `metrics` is the owner's page that reads them |
 
 ## 2. Features, and the files that are them
@@ -52,7 +53,7 @@ you need to change behaviour, not to find code.
 | Theme | everywhere | `ThemeToggle`, `contexts/ThemeProvider.tsx`, `index.css` | -- | `DESIGN.md` |
 | Visit metrics | `pages/MetricsPage.tsx`, owner only | `VisitStats`, `DailyVisitsChart`, `MetricsRange`, `MetricsTable`, `lib/visitRange.ts`, `lib/visitorId.ts`, `recordEvent` and `fetchVisitSummary` in `services/pieces.ts`, opt-out in `SiteFooter` | `api/visits.py`, `VisitEvent` in `models.py`, `ratelimit.py`, `scripts/purge_visits.py` | `METRICS.md` |
 | Privacy | `pages/PrivacyPage.tsx` | `PrivacyPolicy` (English and Spanish), `LanguageToggle`, `lib/siteOwner.ts`, the link and copyright in `SiteFooter` | `scripts/purge_visits.py` keeps the retention it promises | `METRICS.md` section 7 |
-| Page chrome | everywhere | `PageShell`, `Header`, `hooks/useHidingHeader.ts`, `SiteFooter`, `ScrollToTop`, `BackToTop`, `SectionHeader`, `SectionState`, `PageMessage`, `ConfirmDialog` | -- | `DESIGN.md` |
+| Page chrome | everywhere | `PageShell`, `Header`, `hooks/useHidingHeader.ts`, `SiteFooter`, `ScrollToTop`, `BackToTop`, `SectionHeader`, `SectionRule`, `SectionState`, `PageMessage`, `ConfirmDialog` | -- | `DESIGN.md` |
 
 ## 3. The fixed points
 
@@ -67,9 +68,10 @@ These do not move, and most questions end at one of them.
 | What the backup keeps, and how it is restored | `backend/scripts/backup.py`, `backend/README.md` |
 | The JSON shape the frontend receives | `backend/app/schemas.py` (camelCase, matching `types/index.ts`) |
 | A design token, colour or spacing value | `frontend/src/index.css` |
+| A hand-drawn rule or divider | The `pencil-stroke` utility and the `--sa-rule-*` / `--sa-divider-*` sources in `frontend/src/index.css`; the files in `frontend/public/brand/lines/`. `DESIGN.md`, *Rules and dividers* |
 | Shared input and button classes | `frontend/src/components/form-styles.ts` |
 | An SVG icon | `frontend/src/components/icons.tsx` |
-| The logo and the favicons | `logos/` as supplied; the served copies and the header's `logo-*.png` exports in `frontend/public/`, linked from `frontend/index.html` and `Header` |
+| The logo and the favicons | `logos/` as supplied; the header's `logo-*.png` exports in `frontend/public/` and the derived head-crop favicons in `frontend/public/brand/`, linked from `frontend/index.html` and `Header` |
 | URL to page mapping | `frontend/src/App.tsx` |
 | Owner-only enforcement | `backend/app/auth.py` |
 | How a file gets to disk or MinIO | `backend/app/storage.py` |
@@ -108,6 +110,11 @@ context doc only when the map above sends you to it. `STATUS.md` is a
 reference, not a briefing: its section list is section 12, and it is the
 right place to look for *state* -- what is built, what is broken -- never for
 *where*. That is this file.
+
+`context/docs/yancurations-ui-assets.md` is the asset kit's own brief, written
+by its author. Open it before touching a pencil stroke, the animated logo or
+the favicons: it carries the height window, the variation policy and the hard
+don'ts, and it asks for a missing variant to be requested rather than derived.
 
 `DEPLOYMENT-NOTES.md` inverts the rule above: open it *before* you touch
 config, cookies, the storage backend, `docker-compose.yml` or anything that

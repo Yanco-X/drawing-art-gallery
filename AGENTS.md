@@ -185,6 +185,11 @@ loaded automatically; everything below is a menu, not a reading list.
 - When mentioned in the user input prompt, take into account the md files that describe the context of the project or task.
 - [`context/project-overview.md`](context/project-overview.md) contains full in depth description of the project, its goals, and context.
 - [`context/DESIGN.md`](context/DESIGN.md) contains the design guidelines and rules.
+- [`context/docs/yancurations-ui-assets.md`](context/docs/yancurations-ui-assets.md)
+  is the hand-drawn asset kit's brief, from its author: the pencil rules, the
+  animated logo and the favicons. Open it before using, resizing or deriving
+  any of them -- it bounds what may be done to them, and a variant it does not
+  contain is requested rather than made.
 - [`context/TOUCH.md`](context/TOUCH.md) contains the one rule about `touch-action`
   on a swipe surface, and how to diagnose a touch bug that only a real finger shows.
   Open it before putting `touch-action` on anything.
