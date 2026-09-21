@@ -72,7 +72,7 @@ const MetricsPage = () => {
         <p className="mb-4 text-[12px] uppercase tracking-eyebrow text-faint">
           Behind the wall
         </p>
-        <h1 className="max-w-[16em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty text-text">
+        <h1 className="max-w-[16em] font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty text-text">
           Visits.
         </h1>
         <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed text-muted">

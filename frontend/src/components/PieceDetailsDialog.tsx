@@ -108,7 +108,7 @@ export const PieceDetailsDialog = ({
         <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <h2
             id={fieldId + '-heading'}
-            className="font-serif text-[22px] font-normal text-text"
+            className="font-display text-[22px] font-normal text-text"
           >
             Edit details
           </h2>

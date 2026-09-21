@@ -396,7 +396,7 @@ export const DetailedView = ({
             <div className="min-w-0">
               <h2
                 id={headingId}
-                className="truncate font-serif text-[18px] font-normal text-text"
+                className="truncate font-display text-[18px] font-normal text-text"
               >
                 {piece.title}
               </h2>

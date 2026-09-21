@@ -160,7 +160,11 @@
 @theme inline {
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, Helvetica, Arial,
     sans-serif;
-  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  /* Every fallback here is a sans on purpose. If Satoshi fails to load, or
+     for the moment before it arrives, the headings should read as a
+     different sans rather than as a different kind of typeface. */
+  --font-display: "Satoshi", ui-sans-serif, system-ui, Helvetica, Arial,
+    sans-serif;
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   --ease-reflow: cubic-bezier(0.2, 0, 0, 1);
@@ -235,7 +239,45 @@
   mask: var(--stroke-src) center / 100% 100% no-repeat;
 }
 
+/*
+ * The theme swap eases rather than snaps. Applied for the length of the swap
+ * and taken off again, rather than left standing on the page: a permanent
+ * transition on every element would also ease every hover that deliberately
+ * has none, and would cost a style recalculation on a wall of several
+ * hundred cards.
+ *
+ * `!important` is doing real work. Components carrying their own 200ms hover
+ * transition would otherwise cross at their own speed while everything
+ * around them took 300ms, and the page would change theme in two waves.
+ */
+.theme-turning,
+.theme-turning *,
+.theme-turning *::before,
+.theme-turning *::after {
+  transition:
+    background-color 200ms,
+    border-color 200ms,
+    color 200ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-turning,
+  .theme-turning *,
+  .theme-turning *::before,
+  .theme-turning *::after {
+    transition: none !important;
+  }
+}
+
 @layer base {
+  /* The same background as `body`, and not redundant: a lone background on
+     `body` propagates to the root canvas, and the canvas paint does not
+     follow body's transition -- so the page snapped while everything on it
+     eased. With it declared here the canvas takes this one, which does. */
+  html {
+    background-color: var(--color-bg);
+  }
+
   body {
     @apply bg-bg text-text font-sans antialiased;
   }

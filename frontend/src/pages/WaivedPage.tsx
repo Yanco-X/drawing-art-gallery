@@ -14,7 +14,7 @@ const WaivedPage = () => {
           <p className="text-[12px] uppercase tracking-eyebrow text-faint">
             Not found
           </p>
-          <h1 className="max-w-[14em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
+          <h1 className="max-w-[14em] font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
             There's nothing here.
           </h1>
         </section>
@@ -28,7 +28,7 @@ const WaivedPage = () => {
         <p className="mb-4 text-[12px] uppercase tracking-eyebrow text-faint">
           Off the wall
         </p>
-        <h1 className="max-w-[16em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty text-text">
+        <h1 className="max-w-[16em] font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty text-text">
           Waived work.
         </h1>
         <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed text-muted">

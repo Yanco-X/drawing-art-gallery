@@ -72,7 +72,7 @@ const AboutCover = ({
       className="hatch max-h-[max(240px,calc(100svh-440px))] flat:max-h-[calc(100svh-var(--spacing-header)-6rem)] w-auto max-w-full border border-line object-contain transition-colors duration-200 group-hover:border-accent"
     />
     <span className="flex items-baseline gap-3">
-      <span className="font-serif text-[18px] text-text">{piece.title}</span>
+      <span className="font-display text-[18px] text-text">{piece.title}</span>
       {piece.year && (
         <span className="text-[12px] text-faint">{piece.year}</span>
       )}
@@ -288,7 +288,7 @@ const AboutPage = () => {
                     )}
                   </div>
                 </div>
-                <h1 className="font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-text">
+                <h1 className="font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-text">
                   Yanco.
                 </h1>
               </div>

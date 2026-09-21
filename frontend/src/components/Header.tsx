@@ -175,7 +175,7 @@ export const Header = ({
             artwork cap subtracts it as a fixed 72px. */}
         <Link
           to="/home"
-          className="flex items-center gap-2 font-serif text-[32px] leading-none tracking-wordmark text-text"
+          className="flex items-center gap-2 font-display text-[32px] leading-none font-bold tracking-wordmark text-text"
         >
           {/* 48px overhangs the 36px row by 6px a side, inside the header's
               py-5, so the height --spacing-header records is unchanged. A
@@ -188,7 +188,7 @@ export const Header = ({
             className="size-8 min-[370px]:-my-1.5 min-[370px]:size-12"
           />
           <span>
-            Yan<span className="italic text-accent">Curations</span>
+            Yan<span className="text-accent">Curations</span>
           </span>
         </Link>
 

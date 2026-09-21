@@ -31,20 +31,21 @@ swatches:
   light: ['#e8dcc6 to #cbb68c', '#d9e2e6 to #adc0c8', '#e2d7e6 to #c2aecb', '#d9e3da to #aec4b3']
 typography:
   display:
-    fontFamily: Instrument Serif
+    fontFamily: Satoshi
     fontWeight: '400'
     fontSize: clamp(28px, 4vw, 48px)
     lineHeight: '1.05'
   section-heading:
-    fontFamily: Instrument Serif
+    fontFamily: Satoshi
     fontWeight: '400'
     fontSize: 22px
   wordmark:
-    fontFamily: Instrument Serif
+    fontFamily: Satoshi
+    fontWeight: '700'
     fontSize: 32px
     letterSpacing: 0.02em
   card-title:
-    fontFamily: Instrument Serif
+    fontFamily: Satoshi
     fontSize: 18px
   nav:
     fontFamily: Instrument Sans
@@ -93,7 +94,7 @@ motion:
 
 The design system is rooted in the concept of a "Silent Curator." It prioritizes the artwork above all else, using a restrained framework that provides a backdrop rather than competing with the work on the wall.
 
-The personality is quiet and editorial: a serif display face, sharp corners, hairline rules, and a single warm gold accent used sparingly. Nothing glows, nothing floats, nothing bounces. Where the previous system reached for tonal layers and ambient depth, this one reaches for a 1px line and a change of background. The restraint is the point -- every visual effect the UI does not spend is attention returned to the drawings.
+The personality is quiet and editorial: a clean geometric sans for display, sharp corners, hand-drawn rules on the page's structure, and a single warm gold accent used sparingly. Nothing glows, nothing floats, nothing bounces. Where the previous system reached for tonal layers and ambient depth, this one reaches for a 1px line and a change of background. The restraint is the point -- every visual effect the UI does not spend is attention returned to the drawings.
 
 The system ships two full themes of equal standing. Dark reads as a dim private viewing room; light reads as warm gallery paper, not as a white screen.
 
@@ -219,7 +220,8 @@ Four gradients at 135 degrees, cycled by index, used only as a placeholder where
 
 Two families, served from `frontend/public/fonts` through `src/fonts.css`, so no visitor's browser reports to Google.
 
-* **Instrument Serif** (400, with italic) -- display headline, section headings, collection and card names, wordmark.
+* **Satoshi** (400 and 700) -- display headline, section headings, collection and card names, wordmark. **Replaced Instrument Serif on 2026-09-20**, and the serif's files were deleted with it: the display stack is `"Satoshi", ui-sans-serif, system-ui, Helvetica, Arial, sans-serif`, every fallback a sans on purpose, so a failed or slow load reads as a different sans rather than as a different kind of typeface. The token is `--font-display` and the class is `font-display`; both were `serif` until the swap, and a token named for a genre it no longer holds is worth the rename.
+* **Satoshi is not OFL.** It is the ITF Free Font License, which permits and recommends self-hosting, and it carries its own `public/fonts/SATOSHI-LICENSE.txt` -- `OFL.txt` covers Instrument Sans only.
 * **Instrument Sans** (400-600) -- all UI and body text.
 * **System monospace** -- the `[ artwork ]` placeholder label only.
 
@@ -273,7 +275,7 @@ The motion budget is deliberately small.
 | Duration | Applied to |
 |---|---|
 | 200ms | Hover transitions -- border colour and text colour |
-| 300ms | Theme swap (background and colour) |
+| 200ms | Theme swap -- background, border and text colour |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | Masonry reflow when the density, the sort or the filter changes -- and, over the same span, a card arriving or leaving fades |
 | 300ms `cubic-bezier(0.2, 0, 0, 1)` | The filter band and the sort options opening and closing, and the piece page's tag drawer and tag row -- one axis, nothing else. The drawer's rail narrowing and its title scaling ride the same span |
 | 200ms `cubic-bezier(0.2, 0, 0, 1)` | A dialog opening and closing -- opacity, and an 8px rise |
@@ -302,6 +304,14 @@ The exit is the part that needs modern CSS: `close()` removes the element in the
 
 A menu panel needs the same treatment for the same reason, minus `overlay` -- it is not in the top layer. The tag field's suggestion list is the one menu that is, being a popover, so it takes `overlay` as the dialog does -- see Upload modal. It stays mounted and toggles `display` through `data-open`, so `display: none` keeps its links out of the tab order while it is shut, and `allow-discrete` holds the element long enough to fade on the way out. Both live in `index.css` rather than in the components: the exit cannot be written as utility classes without becoming unreadable, and the two entrances belong next to each other.
 
+**The theme swap is eased by a class that only exists during the swap.** `ThemeProvider` puts `theme-turning` on `<html>`, changes `data-theme` in the same frame, and takes the class off 200ms later; the rule lives in `index.css`. **Built 2026-09-20** -- this row had specified it since the system was written, and nothing implemented it, so the page changed theme in one frame. It specified 300ms; 200ms is the owner's call on seeing it, and puts the swap on the same budget as a hover.
+
+It is not left standing on the page, which is the obvious way to write it. A permanent transition on every element also eases every hover that deliberately has none, and costs a style recalculation across a wall of several hundred cards. Its `!important` earns its place too: the components carrying their own 200ms hover transition would otherwise cross at their own speed while everything around them took 300ms, and the page would change theme in two visible waves.
+
+Border colour is included even though this row once read "background and colour". A border that snaps while the surface behind it fades is the one part of the swap the eye catches.
+
+**`html` carries the same background as `body`, and that is not redundant.** A background declared on `body` alone propagates to the root canvas, and the canvas paint does not follow body's transition -- so the page itself snapped while every element on it eased, which reads as the page and its contents changing theme at different moments. Declared on `html` as well, the canvas takes that one, which transitions. The next person will see two identical backgrounds and delete one.
+
 All motion must be skipped under `prefers-reduced-motion: reduce`.
 
 ## Components
@@ -310,7 +320,7 @@ All motion must be skipped under `prefers-reduced-motion: reduce`.
 
 Sticky at `top: 0`, `z-index: 10`, 12px backdrop blur, `bg-translucent` background, and a `rule-1` pencil stroke straddling its bottom edge. Padding `20px` vertical.
 
-* **Wordmark** -- "Yan" in `text` plus "Curations" in accent italic, Instrument Serif 32px. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it. **The mark** stands 8px before it, 48px square since 2026-09-20 (40px when **added 2026-09-18**, see Logo), overhanging the 36px row by 6px a side. The overhang sits inside the row's own 20px padding, so the header keeps its 76px either way. Below 370px it is 32px, the wordmark's own size: a 360px phone has no room for more. The pair is one link.
+* **Wordmark** -- "Yan" in `text` plus "Curations" in accent, Satoshi 32px bold. **Set in Satoshi and bolded 2026-09-20**, when the italic went with the serif: Satoshi's italic is an oblique rather than a drawn italic, and beside the upright it read as a slant rather than as a second voice. **Renamed 2026-09-17** from "Sketchy" plus "Art" at 24px; the page title and the footer took the new name with it. **The mark** stands 8px before it, 48px square since 2026-09-20 (40px when **added 2026-09-18**, see Logo), overhanging the 36px row by 6px a side. The overhang sits inside the row's own 20px padding, so the header keeps its 76px either way. Below 370px it is 32px, the wordmark's own size: a 360px phone has no room for more. The pair is one link.
 * **Row gap** -- 24px from 640px up, 8px below. On a phone it is only the floor between the wordmark and the controls, and a 360px phone needs the 16px to fit the mark.
 * **Nav** -- Gallery / Collections / Yanco / Socials, 14px uppercase, plus Curate, Waived and Metrics for the owner. Active item is `text` with a 1px accent bottom border and 2px of padding beneath; inactive items are `muted` and go accent on hover. The nav sits left of centre; this is a natural result of a `space-between` row and is correct.
 * **"Show me some!"** -- a random piece, for visitors and the owner alike. **Added 2026-09-17.** It sits in the row's free space between the nav and the controls on the right, as `ICON_BUTTON_ACCENT`: outlined accent that fills on hover, an invitation rather than the header's one filled action, which is the owner's Upload. A tooltip says where it goes. It draws from the exhibited pieces, never the one already on screen, and arrives with no origin, so that piece walks the whole gallery. From 1280px it is in the row with its label; **from 1024px to 1280px it is the 36px square**, since Yanco joined the nav on 2026-09-19 and took the room the label needed -- measured from the fonts, the visitor's row keeps 84px to spare at 1024px. **Below 1024px, since 2026-09-19**, it is a 36px accent-outlined square carrying only the shuffle glyph, first of the controls on the right, from 390px up; a narrower phone has no room beside the wordmark and keeps it in the menu panel. Up to 1024px, where the menu button holds the nav, it keeps that square in the row -- which closed the gap it once had between 640px and 1024px. A touch screen never hovers, so it fills while pressed and stays filled until the random piece opens, which is also what tells a tap on a slow connection that it landed.
@@ -449,7 +459,7 @@ Optional. Eyebrow in `faint` at 12px / `0.24em`, then the headline capped at `14
 
 ### Collection card
 
-1px `line` border, `surface` background, 20px padding, 12px column gap, border goes accent on hover over 200ms. Contains a 90px cover strip at 85% opacity (the cover image, or a gradient swatch as fallback), then a 4px-gap block of the name in Instrument Serif 18px and the count in 12px uppercase `faint`.
+1px `line` border, `surface` background, 20px padding, 12px column gap, border goes accent on hover over 200ms. Contains a 90px cover strip at 85% opacity (the cover image, or a gradient swatch as fallback), then a 4px-gap block of the name in Satoshi 18px and the count in 12px uppercase `faint`.
 
 ### Piece card
 
@@ -553,7 +563,7 @@ Not present in the original handoff -- designed against this system as a **galle
   It was `78vh`, set when nothing sat beneath the image. A percentage cannot hold that promise once something does -- the chrome around the artwork is a fixed height, header and page padding above, the Detailed view button and its dimensions line below, while `78vh` grows with the window. The two agreed at about a 900px viewport and disagreed everywhere else, which is how the button came to sit five pixels below the fold on a 1080p laptop, on square pieces as much as on tall ones: at the cap the image is the same height whatever shape the piece is.
 
   Subtracting the chrome instead gives the artwork whatever the page does not need -- larger on a big monitor than `78vh` ever allowed, smaller on a short one, and the button always in view. Measured at 20px of slack below the caption at every width from 390px to 1920px and every height from 660px to 986px. The 320px floor stops a landscape phone reducing the drawing to a stamp. **Changed 2026-09-07.**
-* **Wall label** -- title at `clamp(22px, min(2.4vw, 11.2cqi), 32px)` serif, measured against the rail. The `cqi` term is 32px at the rail's usual width, so it only bites when the rail narrows for the tag drawer: the title scales down with the column and keeps its line breaks rather than wrapping further. Then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `divider-4` strokes -- the lightest in the kit, because a heavy one repeated four times down a rail turns it into a ledger: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
+* **Wall label** -- title at `clamp(22px, min(2.4vw, 11.2cqi), 32px)` in the display face, measured against the rail. The `cqi` term is 32px at the rail's usual width, so it only bites when the rail narrows for the tag drawer: the title scales down with the column and keeps its line breaks rather than wrapping further. Then `{medium} · {year}` in 12px `faint`. Below that, optional blocks separated by `divider-4` strokes -- the lightest in the kit, because a heavy one repeated four times down a rail turns it into a ledger: description, tags, and the collections a piece belongs to. Each block is labelled in 12px uppercase `faint`.
 * **Blocks are omitted entirely when empty.** A heading with nothing under it is louder than no heading. Descriptions are blank in the current data, so that block simply does not render.
 * **A pick wears a star.** **Added 2026-09-18.** A piece in the spotlight carries a solid five-point star, 28px in `accent`, with "In the Spotlight!" as its tooltip and accessible name. It sits in the artwork's right gutter from `lg`, level with the back link in the left one -- on the frame the drawing hangs in, not on the drawing, which was tried first and put a gold mark on the paper. Below `lg` it goes up into the row above the artwork beside the back link, as the back link itself does. It is the one solid accent mark that is not an action -- a status -- and the one glyph besides the density icons that is filled: an outlined star at that size is a scribble.
 * **Platform marks are the one place this set copies someone else's shape.** They live in `components/platform-icons.tsx`, apart from `icons.tsx`, because they break the house rules on purpose -- Instagram keeps its rounded corners, YouTube its pill. A brand is recognised or it is nothing. Everything else in `icons.tsx` is still square-cornered, unfilled and drawn to this design.
@@ -614,7 +624,7 @@ Not present in the original handoff -- designed against this system as a **galle
 
 The owner's page for the gallery's order, `/curate`. **Added 2026-09-19.** The behaviour, and the reasons for it, are in `CURATION.md`; these are the visual rules.
 
-* **An owner page like Waived and Metrics**: eyebrow, serif headline, one line of muted copy, then the work.
+* **An owner page like Waived and Metrics**: eyebrow, display headline, one line of muted copy, then the work.
 * **A toolbar that sticks under the header**, `bg-translucent` with the header's blur and a `line` rule beneath: the count and the save state on the left, the density control, Undo, Discard and the one filled action, Save order, on the right. Unsaved state is said in accent; saved in `faint`.
 * **Tiles are `PieceTile` with the drawing whole**, `object-contain` on the hatch, so a portrait is not cropped to a band while its place is being judged. **The frame holds its 4:3 here, since 2026-09-19**: the drawing is taken out of flow, so it cannot floor the frame's height the way it does in the pickers, and every tile is the same size -- the grid is regular, and the gap a drag opens is exactly one tile. Position on an accent badge at the top left, the pick box at the top right, "New" outlined in accent at the bottom left.
 * **Picked is the accent border and a filled pick box**, the collection pickers' selected state.

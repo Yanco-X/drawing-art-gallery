@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Theme } from '../types';
 import { THEME_STORAGE_KEY, ThemeContext } from './theme-context';
 
 const isTheme = (value: unknown): value is Theme =>
   value === 'dark' || value === 'light';
+
+/** Matches the 300ms the rule in index.css eases over. */
+const TURN_MS = 200;
 
 /*
  * The inline script in index.html has already resolved the theme and stamped it
@@ -18,8 +21,24 @@ const readStampedTheme = (): Theme => {
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>(readStampedTheme);
 
+  // The first run only re-stamps what the inline script already set, so no
+  // colour changes and there is nothing to ease.
+  const stamped = useRef(true);
+
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const root = document.documentElement;
+    if (stamped.current) {
+      stamped.current = false;
+      root.setAttribute('data-theme', theme);
+      return;
+    }
+    root.classList.add('theme-turning');
+    root.setAttribute('data-theme', theme);
+    const timer = window.setTimeout(
+      () => root.classList.remove('theme-turning'),
+      TURN_MS,
+    );
+    return () => window.clearTimeout(timer);
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {

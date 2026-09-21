@@ -83,7 +83,7 @@ export const AddWorkDialog = ({
         <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <h2
             id={headingId}
-            className="font-serif text-[22px] font-normal text-text"
+            className="font-display text-[22px] font-normal text-text"
           >
             Add work
           </h2>

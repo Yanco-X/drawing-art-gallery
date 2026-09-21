@@ -78,7 +78,7 @@ const Message = ({
       {eyebrow}
     </p>
     <h1
-      className={`${measure} font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty`}
+      className={`${measure} font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty`}
     >
       {headline}
     </h1>

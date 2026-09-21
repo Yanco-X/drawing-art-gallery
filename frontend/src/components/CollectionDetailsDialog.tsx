@@ -79,7 +79,7 @@ export const CollectionDetailsDialog = ({
       <form onSubmit={submit} className="flex flex-col gap-5 p-6">
         <h2
           id={fieldId + '-heading'}
-          className="font-serif text-[22px] font-normal text-text"
+          className="font-display text-[22px] font-normal text-text"
         >
           Edit details
         </h2>

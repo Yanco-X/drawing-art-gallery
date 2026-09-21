@@ -150,7 +150,7 @@ export const TagShelf = ({
               <p className="text-[12px] uppercase tracking-eyebrow text-faint">
                 Tagged
               </p>
-              <h2 className="font-serif text-[22px] leading-tight font-normal break-words text-text">
+              <h2 className="font-display text-[22px] leading-tight font-normal break-words text-text">
                 {tag.name}
               </h2>
               <p className="text-[12px] text-faint">{count}</p>

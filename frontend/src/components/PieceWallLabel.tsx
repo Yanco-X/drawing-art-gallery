@@ -62,7 +62,7 @@ export const PieceWallLabel = ({
         )}
         {/* The `cqi` term only bites when the column narrows for the tag
             drawer: the title scales down with it and keeps its line breaks. */}
-        <h1 className="font-serif text-[clamp(22px,min(2.4vw,11.2cqi),32px)] leading-tight font-normal text-text">
+        <h1 className="font-display text-[clamp(22px,min(2.4vw,11.2cqi),32px)] leading-tight font-normal text-text">
           {piece.title}
         </h1>
         {meta && <p className="text-[12px] text-faint">{meta}</p>}
@@ -127,7 +127,7 @@ export const PieceWallLabel = ({
                 <li key={collection.id}>
                   <Link
                     to={`/collections/${collection.slug}`}
-                    className="font-serif text-[20px] font-normal text-text transition-colors duration-200 hover:text-accent"
+                    className="font-display text-[20px] font-normal text-text transition-colors duration-200 hover:text-accent"
                   >
                     {collection.name}
                   </Link>

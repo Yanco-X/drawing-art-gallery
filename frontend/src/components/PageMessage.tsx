@@ -13,7 +13,7 @@ export const PageMessage = ({
     <p className="text-[12px] uppercase tracking-eyebrow text-faint">
       {eyebrow}
     </p>
-    <h1 className="max-w-[14em] font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
+    <h1 className="max-w-[14em] font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-pretty">
       {headline}
     </h1>
     {children && <div>{children}</div>}

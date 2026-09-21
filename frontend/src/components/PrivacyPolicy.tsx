@@ -3,7 +3,7 @@ import { SITE_OWNER } from '../lib/siteOwner';
 
 const PrivacyHeading = ({ title, intro }: { title: string; intro: string }) => (
   <>
-    <h1 className="font-serif text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-text">
+    <h1 className="font-display text-[clamp(28px,4vw,48px)] leading-[1.05] font-normal text-text">
       {title}
     </h1>
     <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed text-muted">{intro}</p>
@@ -12,7 +12,7 @@ const PrivacyHeading = ({ title, intro }: { title: string; intro: string }) => (
 
 const PrivacySection = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="mt-10 max-w-[42em] space-y-3 text-[14px] leading-relaxed text-muted">
-    <h2 className="font-serif text-[22px] font-normal text-text">{title}</h2>
+    <h2 className="font-display text-[22px] font-normal text-text">{title}</h2>
     {children}
   </section>
 );

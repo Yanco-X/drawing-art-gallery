@@ -204,7 +204,7 @@ export const SocialsDialog = ({
     >
       <div className="flex flex-col gap-5 p-6">
         <div>
-          <h2 className="font-serif text-[22px] font-normal text-text">
+          <h2 className="font-display text-[22px] font-normal text-text">
             Where to find you
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-dim">

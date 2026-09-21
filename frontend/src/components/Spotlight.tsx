@@ -79,7 +79,7 @@ const SpotlightArtwork = ({
       state={sequenceState(sequence)}
       aria-label={`View ${piece.title}`}
       onClick={() => rememberSpotlightSlide(window.location.pathname, piece.id)}
-      className={`flex touch-manipulation items-center justify-center overflow-hidden border border-transparent bg-bg transition-colors duration-200 hover:border-accent focus-visible:border-accent ${BAND}`}
+      className={`flex touch-manipulation items-center justify-center overflow-hidden border border-transparent bg-bg transition-[border-color] duration-200 hover:border-accent focus-visible:border-accent ${BAND}`}
     >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
@@ -152,7 +152,7 @@ const SpotlightLabel = ({
           </span>
         </p>
 
-        <h2 className="font-serif text-[clamp(22px,2.4vw,32px)] leading-[1.05] font-normal text-text">
+        <h2 className="font-display text-[clamp(22px,2.4vw,32px)] leading-[1.05] font-normal text-text">
           {piece.title}
         </h2>
 

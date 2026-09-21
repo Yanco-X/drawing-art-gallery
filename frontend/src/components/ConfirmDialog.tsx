@@ -83,7 +83,7 @@ export const ConfirmDialog = ({
       <div className="flex flex-col gap-4 p-6">
         <h2
           id={headingId}
-          className="font-serif text-[22px] font-normal text-text"
+          className="font-display text-[22px] font-normal text-text"
         >
           {title}
         </h2>

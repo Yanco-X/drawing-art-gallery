@@ -39,7 +39,7 @@ export const CollectionCard = ({
           Private
         </span>
       )}
-      <span className="font-serif text-[18px] text-text">
+      <span className="font-display text-[18px] text-text">
         {collection.name}
       </span>
       <span className="text-[12px] uppercase tracking-nav text-faint">
