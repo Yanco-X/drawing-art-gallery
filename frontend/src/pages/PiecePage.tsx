@@ -440,7 +440,14 @@ const PiecePage = () => {
             shelfOpen ? 'xl:grid-cols-[minmax(0,1fr)_272px]' : ''
           }`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 wide:col-start-2 wide:row-start-1 wide:flex-col wide:items-start wide:justify-start wide:gap-3 wide:border-l wide:border-line wide:pb-6 wide:pl-8 flat:pl-5">
+          {/* Both column-2 rows share one stroke rather than carrying an
+              edge each: two tapers meeting would thin the line in the
+              middle of the column. */}
+          <div
+            aria-hidden="true"
+            className="pencil-stroke pointer-events-none -ml-[3px] hidden w-1.5 opacity-70 wide:col-start-2 wide:row-span-2 wide:row-start-1 wide:block [--stroke-src:var(--sa-divider-v-3)]"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-4 wide:col-start-2 wide:row-start-1 wide:flex-col wide:items-start wide:justify-start wide:gap-3 wide:pb-6 wide:pl-8 flat:pl-5">
             {/* Rendered twice rather than placed by grid: the two live in
                 different columns when wide and in one row when stacked. A
                 phone on its side keeps this copy, in the rail, and gives the

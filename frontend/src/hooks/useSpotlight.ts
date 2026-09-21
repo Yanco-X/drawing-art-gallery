@@ -46,14 +46,19 @@ export const useSpotlight = (count: number, suspended = false) => {
     return () => window.clearInterval(timer);
   }, [running, count]);
 
+  const show = useCallback(
+    (to: number) => setIndex(((to % count) + count) % count),
+    [count],
+  );
+
   // Taken before wrapping, so stepping past the last piece still moves on.
   const go = useCallback(
     (to: number) => {
       setPlaying(false);
       setDirection(to < safeIndex ? -1 : 1);
-      setIndex(((to % count) + count) % count);
+      show(to);
     },
-    [count, safeIndex],
+    [safeIndex, show],
   );
 
   const next = useCallback(() => go(safeIndex + 1), [go, safeIndex]);
@@ -66,6 +71,7 @@ export const useSpotlight = (count: number, suspended = false) => {
     running,
     reducedMotion,
     go,
+    show,
     next,
     previous,
     toggle: () => setPlaying((on) => !on),

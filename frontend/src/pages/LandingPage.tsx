@@ -4,6 +4,7 @@ import { CollectionsSection } from '../components/CollectionsSection';
 import { IntroSection } from '../components/IntroSection';
 import { NewCollectionDialog } from '../components/NewCollectionDialog';
 import { PageShell } from '../components/PageShell';
+import { SectionRule } from '../components/SectionRule';
 import { Spotlight } from '../components/Spotlight';
 import { ICON_BUTTON_ACCENT } from '../components/form-styles';
 import { useAsync, useSession } from '../hooks';
@@ -64,6 +65,8 @@ const LandingPage = () => {
           ) : undefined
         }
       />
+
+      <SectionRule className="-scale-x-100 [--stroke-src:var(--sa-rule-7)]" />
 
       <AllWorkSection
         pieces={allPieces}

@@ -18,6 +18,16 @@ export const consumeScroll = (key: string) => {
   if (held) held.pendingScroll = null;
 };
 
+// Kept apart from `visits`: the grid remembers its own piece and scroll under
+// the same key, and one would overwrite the other.
+const spotlightSlides = new Map<string, string>();
+
+export const rememberSpotlightSlide = (key: string, pieceId: string) => {
+  spotlightSlides.set(key, pieceId);
+};
+
+export const readSpotlightSlide = (key: string) => spotlightSlides.get(key);
+
 export type ListState = {
   query: string;
   years: number[];

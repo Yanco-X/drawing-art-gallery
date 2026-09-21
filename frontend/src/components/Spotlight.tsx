@@ -15,6 +15,10 @@ import { INTERVAL_MS } from '../hooks/useSpotlight';
 import { HOME_ORIGIN, sequenceState } from '../lib/origin';
 import { framePiece, pickedIds, spotlightSlots } from '../lib/spotlight';
 import {
+  readSpotlightSlide,
+  rememberSpotlightSlide,
+} from '../lib/returnMemory';
+import {
   TURN,
   carry,
   swipeCancel,
@@ -74,7 +78,8 @@ const SpotlightArtwork = ({
       to={`/piece/${piece.id}`}
       state={sequenceState(sequence)}
       aria-label={`View ${piece.title}`}
-      className={`flex touch-manipulation items-center justify-center overflow-hidden bg-bg ${BAND}`}
+      onClick={() => rememberSpotlightSlide(window.location.pathname, piece.id)}
+      className={`flex touch-manipulation items-center justify-center overflow-hidden border border-transparent bg-bg transition-colors duration-200 hover:border-accent focus-visible:border-accent ${BAND}`}
     >
       {failed ? (
         <span className="font-mono text-[11px] tracking-[0.05em] text-faint">
@@ -167,6 +172,9 @@ const SpotlightLabel = ({
           <Link
             to={`/piece/${piece.id}`}
             state={sequenceState(sequence)}
+            onClick={() =>
+              rememberSpotlightSlide(window.location.pathname, piece.id)
+            }
             className={`${ICON_BUTTON_ACCENT} w-fit max-lg:hidden`}
           >
             View piece
@@ -265,12 +273,25 @@ export const Spotlight = ({
     running,
     reducedMotion,
     go,
+    show,
     next,
     previous,
     toggle,
     hold,
     release,
   } = useSpotlight(slides.length, curating);
+
+  // The slides arrive with the pieces, so the slide to return to cannot be
+  // known when the band first renders. Once only: turning the band by hand
+  // afterwards must stick.
+  const returned = useRef(false);
+  useEffect(() => {
+    if (returned.current || slides.length === 0) return;
+    returned.current = true;
+    const pieceId = readSpotlightSlide(window.location.pathname);
+    const at = pieceId ? slides.findIndex((slide) => slide.id === pieceId) : -1;
+    if (at > 0) show(at);
+  }, [slides, show]);
 
   // Grows and never shrinks: a slide keeps its src once asked for, so
   // stepping back does not fetch the same rendition twice.
@@ -404,7 +425,7 @@ export const Spotlight = ({
           are clean and `pan-y` and `none` are not. A swipe then read as a
           turn cost the next tap on any button in the header.
         */
-        className="arrives border-b border-line"
+        className="arrives relative"
         /*
           A finger is not a hover, and a tap is not keyboard focus. A phone
           synthesises both from a tap, and pausing there swaps the indicator
@@ -559,6 +580,10 @@ export const Spotlight = ({
             )}
           </div>
         )}
+        <div
+          aria-hidden="true"
+          className="pencil-stroke pointer-events-none absolute inset-x-0 -bottom-[3px] h-1.5 opacity-70 [--stroke-src:var(--sa-rule-6)]"
+        />
       </section>
 
       {isOwner && curating && (

@@ -164,7 +164,7 @@ export const Header = ({
   return (
     <header
       onFocus={reveal}
-      className={`sticky top-0 z-10 border-b border-line bg-bg-translucent backdrop-blur-[12px] transition-transform duration-300 ease-reflow motion-reduce:transition-none ${
+      className={`sticky top-0 z-10 bg-bg-translucent backdrop-blur-[12px] transition-transform duration-300 ease-reflow motion-reduce:transition-none ${
         away ? '-translate-y-full' : ''
       }`}
     >
@@ -177,14 +177,15 @@ export const Header = ({
           to="/home"
           className="flex items-center gap-2 font-serif text-[32px] leading-none tracking-wordmark text-text"
         >
-          {/* 40px overhangs the 36px row by 2px a side, so the header keeps
-              the height --spacing-header records. A 360px phone has no room. */}
+          {/* 48px overhangs the 36px row by 6px a side, inside the header's
+              py-5, so the height --spacing-header records is unchanged. A
+              360px phone has no room. */}
           <img
             src="/logo-40.png"
             srcSet="/logo-40.png 40w, /logo-50.png 50w, /logo-60.png 60w, /logo-80.png 80w, /logo-120.png 120w"
-            sizes="(min-width: 370px) 40px, 32px"
+            sizes="(min-width: 370px) 48px, 32px"
             alt=""
-            className="size-8 min-[370px]:-my-0.5 min-[370px]:size-10"
+            className="size-8 min-[370px]:-my-1.5 min-[370px]:size-12"
           />
           <span>
             Yan<span className="italic text-accent">Curations</span>
@@ -290,6 +291,10 @@ export const Header = ({
           )}
         </nav>
       )}
+      <div
+        aria-hidden="true"
+        className="pencil-stroke pointer-events-none absolute inset-x-0 -bottom-1 h-2 opacity-80 [--stroke-src:var(--sa-rule-1)]"
+      />
     </header>
   );
 };

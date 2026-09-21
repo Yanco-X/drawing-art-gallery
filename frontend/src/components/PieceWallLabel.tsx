@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { CollectionRef, Piece, Tag } from '../types';
 
-const Rule = () => <div aria-hidden="true" className="border-t border-line" />;
+const Rule = () => (
+  <div
+    aria-hidden="true"
+    className="pencil-stroke h-[5px] opacity-65 [--stroke-src:var(--sa-divider-4)]"
+  />
+);
 
 const CHIP = 'block border px-3 py-1.5 text-[12px] tracking-nav';
 
@@ -41,8 +46,14 @@ export const PieceWallLabel = ({
 
   return (
     <aside
-      className={`@container flex flex-col gap-6 border-t border-line pt-8 wide:border-t-0 wide:border-l wide:pt-0 wide:pl-8 ${className}`}
+      className={`@container relative flex flex-col gap-6 pt-8 wide:pt-0 wide:pl-8 ${className}`}
     >
+      {/* The wide layout draws this edge as one unbroken stroke down
+          the whole column, from PiecePage. */}
+      <div
+        aria-hidden="true"
+        className="pencil-stroke pointer-events-none absolute inset-x-0 -top-[3px] h-1.5 opacity-70 wide:hidden [--stroke-src:var(--sa-rule-3)]"
+      />
       <div className="flex flex-col gap-2">
         {piece.waivedAt && (
           <p className="text-[12px] uppercase tracking-eyebrow text-faint">

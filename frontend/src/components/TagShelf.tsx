@@ -127,9 +127,15 @@ export const TagShelf = ({
       className={
         row
           ? 'flex flex-col gap-3 pt-4'
-          : 'flex h-full w-[240px] flex-col border-l border-line bg-bg'
+          : 'relative flex h-full w-[240px] flex-col bg-bg'
       }
     >
+      {!row && (
+        <div
+          aria-hidden="true"
+          className="pencil-stroke pointer-events-none absolute inset-y-0 -left-[3px] w-1.5 opacity-70 [--stroke-src:var(--sa-divider-v-2)]"
+        />
+      )}
       {row ? (
         <div className="flex items-center justify-between gap-3">
           <p className="text-[12px] text-faint">
@@ -138,7 +144,7 @@ export const TagShelf = ({
           {close}
         </div>
       ) : (
-        <div className="flex flex-col gap-4 border-b border-line p-4">
+        <div className="relative flex flex-col gap-4 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
               <p className="text-[12px] uppercase tracking-eyebrow text-faint">
@@ -152,6 +158,10 @@ export const TagShelf = ({
             {close}
           </div>
           {seeAll}
+          <div
+            aria-hidden="true"
+            className="pencil-stroke pointer-events-none absolute inset-x-0 -bottom-0.5 h-1 opacity-65 [--stroke-src:var(--sa-divider-3)]"
+          />
         </div>
       )}
 

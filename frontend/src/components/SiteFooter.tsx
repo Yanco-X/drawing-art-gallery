@@ -37,7 +37,11 @@ const CountingNotice = () => {
  * unlike everything around it is a tell.
  */
 export const SiteFooter = ({ onMark }: { onMark?: () => void }) => (
-  <footer className="mt-auto touch-manipulation border-t border-line select-none">
+  <footer className="relative mt-auto touch-manipulation select-none">
+    <div
+      aria-hidden="true"
+      className="pencil-stroke pointer-events-none absolute inset-x-0 -top-1 h-2 -scale-x-100 opacity-80 [--stroke-src:var(--sa-rule-5)]"
+    />
     <div className="mx-auto flex w-full max-w-content flex-wrap items-center justify-between gap-4 px-gutter py-7">
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
         <span className="text-[12px] uppercase tracking-btn text-faint">

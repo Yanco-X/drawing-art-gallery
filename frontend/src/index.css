@@ -191,13 +191,17 @@
   --tracking-eyebrow: 0.24em;
 
   --spacing-gutter: clamp(20px, 5vw, 64px);
-  /* The sticky header's height, measured: `py-5` around its 36px controls,
-     plus the rule. What hangs from it or lands below it uses this. */
-  --spacing-header: 77px;
+  /* The sticky header's height, measured: `py-5` around its 36px controls.
+     Its pencil rule straddles the bottom edge and is not part of it. What
+     hangs from the header or lands below it uses this. */
+  --spacing-header: 76px;
   --spacing-intro-top: clamp(28px, 4vw, 64px);
   --spacing-intro-bottom: clamp(24px, 3.5vw, 48px);
   --spacing-section-sm: clamp(40px, 6vw, 80px);
   --spacing-section-lg: clamp(56px, 8vw, 96px);
+  /* Half a section gap. A rule between two sections sits inside the
+     space they already leave rather than adding to it. */
+  --spacing-rule-gap: clamp(20px, 3vw, 40px);
 
   --container-content: 2400px;
 }
@@ -206,6 +210,29 @@
    missing or failed to load. */
 @utility hatch {
   background-image: var(--sa-hatch);
+}
+
+/* The freehand pencil strokes, one file each and the same in both themes:
+   `pencil-stroke` masks them over currentColor, so the surface decides the
+   colour. */
+:root {
+  --sa-rule-1: url("/brand/lines/rule-1.png");
+  --sa-rule-3: url("/brand/lines/rule-3.png");
+  --sa-rule-5: url("/brand/lines/rule-5.png");
+  --sa-rule-6: url("/brand/lines/rule-6.png");
+  --sa-rule-7: url("/brand/lines/rule-7.png");
+  --sa-divider-3: url("/brand/lines/divider-3.png");
+  --sa-divider-4: url("/brand/lines/divider-4.png");
+  --sa-divider-v-2: url("/brand/lines/divider-v-2.png");
+  --sa-divider-v-3: url("/brand/lines/divider-v-3.png");
+}
+
+/* Render one between 4px and 12px tall. Flatter and the graphite grain
+   washes out to grey; taller and the stroke reads as a smear. */
+@utility pencil-stroke {
+  background: currentColor;
+  -webkit-mask: var(--stroke-src) center / 100% 100% no-repeat;
+  mask: var(--stroke-src) center / 100% 100% no-repeat;
 }
 
 @layer base {
