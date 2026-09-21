@@ -92,5 +92,9 @@ What does work:
    one per `touch-action` value, settled in a single round what two sessions
    of reading swipe code had not.
 
-The phone is debuggable from the PC over `adb`; see the project memory for the
-port forwarding, including the `::1` bridge Vite sometimes needs.
+The phone is debuggable from the PC over `adb`, which is what makes any of this
+possible: `scripts/phone.ps1` sets up the forwarding, including the `::1` bridge
+Vite sometimes needs, and exposes the phone's browser on `127.0.0.1:9223` for
+CDP. Rerun it after every replug -- forwards are lost on unplug, and a missing
+`tcp:9000` shows up as artwork that will not load, since media URLs are absolute
+to MinIO in development.

@@ -928,6 +928,16 @@ Carried forward deliberately.
   straight to the node and skips hit testing entirely. Use
   `document.elementFromPoint` or `Input.dispatchMouseEvent` to prove a
   control is actually reachable.
+- **Swiping fast on the piece page outruns the pieces.** Found by the owner
+  on the phone, 2026-09-20: turn quickly enough and the pieces stop keeping
+  up. Deliberately not chased, because development serves every image off
+  the machine instantly and the fault needs real latency to show its true
+  shape — measuring it here would describe a bottleneck that does not exist
+  in production. **Check it once deployed**, on a phone over mobile data:
+  swipe briskly through several pieces and watch whether the artwork keeps
+  pace with the wall label, or whether a piece shows the previous image, a
+  placeholder, or nothing. `lib/traverse.ts` and the piece page's prefetching
+  are where to look if it does.
 
 ---
 
