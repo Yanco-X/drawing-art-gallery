@@ -172,10 +172,12 @@ export const Header = ({
           controls; at 24px a 360px phone scrolls sideways. */}
       <div className="mx-auto flex w-full max-w-content items-center justify-between gap-2 px-gutter py-5 sm:gap-6">
         {/* leading-none keeps the header its old height; the piece page's
-            artwork cap subtracts it as a fixed 72px. */}
+            artwork cap subtracts it as a fixed 72px. Satoshi Bold is wider
+            than the serif this replaced, so below 516px the wordmark scales
+            down rather than running under the controls. */}
         <Link
           to="/home"
-          className="flex items-center gap-2 font-display text-[32px] leading-none font-bold tracking-wordmark text-text"
+          className="flex items-center gap-2 font-display text-[clamp(24px,6.2vw,32px)] leading-none font-bold tracking-wordmark text-text"
         >
           {/* 48px overhangs the 36px row by 6px a side, inside the header's
               py-5, so the height --spacing-header records is unchanged. A
