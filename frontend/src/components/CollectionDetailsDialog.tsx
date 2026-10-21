@@ -71,9 +71,6 @@ export const CollectionDetailsDialog = ({
         if (busy) event.preventDefault();
       }}
       onClose={close}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) close();
-      }}
       className="m-auto w-[min(92vw,540px)] border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <form onSubmit={submit} className="flex flex-col gap-5 p-6">

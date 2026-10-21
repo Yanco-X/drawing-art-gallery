@@ -1,4 +1,5 @@
 export { useAsync } from './useAsync';
+export { useObjectUrl } from './useObjectUrl';
 export type { Async } from './useAsync';
 export { usePieceFilter } from './usePieceFilter';
 export { useGalleryFilter } from './useGalleryFilter';

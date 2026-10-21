@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ApiError, deleteCollection } from '../services';
 import type { Collection } from '../types';
+import { CollectionCoverDialog } from './CollectionCoverDialog';
 import { CollectionDetailsDialog } from './CollectionDetailsDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ICON_BUTTON, ICON_BUTTON_DANGER } from './form-styles';
-import { ArrangeIcon, DeleteIcon, EditIcon } from './icons';
+import { ArrangeIcon, DeleteIcon, EditIcon, ImageIcon } from './icons';
 
 export const CollectionOwnerActions = ({
   collection,
@@ -17,7 +18,10 @@ export const CollectionOwnerActions = ({
   onArrange: () => void;
   onDeleted: () => void;
 }) => {
-  const [dialog, setDialog] = useState<'details' | 'delete' | null>(null);
+  const [dialog, setDialog] = useState<'details' | 'cover' | 'delete' | null>(null);
+  const cover =
+    collection.pieces.find((piece) => piece.id === collection.coverPieceId) ??
+    collection.pieces[0];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +60,16 @@ export const CollectionOwnerActions = ({
           <EditIcon />
           Edit details
         </button>
+        {cover && (
+          <button
+            type="button"
+            onClick={() => setDialog('cover')}
+            className={ICON_BUTTON}
+          >
+            <ImageIcon />
+            Frame cover
+          </button>
+        )}
         <button type="button" onClick={onArrange} className={ICON_BUTTON}>
           <ArrangeIcon />
           Arrange
@@ -75,6 +89,18 @@ export const CollectionOwnerActions = ({
       {dialog === 'details' && (
         <CollectionDetailsDialog
           collection={collection}
+          onClose={close}
+          onSaved={(saved) => {
+            setDialog(null);
+            onChanged(saved);
+          }}
+        />
+      )}
+
+      {dialog === 'cover' && cover && (
+        <CollectionCoverDialog
+          collection={collection}
+          cover={cover}
           onClose={close}
           onSaved={(saved) => {
             setDialog(null);

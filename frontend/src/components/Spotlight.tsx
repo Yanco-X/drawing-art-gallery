@@ -159,7 +159,7 @@ const SpotlightLabel = ({
         {meta && <p className="text-[12px] text-faint">{meta}</p>}
 
         {piece.description && (
-          <p className="line-clamp-3 max-w-[42em] text-[14px] text-dim">
+          <p className="line-clamp-3 max-w-[42em] text-[14px] whitespace-pre-line text-dim">
             {piece.description}
           </p>
         )}

@@ -133,8 +133,10 @@ check("tags created and attached",
 check("imageUrl points at the display rendition",
       piece["imageUrl"] == f"/media/{pid}/display.webp", piece["imageUrl"])
 check("thumbnailUrl points at the thumb", piece["thumbnailUrl"] == f"/media/{pid}/thumb.webp")
+# "/original." is what marks an original's key, and so what any URL to one
+# would carry; the owner's file panel legitimately says "originalName".
 check("original is not exposed in the payload",
-      not any("original" in str(v) for v in piece.values()))
+      not any("/original." in str(v) for v in piece.values()))
 
 print("\n== renditions ==")
 keys = renditions_of(pid)
@@ -531,6 +533,119 @@ check("null clears it back to filling the frame",
       res.get_json()["focalZoom"] is None, str(res.get_json()["focalZoom"]))
 check("a visitor cannot size it",
       client.patch(f"/api/pieces/{fid}", json={"focalZoom": 180}).status_code == 401)
+
+
+print("\n== replacing an image ==")
+
+
+def replace(piece_id, image_bytes, name, headers=OWNER):
+    return client.put(f"/api/pieces/{piece_id}/image", headers=headers,
+                      data={"image": (io.BytesIO(image_bytes), name)},
+                      content_type="multipart/form-data")
+
+
+rid = client.post("/api/pieces", headers=OWNER, content_type="multipart/form-data", data={
+    "title": "Photographed", "tags": ["Pencil"],
+    "image": (io.BytesIO(make_image(300, 200)), "photo.jpg"),
+}).get_json()["id"]
+client.patch(f"/api/pieces/{rid}", headers=OWNER, json={"focalX": 30, "focalY": 70})
+
+res = replace(rid, make_image(400, 600, fmt="PNG"), "scan.png")
+after = res.get_json()
+check("a replacement answers 200", res.status_code == 200, str(res.status_code))
+check("it takes the new image's size",
+      (after["width"], after["height"]) == (400, 600),
+      f"{after['width']}x{after['height']}")
+check("the label, tags and focal point stay",
+      after["title"] == "Photographed"
+      and [t["slug"] for t in after["tags"]] == ["pencil"]
+      and (after["focalX"], after["focalY"]) == (30, 70))
+# Same URL, new bytes would leave every browser that saw the photo on it.
+check("the new image has fresh urls",
+      after["imageUrl"] == f"/media/{rid}/v1/display.webp", after["imageUrl"])
+check("the new original keeps its own format", f"{rid}/v1/original.png" in storage.objects)
+# The backup copies an original key once and never again.
+check("the old original is not overwritten", f"{rid}/original.jpg" in storage.objects)
+check("the old public files are gone",
+      not any(k.startswith((f"{rid}/display.", f"{rid}/thumb.", f"{rid}/tiles/"))
+              for k in storage.objects))
+source = after["tileSource"]
+check("the pyramid is rebuilt under the new version",
+      source["base"] == f"/media/{rid}/v1/tiles"
+      and f"{rid}/v1/tiles/{source['maxLevel']}/0_0.webp" in storage.objects,
+      str(source))
+
+res = replace(rid, b"not an image", "fake.png")
+check("an unreadable file is the API's own 400", res.status_code == 400, str(res.status_code))
+check("and leaves the piece on its current image",
+      client.get(f"/api/pieces/{rid}").get_json()["imageUrl"] == after["imageUrl"])
+check("a second replacement moves on to v2",
+      replace(rid, make_image(500, 500), "again.jpg").get_json()["imageUrl"]
+      == f"/media/{rid}/v2/display.webp")
+check("an unknown piece 404s",
+      replace(uuid.uuid4(), make_image(10, 10), "x.jpg").status_code == 404)
+check("a visitor cannot replace one",
+      replace(rid, make_image(10, 10), "x.jpg", headers={}).status_code == 401)
+
+# The global cap is 1 MB; only the image routes raise it.
+noise = Image.frombytes("RGB", (700, 700), os.urandom(700 * 700 * 3))
+buffer = io.BytesIO()
+noise.save(buffer, format="PNG")
+check("an image over the global body cap still goes through",
+      len(buffer.getvalue()) > 1024 * 1024
+      and replace(rid, buffer.getvalue(), "big.png").status_code == 200)
+check("while sign-in keeps the small cap",
+      client.post("/api/session", data=b"x" * (2 * 1024 * 1024),
+                  content_type="application/json").status_code == 413)
+
+client.post(f"/api/pieces/{rid}/waive", headers=OWNER)
+check("a waived piece's image cannot be replaced",
+      replace(rid, make_image(10, 10), "x.jpg").status_code == 409)
+client.delete(f"/api/pieces/{rid}", headers=OWNER)
+check("deleting the piece takes every version with it",
+      not any(k.startswith(f"{rid}/") for k in storage.objects))
+
+
+print("\n== what the file says about itself ==")
+scan = io.BytesIO()
+Image.new("L", (600, 900), 200).save(scan, format="PNG", dpi=(600, 600))
+detail = client.post("/api/pieces", headers=OWNER, content_type="multipart/form-data", data={
+    "title": "Scanned", "image": (io.BytesIO(scan.getvalue()), "scan.png"),
+}).get_json()
+check("a scan reports its dpi, mode and size",
+      detail["file"] == {"originalName": "scan.png", "format": "png",
+                         "byteSize": len(scan.getvalue()), "dpi": 600,
+                         "colorMode": "L", "captureDevice": None},
+      str(detail["file"]))
+
+
+def uploaded_name(filename):
+    return client.post("/api/pieces", headers=OWNER, content_type="multipart/form-data", data={
+        "title": "Named", "image": (io.BytesIO(make_image(20, 20)), filename),
+    }).get_json()["file"]["originalName"]
+
+
+check("a whole path keeps only its last part",
+      uploaded_name("C:\\Users\\me\\Scans/Night Calls V.jpg") == "Night Calls V.jpg")
+check("control characters are dropped",
+      uploaded_name("scan\x00\x1b[31m.jpg") == "scan[31m.jpg")
+check("a long name is bounded", len(uploaded_name("a" * 400 + ".jpg")) == 255)
+
+exif = Image.Exif()
+exif[0x010F] = "Xiaomi"
+exif[0x0110] = "Xiaomi 15T Pro" + chr(0)
+detail = client.post("/api/pieces", headers=OWNER, content_type="multipart/form-data", data={
+    "title": "Photographed", "image": (io.BytesIO(make_image(60, 40, exif=exif.tobytes())), "p.jpg"),
+}).get_json()
+check("a photo names its camera once, without padding",
+      detail["file"]["captureDevice"] == "Xiaomi 15T Pro", str(detail["file"]))
+
+exif[0x010F] = "Motorola"
+exif[0x0110] = "Moto G (4)"
+replaced = replace(detail["id"], make_image(60, 40, exif=exif.tobytes()), "q.jpg").get_json()
+check("a replacement brings its own file details",
+      replaced["file"]["captureDevice"] == "Motorola Moto G (4)"
+      and replaced["file"]["originalName"] == "q.jpg", str(replaced["file"]))
 
 
 failed = [c for c in checks if not c[1]]

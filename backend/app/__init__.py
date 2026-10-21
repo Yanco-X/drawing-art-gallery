@@ -88,7 +88,9 @@ def create_app(
         def media(key: str):
             # Only the derivatives are public, as the s3 bucket split has it.
             # The archival original never leaves storage by URL.
-            if "/original." in key:
+            # Lowercased because NTFS is not case-sensitive: ORIGINAL.png
+            # would otherwise reach the same file.
+            if "/original." in key.lower():
                 abort(404)
             os.makedirs(upload_dir, exist_ok=True)
             return send_from_directory(upload_dir, key)

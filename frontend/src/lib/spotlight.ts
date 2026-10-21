@@ -1,4 +1,5 @@
-import type { Piece } from '../types';
+import type { CSSProperties } from 'react';
+import type { CollectionSummary, Piece } from '../types';
 
 // The API refuses a sixth pick.
 export const SPOTLIGHT_COUNT = 5;
@@ -62,3 +63,43 @@ export const framePiece = (
     ? { fit: 'cover', scale: 1, position }
     : { fit: 'contain', scale: piece.focalZoom / 100, position };
 };
+
+// Continuous per-piece values, so they cannot be static classes. See the
+// inline-style exceptions in DESIGN.md.
+export const framingStyle = (framing: Framing): CSSProperties => ({
+  objectFit: framing.fit,
+  objectPosition: framing.position,
+  transformOrigin: framing.position,
+  transform: `scale(${framing.scale})`,
+});
+
+export const coverStyle = (collection: CollectionSummary): CSSProperties =>
+  framingStyle(
+    framePiece({
+      focalX: collection.coverFocalX,
+      focalY: collection.coverFocalY,
+      focalZoom: collection.coverZoom,
+    }),
+  );
+
+export interface FramePreview {
+  label: string;
+  aspect: number;
+}
+
+// The stacked band is the full width over `clamp(320px, 52vh, 500px)`, which
+// lands near 8:9 on any phone held upright.
+export const BAND_PREVIEWS: FramePreview[] = [
+  { label: 'Desktop', aspect: 3 / 2 },
+  { label: 'Phone', aspect: 8 / 9 },
+];
+
+// A card's cover is 90px tall and as wide as its card: about 2:1 in the
+// narrowest grid column, about 4:1 alone in a column on a phone.
+export const COVER_PREVIEWS: FramePreview[] = [
+  { label: 'Narrowest card', aspect: 2 },
+  { label: 'Widest card', aspect: 4 },
+];
+
+// The API's ceiling. A portrait piece takes about 600% to fill the widest card.
+export const COVER_ZOOM_MAX = 1500;

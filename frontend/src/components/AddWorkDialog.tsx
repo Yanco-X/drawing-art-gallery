@@ -74,9 +74,6 @@ export const AddWorkDialog = ({
       ref={dialogRef}
       aria-labelledby={headingId}
       onClose={close}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) close();
-      }}
       className="m-auto h-[92vh] w-[94vw] max-w-[2200px] border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <div className="flex h-full flex-col">

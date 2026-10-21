@@ -213,6 +213,51 @@ check(
     str(after["coverPieceId"]),
 )
 
+print("\n== cover framing ==")
+framed = client.patch(
+    f"/api/collections/{cid}",
+    json={"coverPieceId": ids[2], "coverFocalX": 30, "coverFocalY": 70, "coverZoom": 800},
+    headers=OWNER,
+).get_json()
+check(
+    "a cover chosen and framed in one request",
+    (framed["coverPieceId"], framed["coverFocalX"], framed["coverFocalY"], framed["coverZoom"])
+    == (ids[2], 30, 70, 800),
+    str(framed),
+)
+check(
+    "a zoomed cover serves the display rendition",
+    framed["coverImageUrl"].endswith("/display.webp"),
+    str(framed["coverImageUrl"]),
+)
+for body in ({"coverZoom": 1501}, {"coverZoom": 99}, {"coverFocalX": 101}, {"coverFocalY": "x"}):
+    check(
+        f"out of range refused: {body}",
+        client.patch(f"/api/collections/{cid}", json=body, headers=OWNER).status_code == 400,
+    )
+recovered = client.patch(
+    f"/api/collections/{cid}", json={"coverPieceId": ids[0]}, headers=OWNER
+).get_json()
+check(
+    "changing the cover clears its framing",
+    (recovered["coverFocalX"], recovered["coverFocalY"], recovered["coverZoom"])
+    == (None, None, None),
+    str(recovered),
+)
+client.patch(f"/api/collections/{cid}", json={"coverZoom": 400}, headers=OWNER)
+dropped = client.put(
+    f"/api/collections/{cid}/pieces", json={"pieceIds": [ids[2]]}, headers=OWNER
+).get_json()
+check(
+    "and so does the cover leaving the collection",
+    (dropped["coverPieceId"], dropped["coverZoom"]) == (None, None)
+    and dropped["coverImageUrl"].endswith("/thumb.webp"),
+    str(dropped),
+)
+client.put(
+    f"/api/collections/{cid}/pieces", json={"pieceIds": [ids[0], ids[2]]}, headers=OWNER
+)
+
 print("\n== visibility ==")
 client.patch(f"/api/collections/{cid}", json={"isPublic": False}, headers=OWNER)
 public = client.get("/api/collections").get_json()

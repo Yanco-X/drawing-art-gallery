@@ -197,9 +197,6 @@ export const SocialsDialog = ({
         if (busy) event.preventDefault();
       }}
       onClose={dismiss}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) dismiss();
-      }}
       className="m-auto w-[min(94vw,600px)] border border-line bg-surface p-0 text-[14px] tracking-normal text-text normal-case backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <div className="flex flex-col gap-5 p-6">

@@ -67,6 +67,45 @@ def bounded_text(value, field: str, limit: int) -> str:
     return text
 
 
+FOCAL_ZOOM_MIN = 100
+
+
+def parse_focal(raw, field: str):
+    """A focal coordinate: a whole percent from 0 to 100, or null for centre."""
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ApiError(
+            "A focal point is a percentage.", details={field: str(raw)}
+        )
+    if not 0 <= value <= 100:
+        raise ApiError(
+            "A focal point is between 0 and 100.", details={field: str(raw)}
+        )
+    return value
+
+
+def parse_focal_zoom(raw, field: str, most: int):
+    """
+    How close a crop is, as a percent of the size at which the whole piece
+    fits. 100 is all of it; 200 is twice as close. Null fills the frame.
+    """
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ApiError("A zoom is a percentage.", details={field: str(raw)})
+    if not FOCAL_ZOOM_MIN <= value <= most:
+        raise ApiError(
+            f"A zoom is between {FOCAL_ZOOM_MIN} and {most}.",
+            details={field: str(raw)},
+        )
+    return value
+
+
 def client_ip() -> str | None:
     # X-Real-IP is the caller only behind Railway's edge, which overwrites
     # it. Anywhere Flask is reachable directly, a client can forge it.

@@ -103,6 +103,20 @@ def piece_detail_to_dict(piece: Piece) -> dict:
             for link in piece.collection_links
             if link.collection.is_public or owner
         ],
+    # Owner only. None of it is on the wall, and the camera a piece was
+    # photographed with is the owner's business.
+        "file": _file_details(piece) if owner else None,
+    }
+
+
+def _file_details(piece: Piece) -> dict:
+    return {
+        "originalName": piece.original_filename,
+        "format": piece.original_ext,
+        "byteSize": piece.byte_size,
+        "dpi": piece.dpi,
+        "colorMode": piece.color_mode,
+        "captureDevice": piece.capture_device,
     }
 
 
@@ -115,6 +129,12 @@ def collection_summary_to_dict(collection: Collection) -> dict:
     again. Free to send: `piece_links` is already in memory.
     """
     cover = collection.resolved_cover
+    # The framing belongs to the chosen cover. With none chosen -- or the
+    # chosen one deleted, which the database nulls without asking -- the
+    # fallback shows unframed.
+    framed = collection.cover_piece_id is not None
+    # A close crop of the 600px thumbnail would blur.
+    rendition = "display" if framed and collection.cover_zoom else "thumb"
     return {
         "id": str(collection.id),
         "name": collection.name,
@@ -123,8 +143,11 @@ def collection_summary_to_dict(collection: Collection) -> dict:
         "pieceCount": collection.piece_count,
         "pieceIds": [str(link.piece_id) for link in collection.piece_links],
         "coverImageUrl": (
-            _storage().url_for(cover.key("thumb")) if cover else None
+            _storage().url_for(cover.key(rendition)) if cover else None
         ),
+        "coverFocalX": collection.cover_focal_x if framed else None,
+        "coverFocalY": collection.cover_focal_y if framed else None,
+        "coverZoom": collection.cover_zoom if framed else None,
     # The chosen cover, not the resolved one. Null means nothing was chosen and
     # coverImageUrl is showing the first member instead -- a distinction the
     # arrange UI has to render.

@@ -10,12 +10,14 @@ import { ICON_BUTTON } from '../components/form-styles';
 import {
   HOME_ORIGIN,
   ORIGIN_PARAM,
+  behind,
   nearestStep,
+  pieceHref,
   readTrail,
   serialiseTrail,
 } from '../lib/origin';
 import { fetchCollection, recordEvent } from '../services';
-import type { Collection } from '../types';
+import type { Collection, Piece } from '../types';
 
 const BackLink = () => (
   <Link to="/collections" className={`${ICON_BUTTON} w-fit`}>
@@ -23,11 +25,27 @@ const BackLink = () => (
   </Link>
 );
 
-const BackRow = ({ fromHome }: { fromHome: boolean }) => (
+const BackRow = ({
+  fromHome,
+  fromPiece,
+  trail,
+}: {
+  fromHome: boolean;
+  fromPiece?: Piece;
+  trail: string[];
+}) => (
   <div className="flex flex-wrap items-center gap-2">
     {fromHome && (
       <Link to="/home" className={`${ICON_BUTTON} w-fit`}>
         ← Gallery
+      </Link>
+    )}
+    {fromPiece && (
+      <Link
+        to={pieceHref(fromPiece.id, serialiseTrail(behind(trail)))}
+        className={`${ICON_BUTTON} w-fit`}
+      >
+        ← {fromPiece.title}
       </Link>
     )}
     <BackLink />
@@ -45,7 +63,8 @@ const CollectionPage = () => {
     () => readTrail(params.get(ORIGIN_PARAM)),
     [params],
   );
-  const fromHome = nearestStep(trail) === HOME_ORIGIN;
+  const openedFrom = nearestStep(trail);
+  const fromHome = openedFrom === HOME_ORIGIN;
 
   const { role } = useSession();
 
@@ -106,12 +125,15 @@ const CollectionPage = () => {
   }
 
   const isOwner = role === 'owner';
+  // A piece's wall label hands on the piece's id as the step. Honoured only
+  // while that piece hangs here, which is also what tells it from a slug.
+  const fromPiece = collection.pieces.find((piece) => piece.id === openedFrom);
 
   return (
     <PageShell>
       <section className="mx-auto w-full max-w-content px-gutter pt-8 pb-intro-bottom">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <BackRow fromHome={fromHome} />
+          <BackRow fromHome={fromHome} fromPiece={fromPiece} trail={trail} />
           {isOwner && !arranging && (
             <CollectionOwnerActions
               collection={collection}
@@ -131,7 +153,7 @@ const CollectionPage = () => {
           {collection.name}
         </h1>
         {collection.description && (
-          <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed text-muted">
+          <p className="mt-4 max-w-[42em] text-[14px] leading-relaxed whitespace-pre-line text-muted">
             {collection.description}
           </p>
         )}

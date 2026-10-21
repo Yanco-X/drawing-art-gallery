@@ -6,31 +6,22 @@ import {
   ZOOM_MIN,
   fillRatio,
   framePiece,
+  framingStyle,
 } from '../lib/spotlight';
+import type { FramePreview } from '../lib/spotlight';
 import type { Piece } from '../types';
 import { LABEL, SUBTLE_ACTION } from './form-styles';
 
-const BAND_RATIO = '3 / 2';
-// The stacked band is the full width over `clamp(320px, 52vh, 500px)`, which
-// lands near 8:9 on any phone held upright.
-const PHONE_BAND_RATIO = '8 / 9';
-/* The same shape as a number. Only used to park the slider where an
-   unsized piece already sits, so that first drag does not jump. Nothing
-   stored depends on it: the band is this shape at some window sizes and
-   not at others, which is exactly why the zoom stopped being a percentage
-   of it. */
-const BAND_ASPECT = 3 / 2;
-
 const clamp = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
 
-const BandPreview = ({
+const PreviewFrame = ({
   label,
-  ratio,
+  aspect,
   src,
   framing,
 }: {
   label: string;
-  ratio: string;
+  aspect: number;
   src: string;
   framing: CSSProperties;
 }) => (
@@ -39,7 +30,7 @@ const BandPreview = ({
       {label}
     </figcaption>
     <div
-      style={{ aspectRatio: ratio }}
+      style={{ aspectRatio: aspect }}
       className="w-full overflow-hidden border border-line bg-bg"
     >
       <img
@@ -59,6 +50,9 @@ export const FocalPicker = ({
   y,
   zoom,
   onChange,
+  previews,
+  fillHint,
+  zoomMax = ZOOM_MAX,
 }: {
   piece: Piece;
   /** Null means the piece has never been placed; the mark sits at centre. */
@@ -71,6 +65,11 @@ export const FocalPicker = ({
     y: number | null;
     zoom: number | null;
   }) => void;
+  /** The shapes the crop is shown in. The first parks the zoom slider. */
+  previews: FramePreview[];
+  /** What an unsized piece does in those shapes. */
+  fillHint: string;
+  zoomMax?: number;
 }) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
@@ -79,10 +78,13 @@ export const FocalPicker = ({
   const atX = x ?? CENTRE_FOCAL;
   const atY = y ?? CENTRE_FOCAL;
   /* An unsized piece fills the frame, so the slider starts where filling
-     this preview lands. Anywhere else and the first touch would jump. */
+     the first preview lands. Anywhere else and the first touch would jump.
+     Nothing stored depends on that shape: a frame is it at some window
+     sizes and not at others, which is why the zoom is not a percentage of
+     it. */
   const atZoom =
     zoom ??
-    Math.round(fillRatio(piece.aspectRatio, BAND_ASPECT) * 100);
+    Math.round(fillRatio(piece.aspectRatio, previews[0].aspect) * 100);
   const placed = x !== null || y !== null;
 
   const place = useCallback(
@@ -131,13 +133,9 @@ export const FocalPicker = ({
     onChange({ x: clamp(atX + move[0]), y: clamp(atY + move[1]), zoom });
   };
 
-  const shown = framePiece({ focalX: x, focalY: y, focalZoom: zoom });
-  const framing: CSSProperties = {
-    objectFit: shown.fit,
-    objectPosition: shown.position,
-    transformOrigin: shown.position,
-    transform: `scale(${shown.scale})`,
-  };
+  const framing = framingStyle(
+    framePiece({ focalX: x, focalY: y, focalZoom: zoom }),
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -196,22 +194,27 @@ export const FocalPicker = ({
 
           <div className="flex flex-col gap-2">
             <span className="text-[12px] text-faint">
-              Drag to choose what the band keeps.
+              Drag to choose what stays in frame.
             </span>
-            {/* 27:16 is 3:2 against 8:9, so the two frames share one height. */}
-            <div className="grid grid-cols-[minmax(0,27fr)_minmax(0,16fr)] gap-2">
-              <BandPreview
-                label="Desktop"
-                ratio={BAND_RATIO}
-                src={piece.imageUrl}
-                framing={framing}
-              />
-              <BandPreview
-                label="Phone"
-                ratio={PHONE_BAND_RATIO}
-                src={piece.imageUrl}
-                framing={framing}
-              />
+            {/* Each column as wide as its frame's aspect, so the frames share
+                one height. */}
+            <div
+              style={{
+                gridTemplateColumns: previews
+                  .map((preview) => `minmax(0,${preview.aspect}fr)`)
+                  .join(' '),
+              }}
+              className="grid gap-2"
+            >
+              {previews.map((preview) => (
+                <PreviewFrame
+                  key={preview.label}
+                  label={preview.label}
+                  aspect={preview.aspect}
+                  src={piece.imageUrl}
+                  framing={framing}
+                />
+              ))}
             </div>
 
             <div className="mt-2 flex items-baseline justify-between gap-3">
@@ -235,7 +238,7 @@ export const FocalPicker = ({
             <input
               type="range"
               min={ZOOM_MIN}
-              max={ZOOM_MAX}
+              max={zoomMax}
               value={atZoom}
               onChange={(event) =>
                 onChange({ x, y, zoom: Number(event.target.value) })
@@ -246,7 +249,7 @@ export const FocalPicker = ({
 
             <span className="text-[12px] text-faint">
               {zoom === null
-                ? 'Fills its half of the band, whatever shape that is.'
+                ? fillHint
                 : `About ${Math.round(100 / (atZoom / 100))}% of the piece in` +
                   ' frame, on every screen.'}
             </span>

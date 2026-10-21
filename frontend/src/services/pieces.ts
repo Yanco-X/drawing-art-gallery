@@ -171,6 +171,17 @@ export const updatePiece = async (
   return response.json();
 };
 
+export const replacePieceImage = async (id: string, file: File): Promise<Piece> => {
+  const form = new FormData();
+  form.append('image', file, file.name);
+  const response = await fetch('/api/pieces/' + encodeURIComponent(id) + '/image', {
+    method: 'PUT',
+    body: form,
+  });
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
 // Irreversible: the original is deleted along with the derivatives.
 export const deletePiece = async (id: string): Promise<void> => {
   const response = await fetch('/api/pieces/' + encodeURIComponent(id), {

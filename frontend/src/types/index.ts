@@ -56,6 +56,19 @@ export interface Piece {
   // Detail payload only. Null when the piece has no pyramid, and the viewer
   // falls back to `imageUrl`.
   tileSource?: TileSource | null;
+  // Detail payload only, and null unless the owner is asking.
+  file?: PieceFile | null;
+}
+
+// What the original says about itself, as read at upload.
+export interface PieceFile {
+  // Null for pieces uploaded before names were kept.
+  originalName: string | null;
+  format: string;
+  byteSize: number | null;
+  dpi: number | null;
+  colorMode: string | null;
+  captureDevice: string | null;
 }
 
 // The artist's page: the owner's words, and the pieces beside them, the
@@ -97,6 +110,11 @@ export interface CollectionSummary extends CollectionRef {
   // The cover the owner chose, or null when `coverImageUrl` is showing the
   // first member as a fallback. The arrange grid has to tell those apart.
   coverPieceId: string | null;
+  // How the chosen cover sits in its card, in a piece's focal units. Always
+  // null while `coverPieceId` is.
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverZoom: number | null;
   isPublic: boolean;
   // Null until the owner places it, and always null for a visitor.
   curatedOrder: number | null;
@@ -142,8 +160,12 @@ export interface CollectionPatch {
   name?: string;
   description?: string;
   isPublic?: boolean;
-  // null clears the cover, falling back to the first member.
+  // null clears the cover, falling back to the first member. A new cover
+  // drops the old one's framing, so send both to frame the one chosen.
   coverPieceId?: string | null;
+  coverFocalX?: number | null;
+  coverFocalY?: number | null;
+  coverZoom?: number | null;
 }
 
 export interface NewCollection {

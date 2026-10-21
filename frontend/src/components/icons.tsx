@@ -39,6 +39,13 @@ export const EditIcon = () => (
   </Glyph>
 );
 
+export const ImageIcon = () => (
+  <Glyph>
+    <path d="M3 5h18v14H3z" />
+    <path d="m3 16 5-5 4 4 3-3 6 6" />
+  </Glyph>
+);
+
 export const CollectionsIcon = () => (
   <Glyph>
     <path d="M3 8h13v13H3z" />

@@ -59,8 +59,10 @@ class Config:
     VISITS_PER_CLIENT_PER_MINUTE = 60
     VISITS_PER_HOUR = 10_000
 
-    # Largest upload accepted, before any processing.
-    MAX_CONTENT_LENGTH = int(os.getenv("MAX_UPLOAD_MB", "40")) * 1024 * 1024
+    # Largest request body. Only the image routes raise it, to MAX_UPLOAD_BYTES:
+    # a global 60 MB would let anyone post that much JSON at sign-in.
+    MAX_CONTENT_LENGTH = 1024 * 1024
+    MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_MB", "60")) * 1024 * 1024
 
 # "local" writes to UPLOAD_DIR and lets Flask serve /media/<key>; "s3" targets
 # any S3-compatible bucket.

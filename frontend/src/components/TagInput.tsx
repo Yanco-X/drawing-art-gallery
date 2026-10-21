@@ -80,7 +80,7 @@ export const TagInput = ({
   };
 
   return (
-    <div className="tag-field flex flex-col gap-2">
+    <div className="suggestion-field flex flex-col gap-2">
       <label htmlFor={id} className={LABEL}>
         Tags
       </label>
@@ -123,7 +123,7 @@ export const TagInput = ({
           setOpen(false);
         }}
         placeholder="Charcoal, Portrait — enter to add"
-        className={FIELD + ' tag-field-input'}
+        className={FIELD + ' suggestion-field-input'}
       />
       <ul
         ref={list}
@@ -132,7 +132,7 @@ export const TagInput = ({
         role="listbox"
         aria-label="Tags in use"
         onMouseDown={keepFieldFocus}
-        className="tag-suggestions max-h-[240px] overflow-y-auto border border-line bg-surface p-1"
+        className="suggestion-list max-h-[240px] overflow-y-auto border border-line bg-surface p-1"
       >
         {suggestions.map((name, index) => (
           <li

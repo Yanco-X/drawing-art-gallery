@@ -10,6 +10,7 @@ import { DetailedView } from '../components/DetailedView';
 import { DetailedViewButton } from '../components/DetailedViewButton';
 import { PageShell } from '../components/PageShell';
 import { PieceNav } from '../components/PieceNav';
+import { PieceFileDetails } from '../components/PieceFileDetails';
 import { PieceOwnerActions } from '../components/PieceOwnerActions';
 import { PieceWallLabel } from '../components/PieceWallLabel';
 import { TagShelf } from '../components/TagShelf';
@@ -497,6 +498,7 @@ const PiecePage = () => {
             className="wide:col-start-2 wide:row-start-2"
             piece={piece}
             collections={piece.collections ?? []}
+            origin={serialiseTrail([...readTrail(carried), piece.id])}
             actions={
               role === 'owner' ? (
                 <PieceOwnerActions
@@ -504,6 +506,11 @@ const PiecePage = () => {
                   onChanged={refresh}
                   onDeleted={afterDelete}
                 />
+              ) : undefined
+            }
+            fileDetails={
+              piece.file ? (
+                <PieceFileDetails piece={piece} file={piece.file} />
               ) : undefined
             }
             tagShelf={

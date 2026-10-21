@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { collectionHref } from '../lib/origin';
 import type { CollectionRef, Piece, Tag } from '../types';
 
 const Rule = () => (
@@ -21,13 +22,18 @@ const Block = ({ label, children }: { label: string; children: ReactNode }) => (
 export const PieceWallLabel = ({
   piece,
   collections,
+  origin,
   actions,
+  fileDetails,
   className = '',
   tagShelf,
 }: {
   piece: Piece;
   collections: CollectionRef[];
+  origin: string;
   actions?: ReactNode;
+  /** Under the actions, after a rule. Brings its own heading. */
+  fileDetails?: ReactNode;
   className?: string;
   /** Left out, every tag is a plain label. */
   tagShelf?: {
@@ -71,7 +77,7 @@ export const PieceWallLabel = ({
       {piece.description && (
         <>
           <Rule />
-          <p className="text-[14px] leading-relaxed text-dim">
+          <p className="text-[14px] leading-relaxed whitespace-pre-line text-dim">
             {piece.description}
           </p>
         </>
@@ -126,7 +132,7 @@ export const PieceWallLabel = ({
               {collections.map((collection) => (
                 <li key={collection.id}>
                   <Link
-                    to={`/collections/${collection.slug}`}
+                    to={collectionHref(collection.slug, origin)}
                     className="font-display text-[20px] font-normal text-text transition-colors duration-200 hover:text-accent"
                   >
                     {collection.name}
@@ -141,6 +147,12 @@ export const PieceWallLabel = ({
         <>
           <Rule />
           <div>{actions}</div>
+        </>
+      )}
+      {fileDetails && (
+        <>
+          <Rule />
+          {fileDetails}
         </>
       )}
     </aside>

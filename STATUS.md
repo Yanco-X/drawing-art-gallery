@@ -30,7 +30,7 @@ drawing-art-gallery/
 │   │   │                  spotlight.py, curation.py, visits.py, helpers.py
 │   │   └── services/      storage adapters, images, tiles, slugs
 │   ├── migrations/        alembic, 14 revisions
-│   ├── scripts/           import_uploads.py, backfill_tiles.py
+│   ├── scripts/           import_uploads.py, backfill_tiles.py, backfill_file_details.py
 │   └── tests/             11 suites, 457 checks
 ├── frontend/              77 .ts/.tsx files
 │   └── src/
@@ -69,7 +69,7 @@ docker compose up -d          # postgres:5432, minio:9000, console:9001
 
 ```bash
 .venv/Scripts/activate        # Windows
-alembic upgrade head          # should report d2a9c5e7f1b3
+alembic upgrade head          # should report a3e9f1c7d264
 flask --app app run --port 5000
 ```
 
@@ -255,7 +255,7 @@ keeps them. [`context/METRICS.md`](context/METRICS.md) holds the design.
 
 ### Migrations
 
-Sixteen revisions, head `d2a9c5e7f1b3`. History is immutable — add a
+Nineteen revisions, head `a3e9f1c7d264`. History is immutable — add a
 revision, never edit one.
 
 ```
@@ -275,6 +275,9 @@ a6d0f3b8e217  lowercase tag names
 c4e8a1d2b7f5  add collections.curated_order, placed newest first
 b8e3f6a1c9d2  add the about page: about_page, pieces.about_order
 d2a9c5e7f1b3  add about_page.body_es, seeded in Spanish
+e8c4b2a7d913  add pieces.image_version, for replacing an image
+f6a2d8c3b145  add pieces.dpi, color_mode, capture_device
+a3e9f1c7d264  restore pieces.original_filename, for the owner's file panel
 ```
 
 ### Two model notes worth carrying
@@ -321,7 +324,7 @@ landing page pulls 0.60 MB.
 **Nothing is capped.** Neither container sets a memory, CPU or PID limit;
 the volumes are plain `local` Docker volumes with no size option; and both
 buckets report a MinIO quota of `0 B`, meaning none. The only ceiling
-anywhere is `MAX_UPLOAD_MB`, default 40, which is per upload rather than
+anywhere is `MAX_UPLOAD_MB`, default 60, which is per upload rather than
 cumulative.
 
 Storage is therefore bounded by the Docker VM's disk — roughly 950 GB free
@@ -355,9 +358,10 @@ credential is still configured — see §7.
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/pieces` | Exhibited only, in the curated order with unplaced pieces first (`CURATION.md`). `?waived=true` `[owner]` returns the reserve, newest waived first |
-| `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`. **410 and a tombstone** for a waived piece unless owner |
+| `GET` | `/api/pieces/<id>` | Detail, including `collections` and `tileSource`, and for the owner only `file`: originalName, format, byteSize, dpi, colorMode, captureDevice, read from the upload. **410 and a tombstone** for a waived piece unless owner |
 | `POST` | `/api/pieces` `[owner]` | Multipart upload. Derives keys, generates both derivatives and the Deep Zoom pyramid. Repeated `collectionIds` fields join the piece to collections in the same transaction. Optional `position`, from 1, hangs it there and numbers the gallery; absent leaves it unplaced at the top |
 | `PATCH` | `/api/pieces/<id>` `[owner]` | Title, description, medium, year, createdDate, tags, focalX, focalY, focalZoom. Only keys present are touched. Allowed on a waived piece |
+| `PUT` | `/api/pieces/<id>/image` `[owner]` | Multipart `image`. Swaps the image -- a scan for a photo -- keeping everything else, focal point included. Writes under the next `image_version`'s keys, retiles, and deletes the previous public files; the previous original stays, private. 409 for a waived piece |
 | `DELETE` | `/api/pieces/<id>` `[owner]` | **409 unless the piece is waived** |
 | `POST` | `/api/pieces/<id>/waive` `[owner]` | 409 if already waived |
 | `POST` | `/api/pieces/<id>/restore` `[owner]` | Optional `{"collectionIds": [...]}`, one transaction |

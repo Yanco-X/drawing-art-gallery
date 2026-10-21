@@ -327,6 +327,35 @@ and dropping that piece returned `coverPieceId` to null while
 `coverImageUrl` fell back to the first member. Marker discipline per
 `STATUS.md` §8.
 
+### 9.7 Cover framing (2026-10-19)
+
+*Frame cover* on the collection page opens `CollectionCoverDialog`: the
+spotlight's `FocalPicker`, previewing the crop in the card's own shapes. A
+card's cover is 90px tall and as wide as its card, so the strip runs from
+about 2:1 in the narrowest grid column to about 4:1 alone in a column on a
+phone. The picker shows both ends, and if a crop reads at both it reads
+everywhere between them.
+
+- **Units.** `cover_focal_x`, `cover_focal_y` and `cover_zoom` on
+  `collections` mean what a piece's `focal_*` columns mean, and render
+  through the same `framePiece`. Null on all three is a cover filling its
+  card from the centre, which is how every cover showed before.
+- **The zoom goes to 1500%, not the spotlight's 500%.** The zoom is a
+  multiple of the size at which the whole piece fits, and a portrait piece
+  fits a 4:1 strip at a quarter of the strip's width -- it takes about 600%
+  just to fill it.
+- **A framing belongs to one picture.** Saving one names the cover
+  explicitly, even when the cover was the first-member fallback, which
+  pins it: it stops following the arrangement. Any change of cover --
+  chosen, cleared, or the cover leaving the collection -- clears the
+  framing, and the serializer withholds it while no cover is chosen, which
+  covers the cover piece being deleted out from under the database's
+  `SET NULL`.
+- **A zoomed cover serves the `display` rendition.** Closing in on the
+  600px thumbnail would blur; an unzoomed one keeps the thumbnail.
+
+Checks in `tests/smoke_collections.py`, under `== cover framing ==`.
+
 ---
 
 ## 10. Out of scope

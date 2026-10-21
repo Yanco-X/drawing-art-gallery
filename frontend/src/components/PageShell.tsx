@@ -1,8 +1,11 @@
 import { Suspense, lazy, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSecretTrigger, useSession } from '../hooks';
+import { pieceHref } from '../lib/origin';
 import type { Piece } from '../types';
 import { BackToTop } from './BackToTop';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Header } from './Header';
 import { SiteFooter } from './SiteFooter';
 import { UploadModal } from './UploadModal';
@@ -21,6 +24,8 @@ export const PageShell = ({
   // The dialog lives with the button that opens it rather than in each
   // page, so every route gets the same upload affordance for free.
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploaded, setUploaded] = useState<Piece | null>(null);
+  const navigate = useNavigate();
   const { role, keyholeOpen, openKeyhole, signOut } = useSession();
   const onMark = useSecretTrigger(openKeyhole);
   const isOwner = role === 'owner';
@@ -41,11 +46,29 @@ export const PageShell = ({
       <SiteFooter onMark={onMark} />
 
       {isOwner && (
-        <UploadModal
-          open={uploadOpen}
-          onClose={() => setUploadOpen(false)}
-          onUploaded={onPieceUploaded}
-        />
+        <>
+          <UploadModal
+            open={uploadOpen}
+            onClose={() => setUploadOpen(false)}
+            onUploaded={(piece) => {
+              onPieceUploaded?.(piece);
+              setUploaded(piece);
+            }}
+          />
+          <ConfirmDialog
+            open={uploaded !== null}
+            title="Uploaded"
+            confirmLabel="Open piece"
+            cancelLabel="Stay here"
+            onCancel={() => setUploaded(null)}
+            onConfirm={() => {
+              if (uploaded) navigate(pieceHref(uploaded.id));
+              setUploaded(null);
+            }}
+          >
+            <p>{uploaded?.title} is in the gallery.</p>
+          </ConfirmDialog>
+        </>
       )}
 
       {keyholeOpen && (

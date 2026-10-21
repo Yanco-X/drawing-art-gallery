@@ -84,6 +84,16 @@ class Piece(Base):
     # there is nothing to keep in sync when the storage backend changes.
     original_ext: Mapped[str] = mapped_column(String(10), nullable=False)
     byte_size: Mapped[int | None] = mapped_column(Integer)
+    # The name the file had on the owner's disk, shown in their file panel and
+    # nowhere else. A label only: no key or path is ever built from it.
+    original_filename: Mapped[str | None] = mapped_column(String(255))
+
+    # What the original says about itself, for the owner's file panel. Null
+    # when the file does not say; scripts/backfill_file_details.py fills
+    # pieces uploaded before these existed.
+    dpi: Mapped[int | None] = mapped_column(Integer)
+    color_mode: Mapped[str | None] = mapped_column(String(10))
+    capture_device: Mapped[str | None] = mapped_column(String(100))
 
     medium: Mapped[str | None] = mapped_column(String(100))
     year: Mapped[int | None] = mapped_column(Integer)
@@ -99,6 +109,13 @@ class Piece(Base):
     # rendition, which is what a piece uploaded before tiling does.
     tiles_ready: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+    # Bumped each time the image is replaced, so the new files get keys no
+    # browser cache and no backup has seen: both treat a key as never
+    # rewritten.
+    image_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
     )
 
     # Null is exhibited, set is waived. A timestamp rather than a boolean, so
@@ -153,6 +170,11 @@ class Piece(Base):
             return None
         return self.width / self.height
 
+    def take_file_details(self, details) -> None:
+        self.dpi = details.dpi
+        self.color_mode = details.color_mode
+        self.capture_device = details.capture_device
+
     @property
     def is_waived(self) -> bool:
         return self.waived_at is not None
@@ -161,6 +183,14 @@ class Piece(Base):
     def storage_prefix(self) -> str:
         return f"{self.id}/"
 
+    @property
+    def image_prefix(self) -> str:
+        # The first image sits at the piece's root, where every piece uploaded
+        # before replacement existed already keeps its files.
+        if not self.image_version:
+            return self.storage_prefix
+        return f"{self.storage_prefix}v{self.image_version}/"
+
     def key(self, variant: str) -> str:
         """
         Object key for one rendition.
@@ -168,8 +198,8 @@ class Piece(Base):
         `original` keeps its uploaded format; the derivatives are WebP.
         """
         if variant == "original":
-            return f"{self.id}/original.{self.original_ext}"
-        return f"{self.id}/{variant}.webp"
+            return f"{self.image_prefix}original.{self.original_ext}"
+        return f"{self.image_prefix}{variant}.webp"
 
     @property
     def tile_prefix(self) -> str:
@@ -179,7 +209,7 @@ class Piece(Base):
         Under the piece's own prefix, so deleting the piece already removes
         them.
         """
-        return f"{self.id}/tiles"
+        return f"{self.image_prefix}tiles"
 
     def tile_key(self, level: int, column: int, row: int) -> str:
         return f"{self.tile_prefix}/{level}/{column}_{row}.webp"
@@ -246,6 +276,14 @@ class Collection(Base):
     cover_piece_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("pieces.id", ondelete="SET NULL")
     )
+
+    # How the chosen cover sits in its card, in the units of Piece.focal_x,
+    # focal_y and focal_zoom. Set on one picture, so changing the cover
+    # clears it.
+    cover_focal_x: Mapped[int | None] = mapped_column(Integer)
+    cover_focal_y: Mapped[int | None] = mapped_column(Integer)
+    cover_zoom: Mapped[int | None] = mapped_column(Integer)
+
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Where the owner put it among the collections, from zero. Null is a new

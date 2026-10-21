@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { DailyVisitsChart } from '../components/DailyVisitsChart';
+import { GalleryCounts } from '../components/GalleryCounts';
 import { MetricsRange } from '../components/MetricsRange';
 import { MetricsTable } from '../components/MetricsTable';
 import { PageMessage } from '../components/PageMessage';
@@ -80,6 +81,10 @@ const MetricsPage = () => {
           bound: read trends and rankings, not headcounts.
         </p>
       </section>
+
+      <MetricsSection title="In the gallery now">
+        <GalleryCounts />
+      </MetricsSection>
 
       <section className="mx-auto w-full max-w-content px-gutter pb-10">
         <MetricsRange range={range} onChange={setRange} />

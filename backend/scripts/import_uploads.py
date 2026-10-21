@@ -185,6 +185,7 @@ def main() -> int:
                 width=processed.width,
                 height=processed.height,
             )
+            piece.take_file_details(processed.details)
 
             for rendition in processed.renditions:
                 storage.save(piece.key(rendition.variant), rendition.data, rendition.content_type)

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { coverStyle } from '../lib/spotlight';
 import type { CollectionSummary } from '../types';
 
 /** A collection in the curation board's frame, the one `PieceTile` draws.
@@ -21,12 +22,15 @@ export const CollectionTile = ({
       }`}
     >
       {collection.coverImageUrl ? (
-        <img
-          src={collection.coverImageUrl}
-          alt=""
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <div className="absolute inset-0 overflow-hidden">
+          <img
+            src={collection.coverImageUrl}
+            alt=""
+            loading="lazy"
+            style={coverStyle(collection)}
+            className="h-full w-full"
+          />
+        </div>
       ) : (
         <div
           aria-hidden="true"

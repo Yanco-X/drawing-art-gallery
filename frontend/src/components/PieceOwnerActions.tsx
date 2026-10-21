@@ -2,20 +2,24 @@ import { useMemo, useState } from 'react';
 import { CollectionPicker } from './CollectionPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PieceDetailsDialog } from './PieceDetailsDialog';
+import { ReplacementComparison } from './ReplacementComparison';
 import { ICON_BUTTON, ICON_BUTTON_DANGER } from './form-styles';
 import {
   CollectionsIcon,
   DeleteIcon,
   EditIcon,
+  ImageIcon,
   RestoreIcon,
   WaiveIcon,
 } from './icons';
 import { useAsync } from '../hooks';
+import { imageFileProblem } from '../lib/upload';
 import {
   ApiError,
   createCollection,
   deletePiece,
   fetchAllCollections,
+  replacePieceImage,
   restorePiece,
   setPieceCollections,
   waivePiece,
@@ -44,8 +48,9 @@ export const PieceOwnerActions = ({
   onDeleted,
 }: PieceOwnerActionsProps) => {
   const [dialog, setDialog] = useState<
-    'waive' | 'restore' | 'delete' | 'collections' | 'edit' | null
+    'waive' | 'restore' | 'delete' | 'collections' | 'edit' | 'image' | null
   >(null);
+  const [replacement, setReplacement] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -115,6 +120,19 @@ export const PieceOwnerActions = ({
     setDialog('collections');
   };
 
+  const openReplace = () => {
+    setReplacement(null);
+    setError(null);
+    setDialog('image');
+  };
+
+  const pickReplacement = (candidate: File | undefined) => {
+    if (!candidate) return;
+    const problem = imageFileProblem(candidate);
+    setError(problem);
+    setReplacement(problem ? null : candidate);
+  };
+
   const restoreLabel =
     selected.length === 0
       ? 'Restore'
@@ -154,6 +172,10 @@ export const PieceOwnerActions = ({
           </>
         ) : (
           <>
+            <button type="button" onClick={openReplace} className={ICON_BUTTON}>
+              <ImageIcon />
+              Replace image
+            </button>
             <button
               type="button"
               onClick={openCollections}
@@ -186,6 +208,48 @@ export const PieceOwnerActions = ({
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={dialog === 'image'}
+        title="Replace the image?"
+        confirmLabel="Replace"
+        busyLabel="Uploading…"
+        wide
+        busy={busy}
+        error={error}
+        onCancel={close}
+        onConfirm={() =>
+          replacement
+            ? run(() => replacePieceImage(piece.id, replacement), onChanged)
+            : setError('Choose the new image first.')
+        }
+      >
+        {/* In place of the intro rather than under it, so the dialog does not
+            grow past the window mid-upload. */}
+        {busy ? (
+          <p>
+            A large scan can take a minute: it is tiled for the detailed view
+            before this closes.
+          </p>
+        ) : (
+          <p>
+            A new scan or photo of{' '}
+            <span className="text-text">{piece.title}</span>. Its details, tags,
+            collections and places stay as they are; check the focal point once
+            it is in.
+          </p>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          onChange={(event) => pickReplacement(event.target.files?.[0])}
+          className="text-[14px] text-dim file:mr-3 file:cursor-pointer file:border file:border-line file:bg-bg file:px-3 file:py-2 file:text-text"
+        />
+        {dialog === 'image' && (
+          <ReplacementComparison piece={piece} replacement={replacement} />
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={dialog === 'waive'}

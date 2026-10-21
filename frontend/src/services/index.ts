@@ -12,6 +12,7 @@ export {
   fetchAllCollections,
   collectionsFor,
   waivePiece,
+  replacePieceImage,
   restorePiece,
   setAboutPieces,
   setAboutText,

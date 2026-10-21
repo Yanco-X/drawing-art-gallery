@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { collectionHref } from '../lib/origin';
+import { coverStyle } from '../lib/spotlight';
 import type { CollectionSummary } from '../types';
 
 interface CollectionCardProps {
@@ -18,12 +19,15 @@ export const CollectionCard = ({
     className="flex flex-col gap-3 border border-line bg-surface p-5 transition-colors duration-200 hover:border-accent"
   >
     {collection.coverImageUrl ? (
-      <img
-        src={collection.coverImageUrl}
-        alt=""
-        loading="lazy"
-        className="h-[90px] w-full object-cover opacity-85"
-      />
+      <div className="h-[90px] overflow-hidden bg-bg opacity-85">
+        <img
+          src={collection.coverImageUrl}
+          alt=""
+          loading="lazy"
+          style={coverStyle(collection)}
+          className="h-full w-full"
+        />
+      </div>
     ) : (
   // Swatches cycle through four gradients and are decorative only -- they do
   // not identify a collection.

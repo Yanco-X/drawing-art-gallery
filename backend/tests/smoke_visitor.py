@@ -45,9 +45,6 @@ class TestConfig(Config):
     OWNER_API_TOKEN = "test-token"
     DEBUG = False
     STORAGE_BACKEND = "memory"
-    # Small, so the check that an oversized body answers as JSON need not
-    # send 40 MB. The suite's own uploads are a few kilobytes.
-    MAX_CONTENT_LENGTH = 1024 * 1024
 
 
 storage = MemoryStorage()
@@ -119,6 +116,8 @@ check(
 )
 check("the detail view has a tile source key", "tileSource" in piece)
 check("and a display rendition", bool(piece.get("imageUrl")))
+check("but not the file's details, camera included", piece.get("file") is None,
+      str(piece.get("file")))
 
 
 print("\n== a visitor may browse public collections ==")
@@ -298,6 +297,10 @@ check("a derivative is served under the local backend",
       local.get(f"/media/{piece_key}/thumb.webp").status_code == 200)
 check("the original is not",
       local.get(f"/media/{piece_key}/original.jpg").status_code == 404)
+check("nor a replaced image's original",
+      local.get(f"/media/{piece_key}/v1/original.jpg").status_code == 404)
+check("nor the original by another case",
+      local.get(f"/media/{piece_key}/ORIGINAL.jpg").status_code == 404)
 check("HSTS arrives once cookies are secure",
       local.get("/api/health").headers.get("Strict-Transport-Security") == "max-age=31536000")
 

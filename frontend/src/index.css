@@ -416,16 +416,16 @@
    * A popover rather than an absolute menu: both dialogs scroll their body,
    * which would clip the list at the footer. The top layer is outside it.
    */
-  .tag-field {
-    anchor-scope: --tag-field;
+  .suggestion-field {
+    anchor-scope: --suggestion-field;
   }
 
-  .tag-field-input {
-    anchor-name: --tag-field;
+  .suggestion-field-input {
+    anchor-name: --suggestion-field;
   }
 
-  .tag-suggestions {
-    position-anchor: --tag-field;
+  .suggestion-list {
+    position-anchor: --suggestion-field;
     inset: auto;
     top: anchor(bottom);
     left: anchor(left);
@@ -441,20 +441,20 @@
       overlay 200ms allow-discrete;
   }
 
-  .tag-suggestions:popover-open {
+  .suggestion-list:popover-open {
     opacity: 1;
     translate: 0 0;
   }
 
   @starting-style {
-    .tag-suggestions:popover-open {
+    .suggestion-list:popover-open {
       opacity: 0;
       translate: 0 -8px;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tag-suggestions {
+    .suggestion-list {
       transition: none;
       translate: none;
     }

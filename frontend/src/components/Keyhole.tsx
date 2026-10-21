@@ -70,9 +70,6 @@ const Keyhole = () => {
         if (busy) event.preventDefault();
       }}
       onClose={dismiss}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) dismiss();
-      }}
       className="m-auto w-[min(92vw,360px)] overflow-hidden border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <form onSubmit={submit} className="flex flex-col gap-4 p-6">

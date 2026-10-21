@@ -9,11 +9,15 @@ from ..errors import ApiError
 from ..models import Collection, CollectionPiece, Piece
 from ..schemas import collection_summary_to_dict, collection_to_dict
 from ..services.slugs import unique_slug
-from .helpers import bounded_text, parse_uuid
+from .helpers import bounded_text, parse_focal, parse_focal_zoom, parse_uuid
 
 bp = Blueprint("collections", __name__, url_prefix="/collections")
 
 NAME_MAX, DESCRIPTION_MAX = 255, 4000
+
+# A cover is a strip up to four times wider than it is tall, so a portrait
+# piece takes about 600% just to fill it; the rest is room to close in.
+COVER_ZOOM_MAX = 1500
 
 # The owner's order, new collections above it, newest first; the gallery's
 # rule for pieces, applied to the list of sets.
@@ -86,12 +90,21 @@ def _set_membership(session, collection: Collection, piece_ids: list) -> None:
     # A cover that is no longer a member would render a face the collection
     # does not contain, so drop it back to the first-member fallback.
     if collection.cover_piece_id and collection.cover_piece_id not in parsed:
-        collection.cover_piece_id = None
+        _set_cover(collection, None)
+
+
+def _set_cover(collection: Collection, cover_id) -> None:
+    # A framing was set on one picture and means nothing on another.
+    if cover_id != collection.cover_piece_id:
+        collection.cover_focal_x = None
+        collection.cover_focal_y = None
+        collection.cover_zoom = None
+    collection.cover_piece_id = cover_id
 
 
 def _apply_cover(session, collection: Collection, raw_cover) -> None:
     if raw_cover is None:
-        collection.cover_piece_id = None
+        _set_cover(collection, None)
         return
     cover_id = parse_uuid(raw_cover, "coverPieceId")
     member_ids = {link.piece_id for link in collection.piece_links}
@@ -100,7 +113,7 @@ def _apply_cover(session, collection: Collection, raw_cover) -> None:
             "The cover must be a piece inside the collection.",
             details={"coverPieceId": str(cover_id)},
         )
-    collection.cover_piece_id = cover_id
+    _set_cover(collection, cover_id)
 
 
 @bp.get("")
@@ -186,8 +199,16 @@ def update_collection(collection_id):
     if "isPublic" in data:
         collection.is_public = bool(data["isPublic"])
 
+    # After the cover, so one request can choose a cover and frame it.
     if "coverPieceId" in data:
         _apply_cover(session, collection, data["coverPieceId"])
+
+    for key, attribute in (("coverFocalX", "cover_focal_x"), ("coverFocalY", "cover_focal_y")):
+        if key in data:
+            setattr(collection, attribute, parse_focal(data[key], key))
+
+    if "coverZoom" in data:
+        collection.cover_zoom = parse_focal_zoom(data["coverZoom"], "coverZoom", COVER_ZOOM_MAX)
 
     session.commit()
     return jsonify(collection_to_dict(collection))

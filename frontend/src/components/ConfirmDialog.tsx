@@ -28,10 +28,14 @@ interface ConfirmDialogProps {
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  cancelLabel?: string;
   busyLabel?: string;
   /** 'danger' outlines the confirming button; everything else fills it with
       the accent. Waiving and restoring are reversible. */
   tone?: 'default' | 'danger';
+  /** Room for content that is looked at rather than read, like two images
+      side by side. */
+  wide?: boolean;
   busy?: boolean;
   error?: string | null;
   onCancel: () => void;
@@ -43,8 +47,10 @@ export const ConfirmDialog = ({
   title,
   children,
   confirmLabel,
+  cancelLabel = 'Cancel',
   busyLabel = 'Working…',
   tone = 'default',
+  wide = false,
   busy = false,
   error = null,
   onCancel,
@@ -75,10 +81,7 @@ export const ConfirmDialog = ({
         if (busy) event.preventDefault();
       }}
       onClose={dismiss}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) dismiss();
-      }}
-      className="m-auto w-[min(92vw,480px)] border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
+      className={(wide ? 'w-[min(96vw,1600px)]' : 'w-[min(92vw,480px)]') + ' m-auto border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]'}
     >
       <div className="flex flex-col gap-4 p-6">
         <h2
@@ -105,7 +108,7 @@ export const ConfirmDialog = ({
             disabled={busy}
             className={GHOST_BUTTON}
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"

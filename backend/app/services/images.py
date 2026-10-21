@@ -31,8 +31,8 @@ TILE_METHOD = 4
 # included -- into a WebP when nothing says otherwise.
 WEBP_NO_METADATA = {"exif": b"", "icc_profile": None, "xmp": b""}
 
-# A ceiling on the pixels one upload may decode to. The largest piece in the
-# gallery is 25 megapixels; a small PNG can claim thousands.
+# A ceiling on the pixels one upload may decode to. An A4 scan at 600 dpi is
+# 35 megapixels; a small PNG can claim thousands.
 MAX_PIXELS = 80_000_000
 
 # Extensions we are willing to store an original as. The check that actually
@@ -68,12 +68,64 @@ class Rendition:
 
 
 @dataclass
+class FileDetails:
+    """What a file says about itself, for the owner's file panel."""
+
+    dpi: int | None
+    color_mode: str
+    capture_device: str | None
+
+
+@dataclass
 class ProcessedImage:
     width: int
     height: int
     original_ext: str
     byte_size: int
+    details: FileDetails
     renditions: list[Rendition]
+
+
+# EXIF tags 271 and 272. Bounded because a file can claim anything.
+EXIF_MAKE = 0x010F
+EXIF_MODEL = 0x0110
+DEVICE_MAX = 100
+
+
+def _exif_text(value) -> str:
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", "replace")
+    # Postgres refuses a NUL in text, and EXIF strings are often padded with them.
+    return str(value or "").replace("\x00", "").strip()
+
+
+def _declared_dpi(image: Image.Image) -> int | None:
+    try:
+        dpi = round(float(image.info["dpi"][0]))
+    except (KeyError, TypeError, ValueError, IndexError, OverflowError):
+        return None
+    return dpi if 1 <= dpi <= 100_000 else None
+
+
+def _capture_device(image: Image.Image) -> str | None:
+    exif = image.getexif()
+    make = _exif_text(exif.get(EXIF_MAKE))
+    model = _exif_text(exif.get(EXIF_MODEL))
+    # Phones repeat the make in the model: "Xiaomi" and "Xiaomi 15T Pro".
+    if model.lower().startswith(make.lower()):
+        device = model
+    else:
+        device = f"{make} {model}"
+    return device.strip()[:DEVICE_MAX] or None
+
+
+def read_file_details(image: Image.Image) -> FileDetails:
+    """Header reads only: works on a lazily opened image without decoding it."""
+    return FileDetails(
+        dpi=_declared_dpi(image),
+        color_mode=image.mode,
+        capture_device=_capture_device(image),
+    )
 
 
 def _resize(image: Image.Image, max_edge: int) -> Image.Image:
@@ -115,6 +167,9 @@ def process_upload(raw: bytes) -> ProcessedImage:
     if image.width * image.height > MAX_PIXELS:
         raise InvalidImage("That image is too large to process.")
 
+    # Before the transpose, which hands back a copy without the file's EXIF.
+    details = read_file_details(image)
+
     # Apply the EXIF orientation flag and drop the rest of the metadata.
     # Phone photos are otherwise sideways, and EXIF often carries GPS
     # coordinates that should not follow a public image around.
@@ -129,6 +184,7 @@ def process_upload(raw: bytes) -> ProcessedImage:
         height=height,
         original_ext=original_ext,
         byte_size=len(raw),
+        details=details,
         renditions=[
             Rendition("original", raw, CONTENT_TYPES[original_ext]),
             Rendition("display", _to_webp(_resize(image, DISPLAY_MAX_EDGE)), "image/webp"),

@@ -41,13 +41,16 @@ that derivatives exist.
 |---|---|---|
 | `original_ext` | `String(10)` | `"jpg"` -- the only varying part of the path |
 | `byte_size` | `Integer`, nullable | Size of the original, for reporting |
+| `original_filename` | `String(255)`, nullable | The name on the owner's disk, for their file panel |
 
-**The uploaded filename is not kept.** It was carried briefly as a label,
-then dropped: object keys derive from the piece id, so nothing ever read it
-to find a file, and no download path exposes originals to name one. A
-user-supplied string with no reader is a liability rather than a record --
-it is the sort of column that outlives its purpose and quietly becomes
-something to keep escaping. The title is the human name for a piece.
+**The uploaded filename is a label, and only that.** It was carried briefly,
+then dropped (`64c7a2ba6f09`) because nothing read it: a user-supplied
+string with no reader is a liability rather than a record. It came back in
+`a3e9f1c7d264` once it had one -- the owner's file panel on the piece page.
+It is still never used to find a file: every key derives from the piece id.
+The API keeps the base name only, drops control characters and bounds it at
+255, and sends it to the owner alone. Pieces uploaded while it was gone stay
+null. The title is still the human name for a piece.
 
 `width`, `height`, `medium`, `year` stay as they are. `aspect_ratio`
 remains a computed property, not a column -- the database keeps facts, the
@@ -74,7 +77,19 @@ convenient is one nobody can trust to replay.
 <piece-id>/display.webp       long edge ~1600px, piece page
 <piece-id>/thumb.webp         long edge ~600px, masonry grid
 <piece-id>/tiles/<l>/<c>_<r>.webp   Deep Zoom pyramid, the detail view
+<piece-id>/v<n>/...           the same four, for the n-th replacement image
 ```
+
+**Replacing an image** (`PUT /api/pieces/<id>/image`) never writes over a
+key. `pieces.image_version` counts the replacements and `Piece.image_prefix`
+puts each one under `v<n>/`; version 0 stays at the root, where every earlier
+piece already is. Two things depend on a key never being rewritten: a
+browser that cached the old image under its URL, and `backup.py`, which
+copies each original key once. Once the row points at the new version, the
+previous display, thumb and tiles are deleted -- left public, they would
+serve the old image to anyone who guessed the root key. The previous
+original stays, private, until the piece is deleted with its whole
+`<piece-id>/` prefix. A waived piece's image cannot be replaced (409).
 
 **The pyramid** was added 2026-09-01 for the detail view. Levels are
 successive halvings from a single pixel up to the original's own resolution,
@@ -197,7 +212,8 @@ below is arranged around that.
 
 1. **Generate the id.** `uuid.uuid4()` in Python, before touching storage
    or the database.
-2. **Validate.** Cap the body with Flask's `MAX_CONTENT_LENGTH`, then
+2. **Validate.** Cap the body at `MAX_UPLOAD_BYTES` -- raised per request
+   over the 1 MB global `MAX_CONTENT_LENGTH` -- then
    confirm it is genuinely an image by opening it with Pillow -- never by
    trusting the file extension or `Content-Type`, both client-controlled.
 3. **Normalise.** Apply the EXIF orientation flag so phone photos are not
@@ -314,7 +330,7 @@ that will still bite:
 |---|---|
 | Store a derived key, not a URL | Phase 2 becomes a config change, not a data migration |
 | Filenames generated from the piece UUID | Current filenames have spaces, tildes, double extensions |
-| Do not keep the uploaded filename | Nothing reads it; every key derives from the piece id |
+| Keep the uploaded filename as a label only | The owner's file panel reads it; every key still derives from the piece id |
 | Three derivatives: original, display, thumb | The grid currently loads 30 MB of full-resolution originals |
 | WebP for derivatives | Substantially smaller at equivalent quality |
 | Strip EXIF after applying orientation | Correct rotation; removes GPS from public files |

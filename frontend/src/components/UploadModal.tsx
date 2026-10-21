@@ -1,16 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DragEvent, FormEvent } from 'react';
-import { useAsync } from '../hooks';
+import { useAsync, useObjectUrl } from '../hooks';
+import { DEFAULT_MEDIUM } from '../lib/media';
+import { describeFileSize, imageFileProblem } from '../lib/upload';
 import { effectiveYear } from '../lib/year';
 import { ApiError, createPiece, fetchAllCollections } from '../services';
 import type { CollectionSummary, NewPiece, Piece } from '../types';
 import { CollectionPicker } from './CollectionPicker';
+import { MediumInput } from './MediumInput';
 import { TagInput } from './TagInput';
 import { YearField } from './YearField';
 
-
-/** Mirrors MAX_UPLOAD_MB in backend/app/config.py. */
-const MAX_UPLOAD_MB = 40;
 
 /** Stable no-op loader, so a closed dialog issues no request. */
 const NO_COLLECTIONS = async (): Promise<CollectionSummary[]> => [];
@@ -18,7 +18,7 @@ const NO_COLLECTIONS = async (): Promise<CollectionSummary[]> => [];
 const EMPTY_FIELDS = {
   title: '',
   description: '',
-  medium: '',
+  medium: DEFAULT_MEDIUM,
   year: '',
   createdDate: '',
   position: '',
@@ -89,19 +89,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
   );
   const collections = useAsync(loadCollections);
 
-  // Derived from the file rather than stored: computing it in an effect would
-  // render once with no image and again with it.
-  const preview = useMemo(
-    () => (file ? URL.createObjectURL(file) : null),
-    [file],
-  );
-
-  // Revoking is the one part that is a real side effect. Leaking an object
-  // URL pins the entire file in memory for the life of the page.
-  useEffect(() => {
-    if (!preview) return;
-    return () => URL.revokeObjectURL(preview);
-  }, [preview]);
+  const preview = useObjectUrl(file);
 
   const reset = () => {
     setFields(EMPTY_FIELDS);
@@ -128,17 +116,9 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
 
   const acceptFile = (candidate: File | undefined) => {
     if (!candidate) return;
-    // Advisory only: the API decides what is an image by decoding it.
-    if (!candidate.type.startsWith('image/')) {
-      setError('That file is not an image.');
-      return;
-    }
-    if (candidate.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError('Images must be under ' + MAX_UPLOAD_MB + ' MB.');
-      return;
-    }
-    setError(null);
-    setFile(candidate);
+    const problem = imageFileProblem(candidate);
+    setError(problem);
+    if (!problem) setFile(candidate);
   };
 
   const onDragEnter = (event: DragEvent) => {
@@ -213,10 +193,6 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
         if (busy) event.preventDefault();
       }}
       onClose={close}
-      onClick={(event) => {
-        // Backdrop clicks are dispatched to the dialog element itself.
-        if (event.target === dialogRef.current) close();
-      }}
       className="m-auto max-h-[90vh] w-[min(94vw,940px)] border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <form onSubmit={submit} className="flex max-h-[90vh] flex-col">
@@ -272,7 +248,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
 
             {file && (
               <p className="text-[12px] text-faint">
-                {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
+                {file.name} · {describeFileSize(file)}
               </p>
             )}
 
@@ -339,19 +315,11 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor={fieldId + '-medium'} className={LABEL}>
-                  Medium
-                </label>
-                <input
-                  id={fieldId + '-medium'}
-                  value={fields.medium}
-                  onChange={(event) => setField('medium', event.target.value)}
-                  maxLength={100}
-                  placeholder="Charcoal"
-                  className={FIELD}
-                />
-              </div>
+              <MediumInput
+                id={fieldId + '-medium'}
+                value={fields.medium}
+                onChange={(value) => setField('medium', value)}
+              />
               <YearField
                 id={fieldId + '-year'}
                 year={fields.year}

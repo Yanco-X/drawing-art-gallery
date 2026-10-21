@@ -1,9 +1,18 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { dropDraft, keepDraft, readDraft, savedFields } from '../lib/pieceDraft';
+import type { PieceFields } from '../lib/pieceDraft';
+import { BAND_PREVIEWS } from '../lib/spotlight';
 import { effectiveYear } from '../lib/year';
 import { ApiError, updatePiece } from '../services';
 import type { Piece } from '../types';
-import { FIELD, GHOST_BUTTON, LABEL, PRIMARY_BUTTON } from './form-styles';
+import {
+  FIELD,
+  GHOST_BUTTON,
+  LABEL,
+  PRIMARY_BUTTON,
+  SUBTLE_ACTION,
+} from './form-styles';
 import { FocalPicker } from './FocalPicker';
 import { TagInput } from './TagInput';
 import { YearField } from './YearField';
@@ -20,32 +29,34 @@ export const PieceDetailsDialog = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const fieldId = useId();
 
-  const [title, setTitle] = useState(piece.title);
-  const [description, setDescription] = useState(piece.description);
-  const [medium, setMedium] = useState(piece.medium ?? '');
-  const [year, setYear] = useState(piece.year === null ? '' : String(piece.year));
-  const [createdDate, setCreatedDate] = useState(piece.createdDate ?? '');
-  const [tags, setTags] = useState(piece.tags.map((tag) => tag.name));
-  const [focal, setFocal] = useState<{
-    x: number | null;
-    y: number | null;
-    zoom: number | null;
-  }>({
-    x: piece.focalX,
-    y: piece.focalY,
-    zoom: piece.focalZoom,
-  });
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   /*
    * Mounted only while open, so the fields initialise from the piece as it
-   * stands. Syncing from a prop in an effect would be the same thing done
-   * twice, one render later.
+   * stands, or from the draft a close left behind. Syncing from a prop in an
+   * effect would be the same thing done twice, one render later.
    */
+  const [draft] = useState(() => readDraft(piece.id));
+  const [fields, setFields] = useState(() => draft ?? savedFields(piece));
+  const [restored, setRestored] = useState(draft !== null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { title, description, medium, year, createdDate, tags, focal } = fields;
+
+  const setField = <K extends keyof PieceFields>(key: K, value: PieceFields[K]) =>
+    setFields((current) => ({ ...current, [key]: value }));
+
   useEffect(() => {
     dialogRef.current?.showModal();
   }, []);
+
+  // On every change rather than on close: a reload never closes the dialog.
+  useEffect(() => {
+    keepDraft(piece.id, fields, savedFields(piece));
+  }, [piece, fields]);
+
+  const discard = () => {
+    setFields(savedFields(piece));
+    setRestored(false);
+  };
 
   const close = () => {
     if (busy) return;
@@ -77,6 +88,7 @@ export const PieceDetailsDialog = ({
         focalZoom: focal.zoom,
         tags,
       });
+      dropDraft(piece.id);
       onSaved(saved);
     } catch (caught) {
       setError(
@@ -99,9 +111,6 @@ export const PieceDetailsDialog = ({
         if (busy) event.preventDefault();
       }}
       onClose={close}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) close();
-      }}
       className="m-auto max-h-[90vh] w-[min(94vw,940px)] border border-line bg-surface p-0 text-text backdrop:bg-black/70 backdrop:backdrop-blur-[3px]"
     >
       <form onSubmit={submit} className="flex max-h-[90vh] flex-col">
@@ -123,6 +132,17 @@ export const PieceDetailsDialog = ({
           </button>
         </div>
 
+        {restored && (
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line bg-bg px-6 py-3">
+            <p className="text-[13px] text-dim">
+              Your unsaved changes from last time are back.
+            </p>
+            <button type="button" onClick={discard} className={SUBTLE_ACTION}>
+              Discard them
+            </button>
+          </div>
+        )}
+
         <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto p-6 sm:grid-cols-2">
           <div className="flex flex-col gap-4">
             <FocalPicker
@@ -130,7 +150,9 @@ export const PieceDetailsDialog = ({
               x={focal.x}
               y={focal.y}
               zoom={focal.zoom}
-              onChange={setFocal}
+              onChange={(next) => setField('focal', next)}
+              previews={BAND_PREVIEWS}
+              fillHint="Fills its half of the band, whatever shape that is."
             />
             <p className="text-[12px] text-faint">
               The wall label and the crop — the artwork itself stays as
@@ -148,7 +170,7 @@ export const PieceDetailsDialog = ({
                 value={title}
                 onChange={(event) => {
                   setError(null);
-                  setTitle(event.target.value);
+                  setField('title', event.target.value);
                 }}
                 maxLength={255}
                 className={FIELD}
@@ -162,7 +184,7 @@ export const PieceDetailsDialog = ({
               <textarea
                 id={fieldId + '-description'}
                 value={description}
-                onChange={(event) => setDescription(event.target.value)}
+                onChange={(event) => setField('description', event.target.value)}
                 rows={3}
                 placeholder="A note about the work, shown on its page."
                 className={FIELD + ' resize-y'}
@@ -177,7 +199,7 @@ export const PieceDetailsDialog = ({
                 <input
                   id={fieldId + '-medium'}
                   value={medium}
-                  onChange={(event) => setMedium(event.target.value)}
+                  onChange={(event) => setField('medium', event.target.value)}
                   maxLength={100}
                   placeholder="Charcoal"
                   className={FIELD}
@@ -190,7 +212,7 @@ export const PieceDetailsDialog = ({
                 createdDate={createdDate}
                 onChange={(value) => {
                   setError(null);
-                  setYear(value);
+                  setField('year', value);
                 }}
               />
             </div>
@@ -205,13 +227,17 @@ export const PieceDetailsDialog = ({
                 value={createdDate}
                 onChange={(event) => {
                   setError(null);
-                  setCreatedDate(event.target.value);
+                  setField('createdDate', event.target.value);
                 }}
                 className={FIELD}
               />
             </div>
 
-            <TagInput id={fieldId + '-tags'} tags={tags} onChange={setTags} />
+            <TagInput
+              id={fieldId + '-tags'}
+              tags={tags}
+              onChange={(next) => setField('tags', next)}
+            />
           </div>
         </div>
 

@@ -1,3 +1,4 @@
+import ntpath
 import uuid
 from datetime import date, datetime, timezone
 
@@ -12,7 +13,7 @@ from ..schemas import piece_detail_to_dict, piece_to_dict
 from ..services.images import InvalidImage, process_upload
 from ..services.slugs import slugify
 from ..services.tiles import clear_tiles, write_tiles
-from .helpers import bounded_text, parse_uuid
+from .helpers import bounded_text, parse_focal, parse_focal_zoom, parse_uuid
 
 bp = Blueprint("pieces", __name__, url_prefix="/pieces")
 
@@ -89,50 +90,11 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     return tags
 
 
-FOCAL_ZOOM_MIN = 100
 FOCAL_ZOOM_MAX = 500
 
 
-def _parse_focal(raw, field: str):
-    """A focal coordinate: a whole percent from 0 to 100, or null for centre."""
-    if raw is None or raw == "":
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        raise ApiError(
-            "A focal point is a percentage.", details={field: str(raw)}
-        )
-    if not 0 <= value <= 100:
-        raise ApiError(
-            "A focal point is between 0 and 100.", details={field: str(raw)}
-        )
-    return value
-
-
-def _parse_focal_zoom(raw):
-    """
-    How close the crop is, as a percent of the size at which the whole piece
-    fits. 100 is all of it; 200 is twice as close. Null fills the frame.
-    """
-    if raw is None or raw == "":
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        raise ApiError(
-            "A zoom is a percentage.", details={"focalZoom": str(raw)}
-        )
-    if not FOCAL_ZOOM_MIN <= value <= FOCAL_ZOOM_MAX:
-        raise ApiError(
-            f"A zoom is between {FOCAL_ZOOM_MIN} and {FOCAL_ZOOM_MAX}.",
-            details={"focalZoom": str(raw)},
-        )
-    return value
-
-
 YEAR_MIN, YEAR_MAX = 1900, 2100
-TITLE_MAX, DESCRIPTION_MAX, MEDIUM_MAX = 255, 4000, 100
+TITLE_MAX, DESCRIPTION_MAX, MEDIUM_MAX, FILENAME_MAX = 255, 4000, 100, 255
 
 
 def _parse_position(raw):
@@ -210,22 +172,11 @@ def create_piece():
     sweepable, a row pointing at nothing is a broken image. The commit is the
     point of truth, and a failed commit takes the objects back out.
     """
-    upload = request.files.get("image")
-    if upload is None or not upload.filename:
-        raise ApiError("An image file is required.", details={"image": "required"})
+    raw, processed, filename = _read_image_upload()
 
     title = bounded_text(request.form.get("title"), "title", TITLE_MAX)
     if not title:
         raise ApiError("A piece needs a title.", details={"title": "required"})
-
-    raw = upload.read()
-    if not raw:
-        raise ApiError("The uploaded file is empty.")
-
-    try:
-        processed = process_upload(raw)
-    except InvalidImage as exc:
-        raise ApiError(str(exc), details={"image": "invalid"})
 
     year = _parse_year(request.form.get("year"))
     created = _parse_created_date(request.form.get("createdDate"))
@@ -246,6 +197,8 @@ def create_piece():
         height=processed.height,
         created_date=created,
     )
+    piece.take_file_details(processed.details)
+    piece.original_filename = filename
 
     storage = current_app.extensions["storage"]
     session = SessionLocal()
@@ -270,10 +223,96 @@ def create_piece():
         storage.delete_prefix(piece.storage_prefix)
         raise
 
+    _tile(storage, session, piece, raw)
+    return jsonify(piece_detail_to_dict(piece)), 201
+
+
+@bp.put("/<uuid:piece_id>/image")
+@require_owner
+def replace_image(piece_id):
+    """
+    Swap a piece's image for a better one -- a scan for a photo -- keeping
+    its label, tags, collections, places and focal point.
+
+    multipart/form-data: `image`. The new files go under the next image
+    version's keys, never over the old ones. The old public files are removed
+    once the row points past them; the old original stays, private.
+    """
+    session = SessionLocal()
+    piece = session.get(Piece, piece_id)
+    if piece is None:
+        raise ApiError("Piece not found.", status=404)
+    # A waived piece's new image would be public at a guessable key without
+    # ever having been on the wall.
+    if piece.is_waived:
+        raise ApiError("Restore this piece before replacing its image.", status=409)
+
+    raw, processed, filename = _read_image_upload()
+    stale = [piece.key("display"), piece.key("thumb"), piece.tile_prefix + "/"]
+
+    piece.image_version += 1
+    piece.original_ext = processed.original_ext
+    piece.byte_size = processed.byte_size
+    piece.width = processed.width
+    piece.height = processed.height
+    piece.take_file_details(processed.details)
+    piece.original_filename = filename
+    piece.tiles_ready = False
+    # Taken now: a rollback expires the row, and the expired version would
+    # name the previous image's prefix -- for version 0, the whole piece.
+    new_prefix = piece.image_prefix
+
+    storage = current_app.extensions["storage"]
+    for rendition in processed.renditions:
+        storage.save(
+            piece.key(rendition.variant), rendition.data, rendition.content_type
+        )
+
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        storage.delete_prefix(new_prefix)
+        raise
+
+    for prefix in stale:
+        storage.delete_prefix(prefix)
+
+    _tile(storage, session, piece, raw)
+    return jsonify(piece_detail_to_dict(piece))
+
+
+def _read_image_upload():
+    # Before anything touches the body: the first access parses it against
+    # whatever limit is set at that moment.
+    request.max_content_length = current_app.config["MAX_UPLOAD_BYTES"]
+    upload = request.files.get("image")
+    if upload is None or not upload.filename:
+        raise ApiError("An image file is required.", details={"image": "required"})
+
+    raw = upload.read()
+    if not raw:
+        raise ApiError("The uploaded file is empty.")
+
+    try:
+        processed = process_upload(raw)
+    except InvalidImage as exc:
+        raise ApiError(str(exc), details={"image": "invalid"})
+    return raw, processed, _uploaded_filename(upload.filename)
+
+
+def _uploaded_filename(name: str) -> str | None:
+    # ntpath splits on both separators, for a client that sends a whole path.
+    # Control characters go: the name arrives in a header the client wrote.
+    base = "".join(ch for ch in ntpath.basename(name) if ch.isprintable())
+    return base.strip()[:FILENAME_MAX] or None
+
+
+def _tile(storage, session, piece: Piece, raw: bytes) -> None:
     # After the commit and deliberately not fatal: without a pyramid the
     # detail view falls back to the display rendition, which is what every
     # piece uploaded before tiling does. Synchronous because there is no job
-    # queue -- about 1.7s on a typical piece, 6.5s on the largest.
+    # queue -- about 1.7s on a typical piece, 12s on a 25-megapixel one.
     try:
         write_tiles(storage, piece, raw)
         piece.tiles_ready = True
@@ -285,8 +324,6 @@ def create_piece():
         # that stop partway through a zoom. The backfill can rebuild it.
         clear_tiles(storage, piece)
 
-    return jsonify(piece_detail_to_dict(piece)), 201
-
 
 @bp.patch("/<uuid:piece_id>")
 @require_owner
@@ -296,8 +333,8 @@ def update_piece(piece_id):
 
     Only keys actually present in the body are touched, so a form that sends
     one field cannot blank the rest. Null or an empty string does clear an
-    optional field -- that is an edit, not an omission. The image is not
-    replaceable here.
+    optional field -- that is an edit, not an omission. The image is replaced
+    through PUT .../image.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -330,10 +367,10 @@ def update_piece(piece_id):
 
     for key, attribute in (("focalX", "focal_x"), ("focalY", "focal_y")):
         if key in data:
-            setattr(piece, attribute, _parse_focal(data[key], key))
+            setattr(piece, attribute, parse_focal(data[key], key))
 
     if "focalZoom" in data:
-        piece.focal_zoom = _parse_focal_zoom(data["focalZoom"])
+        piece.focal_zoom = parse_focal_zoom(data["focalZoom"], "focalZoom", FOCAL_ZOOM_MAX)
 
     if "tags" in data:
         if not isinstance(data["tags"], list):
