@@ -25,16 +25,22 @@ GALLERY_ORDER = (
     Piece.title,
 )
 
+# The wall itself: neither waived nor in the sketchbook.
+IN_GALLERY = (Piece.waived_at.is_(None), Piece.in_sketchbook.is_(False))
+
 
 @bp.get("")
 def list_pieces():
     """
-    Gallery order: the owner's curation. Also the picker source for curation.
+    The gallery in the owner's curated order, also the picker source for
+    curation. `?sketchbook=true` is the sketchbook instead, newest first.
 
-    Waived pieces are excluded unless the owner asks for them by name.
+    Waived pieces are excluded from both unless the owner asks for them by
+    name, and then they come from either.
     """
     session = SessionLocal()
     want_waived = request.args.get("waived") == "true"
+    want_sketchbook = request.args.get("sketchbook") == "true"
 
     if want_waived:
         if not is_owner():
@@ -44,8 +50,14 @@ def list_pieces():
         stmt = select(Piece).where(Piece.waived_at.is_not(None)).order_by(
             Piece.waived_at.desc(), Piece.title
         )
+    elif want_sketchbook:
+        stmt = (
+            select(Piece)
+            .where(Piece.waived_at.is_(None), Piece.in_sketchbook.is_(True))
+            .order_by(Piece.created_at.desc(), Piece.title)
+        )
     else:
-        stmt = select(Piece).where(Piece.waived_at.is_(None)).order_by(*GALLERY_ORDER)
+        stmt = select(Piece).where(*IN_GALLERY).order_by(*GALLERY_ORDER)
 
     return jsonify([piece_to_dict(p) for p in session.scalars(stmt).all()])
 
@@ -120,12 +132,35 @@ def _hang_at(session, piece: Piece, position: int) -> None:
     """
     others = session.scalars(
         select(Piece)
-        .where(Piece.waived_at.is_(None), Piece.id != piece.id)
+        .where(*IN_GALLERY, Piece.id != piece.id)
         .order_by(*GALLERY_ORDER)
     ).all()
     at = min(position, len(others) + 1) - 1
     for index, member in enumerate([*others[:at], piece, *others[at:]]):
         member.curated_order = index
+
+
+def _parse_form_flag(raw, field: str) -> bool:
+    """A checkbox sent as a form field: absent, "true" or "false"."""
+    if raw is None or raw == "" or raw == "false":
+        return False
+    if raw == "true":
+        return True
+    raise ApiError(f"{field} must be true or false.", details={field: raw})
+
+
+def _set_sketchbook(piece: Piece, raw) -> None:
+    if not isinstance(raw, bool):
+        raise ApiError(
+            "inSketchbook must be true or false.", details={"inSketchbook": str(raw)}
+        )
+    if raw == piece.in_sketchbook:
+        return
+    piece.in_sketchbook = raw
+    # The gallery's places mean nothing off it. Coming back, the piece waits
+    # at the top for one, as a new upload does.
+    piece.curated_order = None
+    piece.spotlight_order = None
 
 
 def _parse_year(raw):
@@ -165,8 +200,9 @@ def create_piece():
     Upload a piece.
 
     multipart/form-data: `image` plus title, description, medium, year,
-    createdDate, position, and repeated `tags` and `collectionIds` fields.
-    No position leaves the piece unplaced, at the top of the gallery.
+    createdDate, position, inSketchbook, and repeated `tags` and
+    `collectionIds` fields. No position leaves the piece unplaced, at the top
+    of the gallery; a sketchbook piece takes none.
 
     Files are written before the row is committed: orphaned bytes are
     sweepable, a row pointing at nothing is a broken image. The commit is the
@@ -181,6 +217,12 @@ def create_piece():
     year = _parse_year(request.form.get("year"))
     created = _parse_created_date(request.form.get("createdDate"))
     position = _parse_position(request.form.get("position"))
+    in_sketchbook = _parse_form_flag(request.form.get("inSketchbook"), "inSketchbook")
+    if in_sketchbook and position is not None:
+        raise ApiError(
+            "A sketchbook piece has no place in the gallery.",
+            details={"position": request.form.get("position")},
+        )
 
     # The id is generated here, before anything is written: every object key
     # derives from it, so it cannot wait for the INSERT to assign one.
@@ -196,6 +238,7 @@ def create_piece():
         width=processed.width,
         height=processed.height,
         created_date=created,
+        in_sketchbook=in_sketchbook,
     )
     piece.take_file_details(processed.details)
     piece.original_filename = filename
@@ -329,7 +372,8 @@ def _tile(storage, session, piece: Piece, raw: bytes) -> None:
 @require_owner
 def update_piece(piece_id):
     """
-    Correct a piece's wall label.
+    Correct a piece's wall label, or move it between the gallery and the
+    sketchbook.
 
     Only keys actually present in the body are touched, so a form that sends
     one field cannot blank the rest. Null or an empty string does clear an
@@ -379,6 +423,9 @@ def update_piece(piece_id):
         # `tags` are left behind on purpose: they are shared, and another
         # piece may still be using one.
         piece.tags = _resolve_tags(session, data["tags"])
+
+    if "inSketchbook" in data:
+        _set_sketchbook(piece, data["inSketchbook"])
 
     session.commit()
     return jsonify(piece_detail_to_dict(piece))

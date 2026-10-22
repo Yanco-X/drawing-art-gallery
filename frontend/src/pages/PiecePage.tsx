@@ -34,6 +34,7 @@ import {
   fetchCollection,
   fetchPiece,
   fetchPieces,
+  fetchSketchbook,
   fetchWaivedPieces,
   recordEvent,
 } from '../services';
@@ -41,23 +42,26 @@ import type { Collection, Piece, Tag } from '../types';
 
 const BackLink = ({
   waived = false,
+  sketchbook = false,
   from,
   trail = [],
   about = false,
 }: {
   waived?: boolean;
+  sketchbook?: boolean;
   from?: Collection | null;
   trail?: string[];
   about?: boolean;
 }) => {
-  const to = from
-    ? collectionHref(from.slug, serialiseTrail(trail) || undefined)
+  const [to, label] = from
+    ? [collectionHref(from.slug, serialiseTrail(trail) || undefined), from.name]
     : about
-      ? '/about'
+      ? ['/about', 'Yanco']
       : waived
-        ? '/waived'
-        : '/home';
-  const label = from ? from.name : about ? 'Yanco' : waived ? 'Waived' : 'All work';
+        ? ['/waived', 'Waived']
+        : sketchbook
+          ? ['/sketchbook', 'Sketchbook']
+          : ['/home', 'All work'];
   return (
     <Link to={to} className={`${ICON_BUTTON} w-fit`}>
       ← {label}
@@ -230,10 +234,17 @@ const PiecePage = () => {
 
   // Keyed on the state rather than the piece, so refetching one piece does
   // not refetch its siblings.
-  const state = piece ? (piece.waivedAt ? 'waived' : 'exhibited') : null;
+  const state = piece
+    ? piece.waivedAt
+      ? 'waived'
+      : piece.inSketchbook
+        ? 'sketchbook'
+        : 'gallery'
+    : null;
   const loadSiblings = useMemo(() => {
     if (state === 'waived') return fetchWaivedPieces;
-    if (state === 'exhibited') return fetchPieces;
+    if (state === 'sketchbook') return fetchSketchbook;
+    if (state === 'gallery') return fetchPieces;
     return NO_SIBLINGS;
   }, [state]);
   const siblings = useAsync(loadSiblings);
@@ -394,12 +405,13 @@ const PiecePage = () => {
     );
   }
 
-  const gallery = siblings.status === 'ready' ? siblings.data : [];
+  // The section the piece hangs in: the gallery, the sketchbook or the reserve.
+  const section = siblings.status === 'ready' ? siblings.data : [];
   const walk = sequence
-    ? inSequence(gallery, sequence)
+    ? inSequence(section, sequence)
     : inSet
       ? (fromSet?.pieces ?? [])
-      : gallery;
+      : section;
   const { previous, next } = adjacent(walk, piece.id);
 
   // One element, two homes: the stacked row below lg and the artwork's left
@@ -407,6 +419,7 @@ const PiecePage = () => {
   const backLink = (
     <BackLink
       waived={Boolean(piece.waivedAt)}
+      sketchbook={piece.inSketchbook}
       from={inSet ? fromSet : null}
       trail={behind(trail)}
       about={fromAbout}
@@ -416,7 +429,7 @@ const PiecePage = () => {
   const picked = piece.spotlightOrder !== null;
 
   const tagged = (tagId: string) =>
-    gallery.filter((one) => one.tags.some((tag) => tag.id === tagId));
+    section.filter((one) => one.tags.some((tag) => tag.id === tagId));
   // The reserve has no shelf: a waived piece's tags stay plain labels.
   const exhibited = !piece.waivedAt;
   const shelved = shelf &&
@@ -425,6 +438,7 @@ const PiecePage = () => {
       pieces: tagged(shelf.tag.id),
       currentId: piece.id,
       origin: carried,
+      list: piece.inSketchbook ? ('sketchbook' as const) : ('gallery' as const),
     };
 
   return (

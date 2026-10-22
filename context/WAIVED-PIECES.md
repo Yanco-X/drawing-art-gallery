@@ -151,6 +151,10 @@ POST /api/pieces/<id>/restore
 { "collectionIds": ["...", "..."] }     // absent or empty: gallery only
 ```
 
+**It returns to the section it left.** Waiving leaves `in_sketchbook`
+alone, so a waived sketch is restored to the sketchbook and a waived piece to
+the gallery, with no code for either. See `SKETCHBOOK.md`.
+
 **Multiple choice.** `CollectionPiece` is many-to-many and a checkbox list
 costs no more than a radio list; restricting to one would only mean
 restoring twice for a piece that belonged in two.

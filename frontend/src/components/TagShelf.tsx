@@ -7,7 +7,7 @@ import type { Piece, Tag } from '../types';
 import { ICON_BUTTON_ACCENT } from './form-styles';
 import { CloseIcon, GalleryIcon } from './icons';
 
-const GALLERY = '/home';
+const LISTS = { gallery: '/home', sketchbook: '/sketchbook' } as const;
 
 const Thumbnail = ({ piece }: { piece: Piece }) => {
   const [loaded, setLoaded] = useState(false);
@@ -63,16 +63,19 @@ export const TagShelf = ({
   currentId,
   row = false,
   origin,
+  list = 'gallery',
   onClose,
 }: {
   id: string;
   tag: Tag;
-  /** Every exhibited piece carrying the tag, in gallery order. */
+  /** Every piece in the list carrying the tag, in the list's order. */
   pieces: Piece[];
   currentId: string;
   /** Under the tags, scrolling sideways, rather than the drawer's column. */
   row?: boolean;
   origin?: string;
+  /** The section "see all" narrows: the one the piece hangs in. */
+  list?: keyof typeof LISTS;
   onClose: () => void;
 }) => {
   const listRef = useRef<HTMLUListElement>(null);
@@ -111,12 +114,12 @@ export const TagShelf = ({
 
   const seeAll = (
     <Link
-      to={GALLERY}
-      onClick={() => narrowToTag(GALLERY, tag.id, currentId)}
+      to={LISTS[list]}
+      onClick={() => narrowToTag(LISTS[list], tag.id, currentId)}
       className={`${ICON_BUTTON_ACCENT} ${row ? 'w-fit' : ''}`}
     >
       <GalleryIcon />
-      See all in gallery
+      See all in {list}
     </Link>
   );
 

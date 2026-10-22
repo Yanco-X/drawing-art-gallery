@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useAsync, useGalleryFilter } from '../hooks';
-import { fetchPieces } from '../services';
+import { fetchPublicPieces } from '../services';
 import type { Piece } from '../types';
 import { GHOST_BUTTON, PRIMARY_BUTTON, SUBTLE_ACTION } from './form-styles';
 import { PieceFilters } from './PieceFilters';
@@ -25,7 +25,7 @@ export const AddWorkDialog = ({
   const headingId = useId();
   const [picked, setPicked] = useState<string[]>([]);
 
-  const loadPieces = useMemo(() => (open ? fetchPieces : NO_PIECES), [open]);
+  const loadPieces = useMemo(() => (open ? fetchPublicPieces : NO_PIECES), [open]);
   const pieces = useAsync(loadPieces);
 
   const available = useMemo(

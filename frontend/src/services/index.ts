@@ -6,6 +6,8 @@ export {
   fetchAbout,
   fetchPiece,
   fetchPieces,
+  fetchPublicPieces,
+  fetchSketchbook,
   fetchWaivedPieces,
   fetchCollection,
   fetchCollections,

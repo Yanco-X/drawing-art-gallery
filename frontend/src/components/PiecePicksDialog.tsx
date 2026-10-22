@@ -31,8 +31,8 @@ export interface PiecePicksProps {
 }
 
 /**
- * Pick pieces from the gallery and put them in order, for a surface that
- * shows a few of them: the spotlight, the about page.
+ * Pick pieces and put them in order, for a surface that shows a few of them:
+ * the spotlight, the about page.
  */
 export const PiecePicksDialog = ({
   open,
@@ -43,12 +43,16 @@ export const PiecePicksDialog = ({
   listLabel,
   max,
   save,
+  source = fetchPieces,
   slotsFor = picksInOrder,
   emptyHint,
   note,
   nothingToShow,
 }: PiecePicksProps & {
   title: string;
+  /** Where the choices come from: the gallery unless the surface takes
+      sketches too. A module-level function, so it stays the same one. */
+  source?: () => Promise<Piece[]>;
   /** Over the ordered list: where the picks will appear. */
   listLabel: string;
   max: number;
@@ -68,7 +72,7 @@ export const PiecePicksDialog = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPieces = useMemo(() => (open ? fetchPieces : NO_PIECES), [open]);
+  const loadPieces = useMemo(() => (open ? source : NO_PIECES), [open, source]);
   const pieces = useAsync(loadPieces);
   const all = pieces.status === 'ready' ? pieces.data : [];
   const filter = useGalleryFilter(all);

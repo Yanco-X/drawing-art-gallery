@@ -61,10 +61,16 @@ export const PieceWallLabel = ({
         className="pencil-stroke pointer-events-none absolute inset-x-0 -top-[3px] h-1.5 opacity-70 wide:hidden [--stroke-src:var(--sa-rule-3)]"
       />
       <div className="flex flex-col gap-2">
-        {piece.waivedAt && (
+        {piece.waivedAt ? (
           <p className="text-[12px] uppercase tracking-eyebrow text-faint">
             Waived
           </p>
+        ) : (
+          piece.inSketchbook && (
+            <p className="text-[12px] uppercase tracking-eyebrow text-faint">
+              Sketchbook
+            </p>
+          )
         )}
         {/* The `cqi` term only bites when the column narrows for the tag
             drawer: the title scales down with it and keeps its line breaks. */}

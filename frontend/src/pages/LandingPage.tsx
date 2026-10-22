@@ -43,7 +43,11 @@ const LandingPage = () => {
   ];
 
   return (
-    <PageShell onPieceUploaded={(piece) => setAdded((now) => [piece, ...now])}>
+    <PageShell
+      onPieceUploaded={(piece) => {
+        if (!piece.inSketchbook) setAdded((now) => [piece, ...now]);
+      }}
+    >
       <Spotlight pieces={allPieces} collections={allCollections} />
 
       {SHOW_INTRO && <IntroSection />}

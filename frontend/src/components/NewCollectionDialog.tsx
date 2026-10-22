@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAsync, useGalleryFilter } from '../hooks';
-import { ApiError, createCollection, fetchPieces } from '../services';
+import { ApiError, createCollection, fetchPublicPieces } from '../services';
 import type { Collection, Piece } from '../types';
 import {
   FIELD,
@@ -34,7 +34,7 @@ export const NewCollectionDialog = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPieces = useMemo(() => (open ? fetchPieces : NO_PIECES), [open]);
+  const loadPieces = useMemo(() => (open ? fetchPublicPieces : NO_PIECES), [open]);
   const pieces = useAsync(loadPieces);
   const all = pieces.status === 'ready' ? pieces.data : [];
   const filter = useGalleryFilter(all);

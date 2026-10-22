@@ -8,6 +8,7 @@ import {
   CollectionsIcon,
   DeleteIcon,
   EditIcon,
+  GalleryIcon,
   ImageIcon,
   RestoreIcon,
   WaiveIcon,
@@ -22,6 +23,7 @@ import {
   replacePieceImage,
   restorePiece,
   setPieceCollections,
+  updatePiece,
   waivePiece,
 } from '../services';
 import type { CollectionSummary, Piece } from '../types';
@@ -48,8 +50,9 @@ export const PieceOwnerActions = ({
   onDeleted,
 }: PieceOwnerActionsProps) => {
   const [dialog, setDialog] = useState<
-    'waive' | 'restore' | 'delete' | 'collections' | 'edit' | 'image' | null
+    'waive' | 'restore' | 'delete' | 'collections' | 'edit' | 'image' | 'move' | null
   >(null);
+  const section = piece.inSketchbook ? 'sketchbook' : 'gallery';
   const [replacement, setReplacement] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,7 +139,7 @@ export const PieceOwnerActions = ({
   const restoreLabel =
     selected.length === 0
       ? 'Restore'
-      : `Restore to gallery and ${selected.length} collection${
+      : `Restore to ${section} and ${selected.length} collection${
           selected.length === 1 ? '' : 's'
         }`;
 
@@ -183,6 +186,14 @@ export const PieceOwnerActions = ({
             >
               <CollectionsIcon />
               Collections
+            </button>
+            <button
+              type="button"
+              onClick={() => setDialog('move')}
+              className={ICON_BUTTON}
+            >
+              <GalleryIcon />
+              {piece.inSketchbook ? 'Move to the gallery' : 'Move to sketchbook'}
             </button>
             <button
               type="button"
@@ -252,6 +263,34 @@ export const PieceOwnerActions = ({
       </ConfirmDialog>
 
       <ConfirmDialog
+        open={dialog === 'move'}
+        title={piece.inSketchbook ? 'Move to the gallery?' : 'Move to the sketchbook?'}
+        confirmLabel={piece.inSketchbook ? 'Move to the gallery' : 'Move to sketchbook'}
+        busyLabel="Moving…"
+        busy={busy}
+        error={error}
+        onCancel={close}
+        onConfirm={() =>
+          run(() => updatePiece(piece.id, { inSketchbook: !piece.inSketchbook }), onChanged)
+        }
+      >
+        {piece.inSketchbook ? (
+          <p>
+            <span className="text-text">{piece.title}</span> will hang in the
+            gallery, waiting at the top for a place on the Curate page.
+          </p>
+        ) : (
+          <p>
+            <span className="text-text">{piece.title}</span> will leave the
+            gallery for the sketchbook, giving up its place in the gallery's
+            order
+            {piece.spotlightOrder !== null && ' and its slot in the spotlight'}.
+          </p>
+        )}
+        <p>It keeps its collections and its place on the about page.</p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
         open={dialog === 'waive'}
         title="Waive this piece?"
         confirmLabel="Waive"
@@ -263,7 +302,7 @@ export const PieceOwnerActions = ({
       >
         <p>
           <span className="text-text">{piece.title}</span> will be removed
-          from the gallery
+          from the {section}
           {memberships.length > 0 && (
             <>
               , and from{' '}
@@ -295,14 +334,14 @@ export const PieceOwnerActions = ({
         onConfirm={() => run(() => restorePiece(piece.id, selected), onChanged)}
       >
         <p>
-          <span className="text-text">{piece.title}</span> will return to the
-          gallery.
+          <span className="text-text">{piece.title}</span> will return to the{' '}
+          {section}.
         </p>
         <CollectionPicker
           collections={available}
           selected={selected}
           loading={collections.status === 'loading'}
-          emptyMessage="No collections yet — this will return to the gallery on its own."
+          emptyMessage={`No collections yet — this will return to the ${section} on its own.`}
           onToggle={(id) =>
             setSelected((now) =>
               now.includes(id) ? now.filter((x) => x !== id) : [...now, id],

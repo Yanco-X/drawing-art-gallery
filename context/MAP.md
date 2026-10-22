@@ -18,6 +18,7 @@ Grepping fails when the code calls a thing something else. It calls them these.
 | featured, hero, carousel | **spotlight** | The picks the owner pins to the top of the landing page |
 | default order, manual order, arrange the gallery | **curation** / **curated order** | The owner's hand-set order of the gallery, and the page that sets it |
 | archived, hidden, soft-deleted | **waived** | A piece taken out of the gallery but not destroyed. Two stages: waive, then delete |
+| doodles, drafts, roughs, studies, unfinished work | **sketchbook** | The public section for unfinished work, off the gallery wall. `in_sketchbook` on a piece; independent of waived |
 | admin login, sign-in page | **keyhole** | There is no login screen. The owner opens a hidden trigger. See `AUTH.md` |
 | artwork, drawing, image | **piece** | The unit of content. `Piece` in TypeScript, `Piece` in `models.py` |
 | album, gallery, folder | **collection** | A named, ordered set of pieces, addressed by `slug` |
@@ -48,6 +49,7 @@ you need to change behaviour, not to find code.
 | Upload | any, owner only | `UploadModal`, `TagInput`, `MediumInput`, `CollectionPicker`, `YearField`, `hooks/useObjectUrl.ts`, `lib/upload.ts`, `lib/year.ts`, `lib/tags.ts`, `lib/media.ts` | `POST /api/pieces`, `services/images.py`, `storage.py` | `STORAGE.md` |
 | Replace image | piece page, owner only | `PieceOwnerActions`, `ReplacementComparison`, `hooks/useObjectUrl.ts`, `lib/upload.ts`, `replacePieceImage` in `services/pieces.ts` | `PUT /api/pieces/<id>/image`, `image_version` and `image_prefix` on `Piece` in `models.py`, `read_file_details` in `services/images.py`, `scripts/backfill_file_details.py` | `STORAGE.md` section 3 |
 | Waived pieces | `pages/WaivedPage.tsx` | `AllWorkSection` | `POST /api/pieces/<id>/waive`, `.../restore` | `WAIVED-PIECES.md` |
+| Sketchbook | `pages/SketchbookPage.tsx`, "Sketchbook" in the nav | `AllWorkSection`, `fetchSketchbook` and `fetchPublicPieces` in `services/pieces.ts`, the move action in `PieceOwnerActions`, "Goes to" in `UploadModal`, `list` on `TagShelf`, `source` on `PiecePicksDialog` | `?sketchbook=true`, `inSketchbook` and `IN_GALLERY` in `api/pieces.py`, `in_sketchbook` on `Piece` in `models.py`, the refusals in `api/curation.py` and `api/spotlight.py` | `SKETCHBOOK.md` |
 | About page | `pages/AboutPage.tsx`, "Yanco" in the nav | `PiecePicksDialog`, `LanguageToggle`, `lib/decode.ts`, `ABOUT_ORIGIN` in `lib/origin.ts`, the swap's view transition in `index.css`, `fetchAbout`, `setAboutText` and `setAboutPieces` in `services/pieces.ts` | `api/about.py`, `AboutPage` and `Piece.about_order` in `models.py` | `DESIGN.md` |
 | Owner session | hidden | `Keyhole`, `lib/keyhole.ts`, `services/keyhole.ts`, `hooks/useSecretTrigger.ts`, `contexts/SessionProvider.tsx` | `api/session.py`, `auth.py`, `ratelimit.py` | `AUTH.md` |
 | Socials | header | `SocialsMenu`, `SocialsDialog`, `platform-icons`, `contexts/SocialsProvider.tsx` | `api/socials.py` | STATUS.md section 9 |

@@ -122,6 +122,10 @@ class Piece(Base):
     # the reserve has a sort order for free.
     waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Off the gallery wall and still public: doodles, sketches, drafts.
+    # Independent of waived_at, so a restore lands back where the piece was.
+    in_sketchbook: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # Null is not hand-picked; an integer is the slot it holds, from zero.
     # Cleared when a piece is waived, so "set means exhibited" stays an
     # invariant the schema holds rather than a filter every query remembers.

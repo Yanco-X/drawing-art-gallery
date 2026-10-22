@@ -12,6 +12,7 @@ import LandingPage from './pages/LandingPage';
 import MetricsPage from './pages/MetricsPage';
 import PiecePage from './pages/PiecePage';
 import PrivacyPage from './pages/PrivacyPage';
+import SketchbookPage from './pages/SketchbookPage';
 import WaivedPage from './pages/WaivedPage';
 import { recordEvent } from './services';
 
@@ -35,6 +36,7 @@ function App() {
               <Route path="/piece/:id" element={<PiecePage />} />
               <Route path="/collections" element={<CollectionsIndexPage />} />
               <Route path="/collections/:slug" element={<CollectionPage />} />
+              <Route path="/sketchbook" element={<SketchbookPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route
                 path="/curate"

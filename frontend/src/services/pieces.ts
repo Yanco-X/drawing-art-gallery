@@ -73,7 +73,8 @@ export const createPiece = async (input: NewPiece): Promise<Piece> => {
   appendIf(form, 'medium', input.medium);
   appendIf(form, 'year', input.year);
   appendIf(form, 'createdDate', input.createdDate);
-  appendIf(form, 'position', input.position);
+  if (input.inSketchbook) form.append('inSketchbook', 'true');
+  else appendIf(form, 'position', input.position);
   // Repeated fields, which is how Flask's request.form.getlist reads a list.
   input.tags.forEach((tag) => form.append('tags', tag));
   input.collectionIds.forEach((id) => form.append('collectionIds', id));
@@ -102,6 +103,18 @@ export const fetchPieces = async (): Promise<Piece[]> => {
   const response = await fetch('/api/pieces');
   if (!response.ok) await raise(response);
   return response.json();
+};
+
+export const fetchSketchbook = async (): Promise<Piece[]> => {
+  const response = await fetch('/api/pieces?sketchbook=true');
+  if (!response.ok) await raise(response);
+  return response.json();
+};
+
+// Everything a visitor can see, for the pickers that offer both sections.
+export const fetchPublicPieces = async (): Promise<Piece[]> => {
+  const [gallery, sketchbook] = await Promise.all([fetchPieces(), fetchSketchbook()]);
+  return [...gallery, ...sketchbook];
 };
 
 // Neither awaited nor thrown: a count that fails must never reach a page.

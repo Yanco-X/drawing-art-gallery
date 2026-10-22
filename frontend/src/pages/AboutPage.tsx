@@ -18,7 +18,13 @@ import { CheckIcon, EditIcon } from '../components/icons';
 import { useAsync, useSession } from '../hooks';
 import { whenDecoded } from '../lib/decode';
 import { ABOUT_ORIGIN, pieceHref, sequenceState } from '../lib/origin';
-import { ApiError, fetchAbout, setAboutPieces, setAboutText } from '../services';
+import {
+  ApiError,
+  fetchAbout,
+  fetchPublicPieces,
+  setAboutPieces,
+  setAboutText,
+} from '../services';
 import type { About, Piece } from '../types';
 
 // Lazy and owner-only, as the spotlight's picker is.
@@ -380,6 +386,7 @@ const AboutPage = () => {
             listLabel="On the page"
             max={ABOUT_PIECES}
             save={savePieces}
+            source={fetchPublicPieces}
             emptyHint="Pick a cover first, then any others for the row beneath it."
             note="The first is the cover; the rest run beneath it."
           />

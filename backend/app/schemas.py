@@ -43,6 +43,7 @@ def piece_to_dict(piece: Piece) -> dict:
         "createdAt": piece.created_at.isoformat() if piece.created_at else None,
     # Null for an exhibited piece.
         "waivedAt": piece.waived_at.isoformat() if piece.waived_at else None,
+        "inSketchbook": piece.in_sketchbook,
     # The slot the owner gave this piece in the spotlight, or null. Sent to
     # everyone: one integer saves the landing page a second request.
         "spotlightOrder": piece.spotlight_order,

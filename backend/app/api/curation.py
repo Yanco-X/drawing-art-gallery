@@ -21,12 +21,12 @@ from ..models import Collection, Piece
 from ..schemas import collection_summary_to_dict, piece_to_dict
 from .collections import COLLECTION_ORDER
 from .helpers import load_all, ordered_ids
-from .pieces import GALLERY_ORDER
+from .pieces import GALLERY_ORDER, IN_GALLERY
 
 bp = Blueprint("curation", __name__, url_prefix="/curation")
 
 
-EXHIBITED = select(Piece).where(Piece.waived_at.is_(None))
+GALLERY = select(Piece).where(*IN_GALLERY)
 
 
 def _rewrite(session, model, found: dict, ids: list) -> None:
@@ -43,8 +43,8 @@ def _rewrite(session, model, found: dict, ids: list) -> None:
 def replace_piece_order():
     """Body: {"pieceIds": [...]}, the gallery from first to last."""
     session = SessionLocal()
-    exhibited = session.scalar(select(func.count()).select_from(EXHIBITED.subquery()))
-    ids = ordered_ids("pieceIds", exhibited, "That is more pieces than the gallery holds.")
+    hung = session.scalar(select(func.count()).select_from(GALLERY.subquery()))
+    ids = ordered_ids("pieceIds", hung, "That is more pieces than the gallery holds.")
 
     found = load_all(session, Piece, ids)
     waived = [str(pid) for pid in ids if found[pid].is_waived]
@@ -54,11 +54,18 @@ def replace_piece_order():
             status=409,
             details={"waived": waived},
         )
+    sketches = [str(pid) for pid in ids if found[pid].in_sketchbook]
+    if sketches:
+        raise ApiError(
+            "A sketchbook piece has no place in the gallery.",
+            status=409,
+            details={"sketchbook": sketches},
+        )
 
     _rewrite(session, Piece, found, ids)
     session.commit()
 
-    rows = session.scalars(EXHIBITED.order_by(*GALLERY_ORDER)).all()
+    rows = session.scalars(GALLERY.order_by(*GALLERY_ORDER)).all()
     return jsonify([piece_to_dict(piece) for piece in rows])
 
 

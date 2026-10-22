@@ -3,12 +3,18 @@ import { tally } from '../lib/tally';
 import {
   fetchAllCollections,
   fetchPieces,
+  fetchSketchbook,
   fetchWaivedPieces,
 } from '../services';
 import { StatTile } from './StatTile';
 
 const loadGallery = () =>
-  Promise.all([fetchPieces(), fetchWaivedPieces(), fetchAllCollections()]);
+  Promise.all([
+    fetchPieces(),
+    fetchSketchbook(),
+    fetchWaivedPieces(),
+    fetchAllCollections(),
+  ]);
 
 export const GalleryCounts = () => {
   const load = useAsync(loadGallery);
@@ -18,17 +24,18 @@ export const GalleryCounts = () => {
   }
   if (load.status === 'loading') return null;
 
-  const [pieces, waived, collections] = load.data;
+  const [pieces, sketchbook, waived, collections] = load.data;
+  const shown = [...pieces, ...sketchbook];
   const drafts = collections.filter((collection) => !collection.isPublic).length;
-  const tags = tally(pieces.flatMap((piece) => piece.tags.map((tag) => tag.name)));
-  const media = tally(pieces.flatMap((piece) => (piece.medium ? [piece.medium] : [])));
+  const tags = tally(shown.flatMap((piece) => piece.tags.map((tag) => tag.name)));
+  const media = tally(shown.flatMap((piece) => (piece.medium ? [piece.medium] : [])));
 
   return (
     <div className="grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
       <StatTile
         label="Pieces"
         value={String(pieces.length)}
-        note={`${waived.length} more waived`}
+        note={`${sketchbook.length} in the sketchbook, ${waived.length} waived`}
       />
       <StatTile
         label="Collections"
@@ -45,7 +52,7 @@ export const GalleryCounts = () => {
         value={String(media.length)}
         note={
           media[0]
-            ? `${media[0].value} on ${media[0].count} of ${pieces.length}`
+            ? `${media[0].value} on ${media[0].count} of ${shown.length}`
             : 'none given yet'
         }
       />

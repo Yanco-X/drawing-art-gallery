@@ -88,6 +88,12 @@ def replace_spotlight():
                 status=409,
                 details={f"spotlight[{index}]": str(piece_id)},
             )
+        if piece.in_sketchbook:
+            raise ApiError(
+                "A sketchbook piece cannot be in the spotlight.",
+                status=409,
+                details={f"spotlight[{index}]": str(piece_id)},
+            )
 
     # Cleared across the board before the picks are written, so a piece
     # dropped from the list in this same request does not keep its old slot.

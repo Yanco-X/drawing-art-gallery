@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { tagsInUse } from '../lib/tags';
-import { fetchPieces } from '../services';
+import { fetchPublicPieces } from '../services';
 import { FIELD, LABEL } from './form-styles';
 
 // A blur would close the list, and commit the half-typed draft as a tag of its
@@ -48,7 +48,7 @@ export const TagInput = ({
   // pieces, and a tag given to the last one should be offered for the next.
   const suggest = () => {
     setOpen(true);
-    fetchPieces()
+    fetchPublicPieces()
       .then((pieces) => setInUse(tagsInUse(pieces).map((tag) => tag.name)))
       .catch(() => {});
   };

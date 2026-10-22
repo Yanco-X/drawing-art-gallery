@@ -67,6 +67,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
   const [fields, setFields] = useState(EMPTY_FIELDS);
   const [tags, setTags] = useState<string[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [inSketchbook, setInSketchbook] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -95,6 +96,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     setFields(EMPTY_FIELDS);
     setTags([]);
     setCollectionIds([]);
+    setInSketchbook(false);
     setFile(null);
     setError(null);
     dragDepth.current = 0;
@@ -158,6 +160,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
         ...fields,
         year: effectiveYear(fields.year, fields.createdDate),
         file,
+        inSketchbook,
         tags,
         collectionIds,
       };
@@ -176,10 +179,11 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
     }
   };
 
+  const destination = inSketchbook ? 'sketchbook' : 'gallery';
   const submitLabel =
     collectionIds.length === 0
-      ? 'Add to gallery'
-      : `Add to gallery and ${collectionIds.length} collection${
+      ? `Add to ${destination}`
+      : `Add to ${destination} and ${collectionIds.length} collection${
           collectionIds.length === 1 ? '' : 's'
         }`;
 
@@ -272,7 +276,7 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
                   // answer.
                   collections.status === 'error'
                     ? 'Could not load collections — you can add this piece to one afterwards.'
-                    : 'No collections yet — this goes straight to the gallery.'
+                    : `No collections yet — this goes straight to the ${destination}.`
                 }
                 onToggle={(id) =>
                   setCollectionIds((now) =>
@@ -343,26 +347,60 @@ export const UploadModal = ({ open, onClose, onUploaded }: UploadModalProps) => 
 
             <TagInput id={fieldId + '-tags'} tags={tags} onChange={setTags} />
 
-            <div className="flex flex-col gap-2">
-              <label htmlFor={fieldId + '-position'} className={LABEL}>
-                Position in the gallery
-              </label>
-              <input
-                id={fieldId + '-position'}
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={fields.position}
-                onChange={(event) => setField('position', event.target.value)}
-                placeholder="Top"
-                className={FIELD}
-              />
-              <p className="text-[12px] text-faint">
-                Empty puts it at the top, waiting to be placed on the Curate
-                page. A number hangs it there, and fixes the gallery's order
-                as it stands.
-              </p>
-            </div>
+            <fieldset className="flex flex-col gap-2">
+              <legend className={LABEL + ' mb-2'}>Goes to</legend>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <label className="flex cursor-pointer items-center gap-2 text-[14px] text-dim transition-colors duration-200 hover:text-text">
+                  <input
+                    type="radio"
+                    name={fieldId + '-goes-to'}
+                    checked={!inSketchbook}
+                    onChange={() => setInSketchbook(false)}
+                    className="size-4 accent-accent"
+                  />
+                  The gallery
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-[14px] text-dim transition-colors duration-200 hover:text-text">
+                  <input
+                    type="radio"
+                    name={fieldId + '-goes-to'}
+                    checked={inSketchbook}
+                    onChange={() => setInSketchbook(true)}
+                    className="size-4 accent-accent"
+                  />
+                  The sketchbook
+                </label>
+              </div>
+              {inSketchbook && (
+                <p className="text-[12px] text-faint">
+                  Doodles, sketches and drafts, newest first. It can move to the
+                  gallery later.
+                </p>
+              )}
+            </fieldset>
+
+            {!inSketchbook && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor={fieldId + '-position'} className={LABEL}>
+                  Position in the gallery
+                </label>
+                <input
+                  id={fieldId + '-position'}
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={fields.position}
+                  onChange={(event) => setField('position', event.target.value)}
+                  placeholder="Top"
+                  className={FIELD}
+                />
+                <p className="text-[12px] text-faint">
+                  Empty puts it at the top, waiting to be placed on the Curate
+                  page. A number hangs it there, and fixes the gallery's order
+                  as it stands.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

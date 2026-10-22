@@ -66,7 +66,10 @@ export const PageShell = ({
               setUploaded(null);
             }}
           >
-            <p>{uploaded?.title} is in the gallery.</p>
+            <p>
+              {uploaded?.title} is in the{' '}
+              {uploaded?.inSketchbook ? 'sketchbook' : 'gallery'}.
+            </p>
           </ConfirmDialog>
         </>
       )}

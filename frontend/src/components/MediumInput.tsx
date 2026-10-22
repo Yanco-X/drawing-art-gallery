@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { mediumOptions } from '../lib/media';
-import { fetchPieces } from '../services';
+import { fetchPublicPieces } from '../services';
 import { FIELD, LABEL } from './form-styles';
 import { ChevronDownIcon } from './icons';
 
@@ -54,7 +54,7 @@ export const MediumInput = ({
   const suggest = () => {
     setTyped(false);
     setOpen(true);
-    fetchPieces()
+    fetchPublicPieces()
       .then((pieces) => setOptions(mediumOptions(pieces)))
       .catch(() => {});
   };

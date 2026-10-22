@@ -44,6 +44,7 @@ export interface Piece {
   createdDate: string | null;
   tags: Tag[];
   waivedAt: string | null;
+  inSketchbook: boolean;
   spotlightOrder: number | null;
   // Null until the owner places it, and always null for a visitor.
   curatedOrder: number | null;
@@ -133,7 +134,9 @@ export interface NewPiece {
   year: string;
   createdDate: string;
   // The raw input, counting from 1. Empty hangs the piece at the top.
+  // Never sent with `inSketchbook`: the API refuses a place off the wall.
   position: string;
+  inSketchbook: boolean;
   tags: string[];
   collectionIds: string[];
 }
@@ -152,6 +155,8 @@ export interface PiecePatch {
   focalZoom?: number | null;
   // The whole list -- an omitted tag is a removed one.
   tags?: string[];
+  // Moving into the sketchbook gives up the spotlight and the gallery order.
+  inSketchbook?: boolean;
 }
 
 // `slug` is deliberately absent: the API only re-slugs when it is sent, which

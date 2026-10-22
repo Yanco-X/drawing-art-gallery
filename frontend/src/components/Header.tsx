@@ -39,6 +39,11 @@ const buildNavItems = (pathname: string, role: Role): NavItem[] => {
       to: '/collections',
       active: pathname.startsWith('/collections'),
     },
+    {
+      label: 'Sketchbook',
+      to: '/sketchbook',
+      active: pathname.startsWith('/sketchbook'),
+    },
     { label: 'Yanco', to: '/about', active: pathname.startsWith('/about') },
   ];
 

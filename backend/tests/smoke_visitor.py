@@ -120,6 +120,25 @@ check("but not the file's details, camera included", piece.get("file") is None,
       str(piece.get("file")))
 
 
+print("\n== a visitor may leaf through the sketchbook ==")
+for title in ("__contract__ Doodle", "__contract__ Torn Out"):
+    client.post(
+        "/api/pieces", headers=OWNER, content_type="multipart/form-data",
+        data={"title": title, "inSketchbook": "true",
+              "image": (io.BytesIO(make_image()), "a.jpg")},
+    )
+torn_out = next(
+    p["id"] for p in client.get("/api/pieces?sketchbook=true").get_json()
+    if p["title"] == "__contract__ Torn Out"
+)
+client.post(f"/api/pieces/{torn_out}/waive", headers=OWNER)
+res = client.get("/api/pieces?sketchbook=true")
+sketchbook = [p["title"] for p in res.get_json()]
+check("the sketchbook is public", res.status_code == 200, str(res.status_code))
+check("and holds its sketch", "__contract__ Doodle" in sketchbook, str(sketchbook))
+check("but never a waived one", "__contract__ Torn Out" not in sketchbook, str(sketchbook))
+
+
 print("\n== a visitor may browse public collections ==")
 res = client.get("/api/collections")
 names = [c["name"] for c in res.get_json()]
@@ -175,6 +194,10 @@ check(
 check(
     "the reserve needs the owner",
     client.get("/api/pieces?waived=true").status_code == 401,
+)
+check(
+    "and asking for the sketchbook as well does not route around it",
+    client.get("/api/pieces?waived=true&sketchbook=true").status_code == 401,
 )
 check(
     "so does listing drafts",
