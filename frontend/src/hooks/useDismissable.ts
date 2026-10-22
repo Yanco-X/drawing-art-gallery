@@ -20,7 +20,10 @@ export const useDismissable = <T extends HTMLElement>(
       if (!root.current?.contains(event.target as Node)) latest.current();
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') latest.current();
+      if (event.key !== 'Escape') return;
+      // Inside a modal dialog the same key would also close the dialog.
+      event.preventDefault();
+      latest.current();
     };
     document.addEventListener('mousedown', onPointer);
     document.addEventListener('keydown', onKey);

@@ -1,33 +1,21 @@
+import type { useGalleryFilter } from '../hooks';
 import { FIELD, LABEL, SUBTLE_ACTION } from './form-styles';
+import { MultiSelect } from './MultiSelect';
 
 export const PieceFilters = ({
   id,
-  query,
-  onQueryChange,
-  year,
-  onYearChange,
-  years,
-  showing,
+  filter,
   total,
-  active,
-  onClear,
 }: {
   id: string;
-  query: string;
-  onQueryChange: (value: string) => void;
-  year: string;
-  onYearChange: (value: string) => void;
-  years: number[];
-  showing: number;
+  filter: ReturnType<typeof useGalleryFilter>;
   total: number;
-  active: boolean;
-  onClear: () => void;
 }) => (
   <div className="flex flex-col gap-4 border-t border-line pt-4">
     <div className="flex items-baseline justify-between gap-3">
       <span className={LABEL}>Filter</span>
-      {active && (
-        <button type="button" onClick={onClear} className={SUBTLE_ACTION}>
+      {filter.active && (
+        <button type="button" onClick={filter.clear} className={SUBTLE_ACTION}>
           Clear
         </button>
       )}
@@ -35,43 +23,49 @@ export const PieceFilters = ({
 
     <div className="flex flex-col gap-2">
       <label htmlFor={id + '-query'} className="sr-only">
-        Search by title
+        Search
       </label>
       <input
         id={id + '-query'}
         type="search"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Search titles…"
+        value={filter.query}
+        onChange={(event) => filter.setQuery(event.target.value)}
+        placeholder="Title, medium, tag…"
         className={FIELD}
       />
     </div>
 
-    {years.length > 0 && (
-      <div className="flex flex-col gap-2">
-        <label htmlFor={id + '-year'} className="sr-only">
-          Filter by year
-        </label>
-        <select
-          id={id + '-year'}
-          value={year}
-          onChange={(event) => onYearChange(event.target.value)}
-          className={FIELD + ' cursor-pointer'}
-        >
-          <option value="">Any year</option>
-          {years.map((value) => (
-            <option key={value} value={String(value)}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+    {filter.availableYears.length > 0 && (
+      <MultiSelect
+        sizing=""
+        label="Year"
+        placeholder="Any year"
+        options={filter.availableYears.map((year) => ({
+          value: String(year),
+          label: String(year),
+        }))}
+        selected={filter.years.map(String)}
+        onToggle={(value) => filter.toggleYear(Number(value))}
+        summarise={(count) => `${count} years`}
+      />
+    )}
+
+    {filter.availableTags.length > 0 && (
+      <MultiSelect
+        sizing=""
+        label="Tags"
+        placeholder="Any tag"
+        options={filter.availableTags.map((tag) => ({ value: tag.id, label: tag.name }))}
+        selected={filter.tagIds}
+        onToggle={filter.toggleTag}
+        summarise={(count) => `${count} tags`}
+      />
     )}
 
     <p className="text-[12px] text-faint">
-      {showing === total
+      {filter.filtered.length === total
         ? `${total} ${total === 1 ? 'piece' : 'pieces'}`
-        : `${showing} of ${total} shown`}
+        : `${filter.filtered.length} of ${total} shown`}
     </p>
   </div>
 );

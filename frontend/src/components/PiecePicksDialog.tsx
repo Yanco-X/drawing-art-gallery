@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useAsync, usePieceFilter } from '../hooks';
+import { useAsync, useGalleryFilter } from '../hooks';
 import { move } from '../lib/order';
 import { ApiError, fetchPieces } from '../services';
 import type { Piece } from '../types';
@@ -71,7 +71,7 @@ export const PiecePicksDialog = ({
   const loadPieces = useMemo(() => (open ? fetchPieces : NO_PIECES), [open]);
   const pieces = useAsync(loadPieces);
   const all = pieces.status === 'ready' ? pieces.data : [];
-  const filter = usePieceFilter(all);
+  const filter = useGalleryFilter(all);
 
   // Reopened, the dialog shows what is actually saved rather than what was
   // abandoned last time.
@@ -203,15 +203,8 @@ export const PiecePicksDialog = ({
 
             <PieceFilters
               id={fieldId}
-              query={filter.query}
-              onQueryChange={filter.setQuery}
-              year={filter.year}
-              onYearChange={filter.setYear}
-              years={filter.years}
-              showing={filter.filtered.length}
+              filter={filter}
               total={all.length}
-              active={filter.active}
-              onClear={filter.clear}
             />
 
             <div className="flex flex-col gap-1 border-t border-line pt-4">

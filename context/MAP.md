@@ -37,8 +37,8 @@ you need to change behaviour, not to find code.
 |---|---|---|---|---|
 | Landing page | `pages/LandingPage.tsx` | `IntroSection`, `Spotlight`, `CollectionsSection`, `AllWorkSection` | `GET /api/pieces`, `GET /api/collections` | `feature/landing-phase-*.md` |
 | Spotlight | landing | `Spotlight`, `SpotlightDialog`, `PiecePicksDialog`, `SpotlightOrder`, `FocalPicker`, `lib/spotlight.ts`, `lib/swipe.ts`, `hooks/useSpotlight.ts` | `api/spotlight.py` | STATUS.md section 9 |
-| Piece grid | landing, collection, waived | `AllWorkSection`, `MasonryGrid`, `lib/masonry.ts`, `PieceCard`, `PieceFilters`, `DensityControl`, `hooks/useGridDensity.ts`, `hooks/useFlipReflow.ts`, `hooks/usePieceFilter.ts` | `GET /api/pieces` | `DESIGN.md` |
-| Gallery filter | landing, collection | `GalleryFilter`, `MultiSelect`, `hooks/useGalleryFilter.ts`, `lib/tags.ts` | -- filters in the browser | `DESIGN.md`, `current-feature.md` |
+| Piece grid | landing, collection, waived | `AllWorkSection`, `MasonryGrid`, `lib/masonry.ts`, `PieceCard`, `PieceFilters`, `DensityControl`, `hooks/useGridDensity.ts`, `hooks/useFlipReflow.ts` | `GET /api/pieces` | `DESIGN.md` |
+| Gallery filter | landing, collection, and the piece pickers (`PieceFilters` in add work, new collection, spotlight and about picks) | `GalleryFilter`, `PieceFilters`, `MultiSelect`, `hooks/useGalleryFilter.ts`, `hooks/useDismissable.ts`, `lib/tags.ts` | -- filters in the browser | `DESIGN.md`, `current-feature.md` |
 | Gallery sort | landing, collection | `GallerySort`, `hooks/useGallerySort.ts`, `lib/sortPieces.ts` | `createdAt` on the piece payload | `DESIGN.md` |
 | Curation | `pages/CurationPage.tsx`, owner only | `CurationBoard`, `PieceTile`, `CollectionTile`, `lib/order.ts`, `setCuratedOrder` and `setCollectionOrder` in `services/pieces.ts` | `api/curation.py`, `GALLERY_ORDER` in `api/pieces.py`, `COLLECTION_ORDER` in `api/collections.py` | `CURATION.md` |
 | List memory | landing, collection | `hooks/useReturnMemory.ts`, `lib/returnMemory.ts` | -- | `DESIGN.md` |

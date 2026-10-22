@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useAsync, usePieceFilter } from '../hooks';
+import { useAsync, useGalleryFilter } from '../hooks';
 import { fetchPieces } from '../services';
 import type { Piece } from '../types';
 import { GHOST_BUTTON, PRIMARY_BUTTON, SUBTLE_ACTION } from './form-styles';
@@ -35,7 +35,7 @@ export const AddWorkDialog = ({
       ),
     [pieces, excludeIds],
   );
-  const filter = usePieceFilter(available);
+  const filter = useGalleryFilter(available);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -122,15 +122,8 @@ export const AddWorkDialog = ({
 
             <PieceFilters
               id={headingId}
-              query={filter.query}
-              onQueryChange={filter.setQuery}
-              year={filter.year}
-              onYearChange={filter.setYear}
-              years={filter.years}
-              showing={filter.filtered.length}
+              filter={filter}
               total={available.length}
-              active={filter.active}
-              onClear={filter.clear}
             />
 
             <div className="flex items-baseline justify-between gap-3 border-t border-line pt-4">

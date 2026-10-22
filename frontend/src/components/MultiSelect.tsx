@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useDismissable } from '../hooks';
 import { LABEL } from './form-styles';
 import { ChevronDownIcon } from './icons';
@@ -23,6 +23,7 @@ export const MultiSelect = ({
   selected,
   onToggle,
   summarise,
+  sizing = 'max-w-[240px] min-w-[180px] flex-1',
 }: {
   label: string;
   placeholder: string;
@@ -30,10 +31,24 @@ export const MultiSelect = ({
   selected: string[];
   onToggle: (value: string) => void;
   summarise?: (count: number) => string;
+  /** Width classes. The default shares a filter row; empty fills a column. */
+  sizing?: string;
 }) => {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const root = useDismissable<HTMLDivElement>(open, () => setOpen(false));
+  const searchField = useRef<HTMLInputElement>(null);
   const id = useId();
+
+  // Not on touch: the keyboard would rise over the list that was asked for.
+  useEffect(() => {
+    if (open && window.matchMedia('(pointer: fine)').matches) searchField.current?.focus();
+  }, [open]);
+
+  const needle = search.trim().toLowerCase();
+  const visible = needle
+    ? options.filter((option) => option.label.toLowerCase().includes(needle))
+    : options;
 
   const chosen = options.filter((option) => selected.includes(option.value));
   const summary =
@@ -44,14 +59,17 @@ export const MultiSelect = ({
         : (summarise?.(chosen.length) ?? `${chosen.length} selected`);
 
   return (
-    <div ref={root} className="relative w-full max-w-[240px] min-w-[180px] flex-1">
+    <div ref={root} className={'relative w-full ' + sizing}>
       <span id={id + '-label'} className={LABEL + ' mb-3 block'}>
         {label}
       </span>
 
       <button
         type="button"
-        onClick={() => setOpen((was) => !was)}
+        onClick={() => {
+          if (!open) setSearch('');
+          setOpen(!open);
+        }}
         aria-expanded={open}
         aria-haspopup="true"
         aria-labelledby={`${id}-label ${id}-summary`}
@@ -83,9 +101,25 @@ export const MultiSelect = ({
         data-open={open}
         className="menu-panel absolute top-full left-0 z-20 mt-2 max-h-[280px] w-full min-w-[180px] overflow-y-auto border border-line bg-surface"
       >
+        <input
+          ref={searchField}
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            // The filter can sit inside a form, and Enter would submit it.
+            if (event.key === 'Enter') event.preventDefault();
+          }}
+          aria-label={'Search ' + label.toLowerCase()}
+          placeholder="Type to filter…"
+          className="sticky top-0 z-10 w-full border-0 border-b border-line bg-surface px-3 py-2.5 text-[14px] text-text placeholder:text-faint focus:border-accent focus:outline-none"
+        />
         <fieldset className="border-none p-1">
           <legend className="sr-only">{label}</legend>
-          {options.map((option) => (
+          {visible.length === 0 && (
+            <p className="px-3 py-2 text-[13px] text-faint">No matches</p>
+          )}
+          {visible.map((option) => (
             <label
               key={option.value}
               className="flex cursor-pointer items-center gap-3 px-3 py-2 text-[14px] text-dim transition-colors duration-200 hover:text-accent"

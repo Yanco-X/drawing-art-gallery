@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react';
 import { tagsInUse } from '../lib/tags';
 import type { CollectionSummary, Piece } from '../types';
 
+// Shared, so the memos keyed on it hold when a caller has no collections.
+const NO_COLLECTIONS: CollectionSummary[] = [];
+
 export const useGalleryFilter = (
   pieces: Piece[],
-  collections: CollectionSummary[],
+  collections: CollectionSummary[] = NO_COLLECTIONS,
   initial?: {
     query: string;
     years: number[];

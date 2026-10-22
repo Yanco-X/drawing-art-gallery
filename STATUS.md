@@ -642,8 +642,9 @@ the title and year filters usually remove the scroll entirely. The mode is
 gone: `PieceCard`, `MasonryGrid` and `AllWorkSection` no longer know what a
 selection is.
 
-`PiecePickerGrid`, `PieceFilters` and `usePieceFilter` are shared with the
-Add work dialog in arrange mode, which had the same unfiltered scroll.
+`PiecePickerGrid` and `PieceFilters` are shared with the Add work dialog in
+arrange mode, which had the same unfiltered scroll. The filter is the
+gallery's own `useGalleryFilter`: search, years and tags.
 
 **Collection view** is specified in
 [`context/COLLECTIONS.md`](context/COLLECTIONS.md). A collection has a page

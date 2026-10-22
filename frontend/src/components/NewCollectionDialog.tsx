@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useAsync, usePieceFilter } from '../hooks';
+import { useAsync, useGalleryFilter } from '../hooks';
 import { ApiError, createCollection, fetchPieces } from '../services';
 import type { Collection, Piece } from '../types';
 import {
@@ -37,7 +37,7 @@ export const NewCollectionDialog = ({
   const loadPieces = useMemo(() => (open ? fetchPieces : NO_PIECES), [open]);
   const pieces = useAsync(loadPieces);
   const all = pieces.status === 'ready' ? pieces.data : [];
-  const filter = usePieceFilter(all);
+  const filter = useGalleryFilter(all);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -163,15 +163,8 @@ export const NewCollectionDialog = ({
 
             <PieceFilters
               id={fieldId}
-              query={filter.query}
-              onQueryChange={filter.setQuery}
-              year={filter.year}
-              onYearChange={filter.setYear}
-              years={filter.years}
-              showing={filter.filtered.length}
+              filter={filter}
               total={all.length}
-              active={filter.active}
-              onClear={filter.clear}
             />
 
             <div className="flex flex-col gap-1 border-t border-line pt-4">
