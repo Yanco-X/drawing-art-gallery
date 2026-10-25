@@ -8,6 +8,7 @@ MemoryStorage. Runs the real app, real Pillow processing, real routes.
 import io
 import os
 import sys
+import tempfile
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,7 +24,7 @@ from app.db import Base, SessionLocal  # noqa: E402
 from app.models import Piece, Tag  # noqa: E402
 from app.services.images import tile_level_count, tile_pyramid  # noqa: E402
 from sqlalchemy import select  # noqa: E402
-from app.storage import MemoryStorage  # noqa: E402
+from app.storage import LocalStorage, MemoryStorage  # noqa: E402
 
 OWNER = {"X-Owner-Token": "test-token"}
 checks = []
@@ -646,6 +647,40 @@ replaced = replace(detail["id"], make_image(60, 40, exif=exif.tobytes()), "q.jpg
 check("a replacement brings its own file details",
       replaced["file"]["captureDevice"] == "Motorola Moto G (4)"
       and replaced["file"]["originalName"] == "q.jpg", str(replaced["file"]))
+
+
+print("\n== the local backend deletes single keys, as the others do ==")
+with tempfile.TemporaryDirectory() as root:
+    local = LocalStorage(root)
+    for key in ("p/display.webp", "p/thumb.webp", "p/tiles/0/0_0.webp", "p/v1/display.webp"):
+        local.save(key, b"x", "image/webp")
+    for stale in ("p/display.webp", "p/thumb.webp", "p/tiles/"):
+        local.delete_prefix(stale)
+    check("a replaced display and thumb are removed",
+          not os.path.exists(os.path.join(root, "p", "display.webp"))
+          and not os.path.exists(os.path.join(root, "p", "thumb.webp")))
+    check("the old tiles directory is removed",
+          not os.path.exists(os.path.join(root, "p", "tiles")))
+    check("the new version is untouched",
+          os.path.exists(os.path.join(root, "p", "v1", "display.webp")))
+
+
+print("\n== malformed tags and numbers answer 400, never 500 ==")
+pid = detail["id"]
+for label, body in [
+    ("a non-text tag", {"tags": [5]}),
+    ("a tag past its column", {"tags": ["x" * 101]}),
+    ("more tags than a piece holds", {"tags": [f"t{n}" for n in range(51)]}),
+    ("a tag with a NUL", {"tags": ["a\x00b"]}),
+    ("an infinite year", {"year": 1e400}),
+    ("an infinite zoom", {"focalZoom": 1e400}),
+]:
+    res = client.patch(f"/api/pieces/{pid}", headers=OWNER, json=body)
+    check(f"{label} is refused", res.status_code == 400, str(res.status_code))
+res = client.patch(f"/api/pieces/{pid}", headers=OWNER, json={"tags": ["Ink", "ink", "  "]})
+check("ordinary tags still save, deduplicated",
+      res.status_code == 200 and [t["name"] for t in res.get_json()["tags"]] == ["ink"],
+      str(res.get_json().get("tags")))
 
 
 failed = [c for c in checks if not c[1]]

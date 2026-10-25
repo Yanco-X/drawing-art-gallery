@@ -11,7 +11,7 @@ from .cli import register_cli
 from .config import Config, production_setting_problems
 from .db import SessionLocal, init_engine
 from .errors import register_error_handlers
-from .ratelimit import AttemptLimiter, WindowCounter
+from .ratelimit import AttemptLimiter, DistinctLimiter, WindowCounter
 from .storage import LocalStorage, build_storage
 
 
@@ -44,6 +44,12 @@ def create_app(
     )
     app.extensions["visits_budget"] = WindowCounter(
         app.config["VISITS_PER_HOUR"], timedelta(hours=1)
+    )
+    app.extensions["visitor_ids_per_client"] = DistinctLimiter(
+        app.config["VISITOR_IDS_PER_CLIENT_PER_DAY"], timedelta(days=1)
+    )
+    app.extensions["visits_per_visitor"] = AttemptLimiter(
+        app.config["VISITS_PER_VISITOR_PER_DAY"], timedelta(days=1)
     )
 
     init_auth(app)

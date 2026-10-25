@@ -139,6 +139,16 @@ check("an unknown platform is accepted, since the icon falls back",
       .status_code == 200)
 check("emptying the list is allowed", put([]).status_code == 200 and listed() == [])
 
+print("\n== malformed fields answer 400, never 500 ==")
+for label, entry in [
+    ("a numeric platform", {"platform": 5, "label": "x", "url": "https://x.example"}),
+    ("a numeric url", {"platform": "x", "label": "x", "url": 5}),
+    ("a url past its column", {"platform": "x", "label": "x", "url": "https://x.example/" + "a" * 500}),
+    ("a label with a NUL", {"platform": "x", "label": "a\x00b", "url": "https://x.example"}),
+]:
+    res = put([entry])
+    check(f"{label} is refused", res.status_code == 400, str(res.status_code))
+
 
 passed = sum(1 for _, ok, _ in checks if ok)
 print(f"\n{passed}/{len(checks)} checks passed")

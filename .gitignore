@@ -37,3 +37,6 @@ graphify-out/
 .claude/skills/brag
 skills-lock.json
 brag-output/
+
+# cloudflare/security-audit-skill, copied by hand from commit c1c8a8c.
+.claude/skills/security-audit/

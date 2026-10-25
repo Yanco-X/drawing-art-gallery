@@ -20,7 +20,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
 
 from app import create_app  # noqa: E402
-from app.config import Config  # noqa: E402
+from app.config import Config, production_setting_problems  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
 from app.models import User, new_session_token  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
@@ -125,6 +125,7 @@ check(
 )
 
 print("\n== signing out ==")
+copied = client.get_cookie("remember_token").value
 res = client.delete("/api/session")
 check("returns the visitor role", res.get_json() == {"role": "visitor"},
       str(res.get_json()))
@@ -132,6 +133,12 @@ check("the caller is a visitor again", role() == "visitor")
 check("and cannot write", a_mutation().status_code == 401)
 check("signing out twice is refused, like any owner route",
       client.delete("/api/session").status_code == 401)
+thief = app.test_client()
+thief.set_cookie("remember_token", copied)
+check("a remember cookie copied before sign-out is dead after it",
+      thief.get("/api/session/me").get_json()["role"] == "visitor")
+check("and cannot write",
+      thief.post("/api/collections", json={"name": "__session_fixture__ copied"}).status_code == 401)
 
 print("\n== repeated guessing ==")
 app.extensions["login_attempts"].clear("127.0.0.1")
@@ -159,6 +166,39 @@ with app.app_context():
 check("the old cookie no longer identifies the owner",
       client.get("/api/session/me").get_json()["role"] == "visitor")
 check("the password still signs in", sign_in(PASSWORD).status_code == 200)
+
+print("\n== behind the edge, every guess is counted ==")
+app.config["TRUST_X_REAL_IP"] = True
+limit = TestConfig.LOGIN_MAX_ATTEMPTS
+
+
+def guesses(headers_for):
+    app.extensions["login_attempts"].clear("127.0.0.1")
+    return [
+        client.post("/api/session", json={"password": "wrong"}, headers=headers_for(n)).status_code
+        for n in range(limit + 1)
+    ]
+
+
+check("a missing X-Real-IP falls back to the socket and is limited",
+      guesses(lambda n: {})[-1] == 429)
+check("a junk X-Real-IP per guess cannot escape the limit",
+      guesses(lambda n: {"X-Real-IP": f"a{n}"})[-1] == 429)
+check("an empty X-Real-IP is limited too",
+      guesses(lambda n: {"X-Real-IP": ""})[-1] == 429)
+app.extensions["login_attempts"].clear("127.0.0.1")
+check("a real X-Real-IP is its own client",
+      client.post("/api/session", json={"password": PASSWORD},
+                  headers={"X-Real-IP": "198.51.100.7"}).status_code == 200)
+app.config["TRUST_X_REAL_IP"] = False
+
+print("\n== production must choose how to read the client ==")
+production = {"SECRET_KEY": "x", "COOKIE_SECURE": "1", "STORAGE_BACKEND": "s3"}
+check("leaving TRUST_X_REAL_IP unset refuses to start",
+      "TRUST_X_REAL_IP is not set to 0 or 1" in production_setting_problems(production))
+check("either explicit value is accepted",
+      production_setting_problems({**production, "TRUST_X_REAL_IP": "1"}) == []
+      and production_setting_problems({**production, "TRUST_X_REAL_IP": "0"}) == [])
 
 
 passed = sum(1 for _, ok, _ in checks if ok)

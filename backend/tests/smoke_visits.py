@@ -24,7 +24,7 @@ from app.config import Config  # noqa: E402
 from app.db import Base, SessionLocal  # noqa: E402
 from app.api.visits import EVENT_RETENTION, purge_expired_events  # noqa: E402
 from app.models import VisitEvent  # noqa: E402
-from app.ratelimit import AttemptLimiter, WindowCounter  # noqa: E402
+from app.ratelimit import AttemptLimiter, DistinctLimiter, WindowCounter  # noqa: E402
 from app.storage import MemoryStorage  # noqa: E402
 
 OWNER = {"X-Owner-Token": "test-token"}
@@ -111,6 +111,12 @@ def stored(**where):
 def fresh_limits():
     app.extensions["visits_per_client"] = AttemptLimiter(
         app.config["VISITS_PER_CLIENT_PER_MINUTE"], timedelta(minutes=1)
+    )
+    app.extensions["visitor_ids_per_client"] = DistinctLimiter(
+        app.config["VISITOR_IDS_PER_CLIENT_PER_DAY"], timedelta(days=1)
+    )
+    app.extensions["visits_per_visitor"] = AttemptLimiter(
+        app.config["VISITS_PER_VISITOR_PER_DAY"], timedelta(days=1)
     )
 
 
@@ -211,6 +217,45 @@ check("but only the budget is stored", stored() == before + 2, f"{before} -> {st
 app.extensions["visits_budget"] = WindowCounter(
     app.config["VISITS_PER_HOUR"], timedelta(hours=1)
 )
+
+
+print("\n== a script cannot mint visitors or visits ==")
+fresh_limits()
+before = stored()
+for _ in range(12):
+    send({"kind": "visit", "visitorId": str(uuid.uuid4())},
+         environ_base={"REMOTE_ADDR": "10.0.0.3"})
+check("one client is counted as at most ten visitors a day",
+      stored() == before + 10, f"{before} -> {stored()}")
+check("another client still counts",
+      send({"kind": "visit", "visitorId": str(uuid.uuid4())},
+           environ_base={"REMOTE_ADDR": "10.0.0.4"}).status_code == 204
+      and stored() == before + 11)
+
+fresh_limits()
+before = stored()
+repeat = {"kind": "visit", "visitorId": str(uuid.uuid4())}
+for _ in range(25):
+    send(repeat, environ_base={"REMOTE_ADDR": "10.0.0.5"})
+check("one visitor is counted for at most twenty visits a day",
+      stored() == before + 20, f"{before} -> {stored()}")
+piece_view = {**repeat, "kind": "piece_view", "pieceId": hung}
+send(piece_view, environ_base={"REMOTE_ADDR": "10.0.0.5"})
+check("their piece views still count", stored() == before + 21, f"{before} -> {stored()}")
+
+fresh_limits()
+before = stored()
+for n in range(12):
+    send({"kind": "visit", "visitorId": str(uuid.uuid4())},
+         environ_base={"REMOTE_ADDR": f"2001:db8::{n + 1}"})
+check("one IPv6 /64 is one client",
+      stored() == before + 10, f"{before} -> {stored()}")
+
+ids = DistinctLimiter(2, timedelta(days=1), max_keys=100)
+for n in range(1000):
+    ids.allow(f"10.2.{n // 256}.{n % 256}", n)
+check("a thousand clients cannot grow the id limiter past its bound",
+      len(ids._windows) <= 100, str(len(ids._windows)))
 
 limiter = AttemptLimiter(5, timedelta(minutes=1), max_keys=100)
 for _ in range(5):

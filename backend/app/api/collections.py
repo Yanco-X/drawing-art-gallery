@@ -9,7 +9,7 @@ from ..errors import ApiError
 from ..models import Collection, CollectionPiece, Piece
 from ..schemas import collection_summary_to_dict, collection_to_dict
 from ..services.slugs import unique_slug
-from .helpers import bounded_text, parse_focal, parse_focal_zoom, parse_uuid
+from .helpers import bounded_text, flag, json_object, parse_focal, parse_focal_zoom, parse_uuid
 
 bp = Blueprint("collections", __name__, url_prefix="/collections")
 
@@ -26,13 +26,6 @@ COLLECTION_ORDER = (
     Collection.created_at.desc(),
     Collection.name,
 )
-
-
-def _body() -> dict:
-    data = request.get_json(silent=True)
-    if not isinstance(data, dict):
-        raise ApiError("Expected a JSON object body.")
-    return data
 
 
 def _load(session, collection_id) -> Collection:
@@ -149,7 +142,7 @@ def get_collection(slug: str):
 @bp.post("")
 @require_owner
 def create_collection():
-    data = _body()
+    data = json_object()
     name = bounded_text(data.get("name"), "name", NAME_MAX)
     if not name:
         raise ApiError("A collection needs a name.", details={"name": "required"})
@@ -157,10 +150,12 @@ def create_collection():
     session = SessionLocal()
     collection = Collection(
         name=name,
-        slug=unique_slug(session, Collection, data.get("slug") or name),
+        slug=unique_slug(
+            session, Collection, bounded_text(data.get("slug"), "slug", NAME_MAX) or name
+        ),
         description=bounded_text(data.get("description"), "description", DESCRIPTION_MAX)
         or None,
-        is_public=bool(data.get("isPublic", True)),
+        is_public=flag(data, "isPublic") if "isPublic" in data else True,
     )
     session.add(collection)
 
@@ -176,7 +171,7 @@ def create_collection():
 @bp.patch("/<uuid:collection_id>")
 @require_owner
 def update_collection(collection_id):
-    data = _body()
+    data = json_object()
     session = SessionLocal()
     collection = _load(session, collection_id)
 
@@ -188,7 +183,10 @@ def update_collection(collection_id):
 
     if "slug" in data:
         collection.slug = unique_slug(
-            session, Collection, data["slug"], exclude_id=collection.id
+            session,
+            Collection,
+            bounded_text(data["slug"], "slug", NAME_MAX),
+            exclude_id=collection.id,
         )
 
     if "description" in data:
@@ -197,7 +195,7 @@ def update_collection(collection_id):
         )
 
     if "isPublic" in data:
-        collection.is_public = bool(data["isPublic"])
+        collection.is_public = flag(data, "isPublic")
 
     # After the cover, so one request can choose a cover and frame it.
     if "coverPieceId" in data:
@@ -217,7 +215,7 @@ def update_collection(collection_id):
 @bp.put("/<uuid:collection_id>/pieces")
 @require_owner
 def set_collection_pieces(collection_id):
-    data = _body()
+    data = json_object()
     if "pieceIds" not in data:
         raise ApiError("pieceIds is required.", details={"pieceIds": "required"})
 

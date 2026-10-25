@@ -1,5 +1,6 @@
 """Shared request-parsing helpers for the API blueprints."""
 
+import ipaddress
 import uuid
 
 from flask import current_app, request
@@ -42,6 +43,24 @@ def load_all(session, model, ids: list) -> dict:
     return found
 
 
+def json_object(optional: bool = False) -> dict:
+    """The request's JSON body, which must be an object; {} when optional and absent."""
+    data = request.get_json(silent=True)
+    if data is None and optional:
+        return {}
+    if not isinstance(data, dict):
+        raise ApiError("Expected a JSON object body.")
+    return data
+
+
+def flag(data: dict, field: str) -> bool:
+    """A JSON boolean. bool() would read the string "false" as true."""
+    value = data[field]
+    if not isinstance(value, bool):
+        raise ApiError(f"{field} must be true or false.", details={field: str(value)})
+    return value
+
+
 def _storable(text: str) -> bool:
     # Postgres keeps neither a NUL nor half a surrogate pair. Left to the
     # commit, either is a 500 instead of the 400 below.
@@ -76,7 +95,8 @@ def parse_focal(raw, field: str):
         return None
     try:
         value = int(raw)
-    except (TypeError, ValueError):
+    # OverflowError: JSON's 1e400 arrives as infinity.
+    except (TypeError, ValueError, OverflowError):
         raise ApiError(
             "A focal point is a percentage.", details={field: str(raw)}
         )
@@ -96,7 +116,7 @@ def parse_focal_zoom(raw, field: str, most: int):
         return None
     try:
         value = int(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise ApiError("A zoom is a percentage.", details={field: str(raw)})
     if not FOCAL_ZOOM_MIN <= value <= most:
         raise ApiError(
@@ -110,5 +130,30 @@ def client_ip() -> str | None:
     # X-Real-IP is the caller only behind Railway's edge, which overwrites
     # it. Anywhere Flask is reachable directly, a client can forge it.
     if current_app.config["TRUST_X_REAL_IP"]:
-        return request.headers.get("X-Real-IP") or None
-    return request.remote_addr
+        # No usable header means the request did not come through the edge,
+        # so the socket is the caller. Treating it as unattributable would
+        # leave it uncounted: unlimited guesses at the password.
+        forwarded = _client_key(request.headers.get("X-Real-IP"))
+        if forwarded and _is_address(forwarded):
+            return forwarded
+    return _client_key(request.remote_addr)
+
+
+def _is_address(key: str) -> bool:
+    try:
+        ipaddress.ip_network(key, strict=False)
+    except ValueError:
+        return False
+    return True
+
+
+def _client_key(address: str | None) -> str | None:
+    # One IPv6 host is handed a whole /64; keyed per address, it would step
+    # around every per-client limit by rotating through it.
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return address or None
+    if ip.version == 6 and ip.ipv4_mapped is None:
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False))
+    return address

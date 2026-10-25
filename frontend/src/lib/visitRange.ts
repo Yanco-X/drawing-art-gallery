@@ -3,11 +3,12 @@ import type { VisitRange } from '../types';
 // The API's cap on one query, so a preset never asks for more than it allows.
 export const MAX_RANGE_DAYS = 366;
 
-export const RANGE_PRESETS = [
-  { label: 'Today', days: 1 },
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '12 months', days: 365 },
+export const RANGE_PRESETS: { label: string; range: () => VisitRange }[] = [
+  { label: 'Today', range: () => lastDays(1) },
+  { label: '7 days', range: () => lastDays(7) },
+  { label: 'This month', range: () => thisMonth() },
+  { label: '30 days', range: () => lastDays(30) },
+  { label: '12 months', range: () => lastDays(365) },
 ];
 
 const pad = (part: number) => String(part).padStart(2, '0');
@@ -30,7 +31,12 @@ export const lastDays = (days: number, today = new Date()): VisitRange => {
   return { from: isoDate(from), to: isoDate(today) };
 };
 
-export const rangeDays = (range: VisitRange): number => {
+export const thisMonth = (today = new Date()): VisitRange => ({
+  from: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+  to: isoDate(today),
+});
+
+export const rangeDays =(range: VisitRange): number => {
   const span = parseDay(range.to).getTime() - parseDay(range.from).getTime();
   return Math.round(span / 86_400_000) + 1;
 };

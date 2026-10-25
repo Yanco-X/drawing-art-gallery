@@ -3,7 +3,6 @@ import {
   MAX_RANGE_DAYS,
   RANGE_PRESETS,
   isoDate,
-  lastDays,
   parseDay,
   sameRange,
 } from '../lib/visitRange';
@@ -28,13 +27,13 @@ export const MetricsRange = ({
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
       <div role="group" aria-label="Range" className="flex flex-wrap gap-2">
         {RANGE_PRESETS.map((preset) => {
-          const active = sameRange(range, lastDays(preset.days));
+          const active = sameRange(range, preset.range());
           return (
             <button
-              key={preset.days}
+              key={preset.label}
               type="button"
               aria-pressed={active}
-              onClick={() => onChange(lastDays(preset.days))}
+              onClick={() => onChange(preset.range())}
               // Variants, not plain classes: ICON_BUTTON already sets the
               // border and text colour, and a second plain class loses to it.
               className={`${ICON_BUTTON} aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-on-accent`}

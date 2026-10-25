@@ -164,12 +164,23 @@ What the route enforces:
 | Content-Length | Required | 411 |
 | Body size | 1 KB | 413, before parsing |
 | Per client IP | 60 events a minute | 429 |
+| Visitor ids per client IP | 10 a day | Dropped, 204 |
+| `visit` events per visitor id | 20 a day | Dropped, 204 |
 | Global | 10,000 events an hour | Dropped, 204 |
 
 - **Per IP** uses `AttemptLimiter`, keyed by `client_ip()`: Railway's
   `X-Real-IP` when `TRUST_X_REAL_IP=1`, the socket address otherwise. The
   login limiter reads the same helper. A visitor clicking through pieces as
   fast as they can makes about 30 a minute.
+- **The two daily caps stop fake numbers, not floods.** A browser keeps one
+  visitor id for 13 months and sends one `visit` per tab, so one address
+  minting fresh ids, or one id repeating `visit`, is a script inflating
+  unique visitors or visits. Past the cap the event is dropped with the same
+  204, so the script learns nothing. A household or office behind one
+  address keeps ten distinct visitors a day. `DistinctLimiter` holds the ids
+  in memory only; no address is stored.
+- **IPv6 is keyed by its /64.** One host is handed a whole /64, so per
+  address it could rotate around every per-client limit, sign-in included.
 - **Global** is a fixed-window counter, not `AttemptLimiter`: that keeps a
   list of timestamps per key, and a 10,000-entry list rebuilt per request
   would be expensive exactly when under attack. It stops a many-IP flood
@@ -227,7 +238,8 @@ visitors per device, so they can sum to slightly more than `unique`.
 
 ### The page
 
-- Range presets -- today, 7 days, 30 days, 12 months -- and two native
+- Range presets -- today, 7 days, this month (the default), 30 days,
+  12 months -- and two native
   `<input type="date">` for anything else. The browser's
   `Intl.DateTimeFormat().resolvedOptions().timeZone` is sent as `tz`.
   The preset in force is filled in accent, as the density control's is;

@@ -1,5 +1,5 @@
 -- The account the web app connects as: rows only, no schema changes, and
--- the users table read-only. Run once per database as the account that owns
+-- the users table read-only but for the session token. Run once per database as the account that owns
 -- the tables (sketchyart locally, postgres on Railway), after they exist:
 --
 --   alembic upgrade head
@@ -21,7 +21,10 @@ GRANT USAGE ON SCHEMA public TO yancurations_postgres;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO yancurations_postgres;
 
 -- Only `flask set-owner` writes users, and it runs as the owner account.
+-- The one exception is the session token, which sign-out replaces so that a
+-- copied cookie dies with the session.
 REVOKE INSERT, UPDATE, DELETE ON users FROM yancurations_postgres;
+GRANT UPDATE (session_token) ON users TO yancurations_postgres;
 REVOKE ALL ON alembic_version FROM yancurations_postgres;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public

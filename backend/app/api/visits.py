@@ -58,6 +58,8 @@ def record_event():
         or not agent
         or BOT_AGENT.search(agent)
         or not _target_is_exhibited(event)
+        or not current_app.extensions["visitor_ids_per_client"].allow(client, event.visitor_id)
+        or not _visit_allowed(event)
         or not current_app.extensions["visits_budget"].admit()
     )
     if not ignored:
@@ -102,6 +104,17 @@ def _target_is_exhibited(event: VisitEvent) -> bool:
                 select(Collection.is_public).where(Collection.id == event.collection_id)
             )
         )
+    return True
+
+
+def _visit_allowed(event: VisitEvent) -> bool:
+    if event.kind != "visit":
+        return True
+    per_visitor = current_app.extensions["visits_per_visitor"]
+    key = str(event.visitor_id)
+    if per_visitor.is_blocked(key):
+        return False
+    per_visitor.record(key)
     return True
 
 

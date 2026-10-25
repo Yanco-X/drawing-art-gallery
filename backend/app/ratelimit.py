@@ -77,6 +77,37 @@ class AttemptLimiter:
                 self._windows.pop(key, None)
 
 
+class DistinctLimiter:
+    """At most `limit` distinct values per key in a window, opened by its first value."""
+
+    def __init__(self, limit: int, window: timedelta, max_keys: int = 10_000):
+        self.limit = limit
+        self.window = window
+        self.max_keys = max_keys
+        self._windows: dict[str, tuple[datetime, set]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str | None, value) -> bool:
+        if not key:
+            return True
+        now = _now()
+        with self._lock:
+            held = self._windows.get(key)
+            if held is None or now - held[0] >= self.window:
+                # Re-inserted, so the dict's order is the order windows opened.
+                self._windows.pop(key, None)
+                held = self._windows[key] = (now, set())
+                while len(self._windows) > self.max_keys:
+                    del self._windows[next(iter(self._windows))]
+            values = held[1]
+            if value in values:
+                return True
+            if len(values) >= self.limit:
+                return False
+            values.add(value)
+            return True
+
+
 class WindowCounter:
     """One count shared by every client: a ceiling across all of them."""
 

@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import boto3
 
@@ -43,21 +44,28 @@ def backup_client():
     )
 
 
+def without_password(database_url: str) -> tuple[str, dict[str, str]]:
+    """The URL for argv, and the environment that carries its password instead."""
+    url = urlsplit(database_url)
+    env = dict(os.environ)
+    if url.password is None:
+        return database_url, env
+    user, host = url.netloc.rsplit("@", 1)
+    env["PGPASSWORD"] = unquote(url.password)
+    return urlunsplit(url._replace(netloc=f"{user.split(':', 1)[0]}@{host}")), env
+
+
 def dump_database(destination: str) -> None:
+    # The password never goes in argv: the process table shows it, and a
+    # failure's CalledProcessError prints the whole command into the job log.
+    url, env = without_password(os.environ["BACKUP_DATABASE_URL"])
     # --no-owner and --no-acl let the dump restore into a database whose roles
     # are named differently, which a scratch database always is.
-    subprocess.run(
-        [
-            "pg_dump",
-            "--format=custom",
-            "--no-owner",
-            "--no-acl",
-            "--file",
-            destination,
-            os.environ["BACKUP_DATABASE_URL"],
-        ],
-        check=True,
-    )
+    command = ["pg_dump", "--format=custom", "--no-owner", "--no-acl", "--file", destination, url]
+    try:
+        subprocess.run(command, env=env, check=True)
+    except subprocess.CalledProcessError as error:
+        raise SystemExit(f"pg_dump failed with exit status {error.returncode}.") from None
 
 
 def keys_in(client, bucket: str, prefix: str) -> set[str]:

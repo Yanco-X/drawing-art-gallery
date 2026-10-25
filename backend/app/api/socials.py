@@ -16,10 +16,12 @@ from ..db import SessionLocal
 from ..errors import ApiError
 from ..models import Social
 from ..schemas import social_to_dict
+from .helpers import bounded_text
 
 bp = Blueprint("socials", __name__, url_prefix="/socials")
 
 MAX_SOCIALS = 20
+URL_MAX = 500
 
 
 def _clean_url(raw, index: int) -> str:
@@ -31,7 +33,7 @@ def _clean_url(raw, index: int) -> str:
     lines to take out of the database. A bare domain is assumed to be https,
     which is what pasting one from a browser bar usually means.
     """
-    url = (raw or "").strip()
+    url = raw.strip() if isinstance(raw, str) else ""
     if not url:
         raise ApiError("A social needs a url.", details={f"socials[{index}]": "url"})
 
@@ -55,18 +57,18 @@ def _clean_url(raw, index: int) -> str:
             "A social's url must be http or https.",
             details={f"socials[{index}]": url},
         )
-    return url
+    return _required(url, "url", index, URL_MAX)
 
 
 def _required(value, field: str, index: int, limit: int) -> str:
-    text = (value or "").strip()
+    text = value.strip() if isinstance(value, str) else ""
     if not text:
         raise ApiError(f"A social needs a {field}.", details={f"socials[{index}]": field})
     if len(text) > limit:
         raise ApiError(
             f"That {field} is too long.", details={f"socials[{index}]": field}
         )
-    return text
+    return bounded_text(text, f"socials[{index}].{field}", limit)
 
 
 @bp.get("")

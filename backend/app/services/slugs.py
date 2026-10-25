@@ -25,7 +25,9 @@ def unique_slug(session: Session, model, desired: str, exclude_id=None) -> str:
     afterwards -- renaming a collection should not break a link someone
     already shared. Rename the slug explicitly if you want it moved.
     """
-    base = slugify(desired) or "untitled"
+    # Cut to leave room for a suffix inside the 255-character column; NFKD can
+    # make a slug longer than the name it came from.
+    base = slugify(desired)[:240].strip("-") or "untitled"
     candidate = base
     suffix = 2
     while True:

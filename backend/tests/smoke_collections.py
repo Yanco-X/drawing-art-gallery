@@ -406,6 +406,29 @@ check("and says to restore first", "estore" in res.get_json()["error"],
 client.post(f"/api/pieces/{ids[1]}/restore", headers=OWNER)
 
 
+print("\n== malformed owner bodies answer 400, never 500 ==")
+res = client.post("/api/collections", headers=OWNER, json={"name": "Quoted", "isPublic": "false"})
+check("isPublic as the string \"false\" is refused, not read as true",
+      res.status_code == 400, str(res.status_code))
+res = client.post("/api/collections", headers=OWNER, json={"name": "Long", "slug": "x" * 300})
+check("a slug past the column is refused", res.status_code == 400, str(res.status_code))
+res = client.post("/api/collections", headers=OWNER, json={"name": "ﬀ" * 255})
+check("a name that NFKD lengthens still fits its slug",
+      res.status_code == 201 and len(res.get_json()["slug"]) <= 255, str(res.status_code))
+res = client.post("/api/collections", headers=OWNER, json={"name": "Numbered", "slug": 5})
+check("a non-text slug is read as text", res.status_code == 201, str(res.status_code))
+res = client.post(f"/api/pieces/{ids[1]}/waive", headers=OWNER)
+res = client.post(f"/api/pieces/{ids[1]}/restore", headers=OWNER, json=[1])
+check("a list body to restore is refused", res.status_code == 400, str(res.status_code))
+res = client.post(f"/api/pieces/{ids[1]}/restore", headers=OWNER)
+check("an empty restore still works", res.status_code == 200, str(res.status_code))
+res = client.put(f"/api/pieces/{ids[1]}/collections", headers=OWNER, json=[1])
+check("a list body to set collections is refused", res.status_code == 400, str(res.status_code))
+framed = client.post("/api/collections", headers=OWNER, json={"name": "Framed"}).get_json()
+res = client.patch(f"/api/collections/{framed['id']}", headers=OWNER, json={"coverFocalX": 1e400})
+check("an infinite focal point is refused", res.status_code == 400, str(res.status_code))
+
+
 failed = [c for c in checks if not c[1]]
 print(f"\n{len(checks) - len(failed)}/{len(checks)} checks passed")
 if failed:

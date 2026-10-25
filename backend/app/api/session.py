@@ -5,16 +5,16 @@ Named for the resource rather than for the act, so no shipped string says
 login or auth -- context/AUTH.md section 5.
 """
 
-from flask import Blueprint, current_app, jsonify, request
-from flask_login import login_user, logout_user
+from flask import Blueprint, current_app, jsonify
+from flask_login import current_user, login_user, logout_user
 from sqlalchemy import select
 from werkzeug.security import check_password_hash
 
 from ..auth import is_owner, require_owner
 from ..db import SessionLocal
 from ..errors import ApiError
-from ..models import User
-from .helpers import client_ip
+from ..models import User, new_session_token
+from .helpers import client_ip, json_object
 
 bp = Blueprint("session", __name__, url_prefix="/session")
 
@@ -36,7 +36,9 @@ def sign_in():
     if limiter.is_blocked(client):
         raise ApiError("Too many attempts. Try again later.", status=429)
 
-    password = (request.get_json(silent=True) or {}).get("password") or ""
+    password = json_object(optional=True).get("password")
+    if not isinstance(password, str):
+        password = ""
     owner = SessionLocal().scalars(
         select(User).where(User.role == "owner")
     ).first()
@@ -56,6 +58,11 @@ def sign_in():
 @bp.delete("")
 @require_owner
 def sign_out():
+    # Clearing this browser's cookies is not enough: a copied remember cookie
+    # would stay valid. A new token ends every session, on every device.
+    if current_user.is_authenticated:
+        current_user.session_token = new_session_token()
+        SessionLocal().commit()
     logout_user()
     return jsonify({"role": "visitor"})
 

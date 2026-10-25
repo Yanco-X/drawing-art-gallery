@@ -67,6 +67,9 @@ class LocalStorage:
         path = self._path(prefix.rstrip("/"))
         if not os.path.exists(path):
             return
+        # A prefix can name one object, as the other backends allow: replacing
+        # an image passes its display and thumb keys. rmtree refuses a file.
+        remove = shutil.rmtree if os.path.isdir(path) else os.remove
         # Windows refuses to unlink a file another handle still has open,
         # and Flask's static file serving can hold one until the response is
         # fully written. POSIX has no such restriction. Retry briefly, then
@@ -74,13 +77,13 @@ class LocalStorage:
         # with nothing to point at them.
         for attempt in range(3):
             try:
-                shutil.rmtree(path)
+                remove(path)
                 return
             except OSError:
                 if attempt < 2:
                     time.sleep(0.1 * (attempt + 1))
         try:
-            shutil.rmtree(path)
+            remove(path)
         except OSError as exc:
             logger.warning("orphaned files left at %s: %s", path, exc)
 

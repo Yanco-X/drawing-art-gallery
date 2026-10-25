@@ -58,6 +58,10 @@ class Config:
 
     VISITS_PER_CLIENT_PER_MINUTE = 60
     VISITS_PER_HOUR = 10_000
+    # A browser keeps one visitor id for 13 months and sends one visit per
+    # tab, so past these an event is a script minting traffic.
+    VISITOR_IDS_PER_CLIENT_PER_DAY = 10
+    VISITS_PER_VISITOR_PER_DAY = 20
 
     # Largest request body. Only the image routes raise it, to MAX_UPLOAD_BYTES:
     # a global 60 MB would let anyone post that much JSON at sign-in.
@@ -108,4 +112,8 @@ def production_setting_problems(env: Mapping[str, str]) -> list[str]:
         problems.append("COOKIE_SECURE is not 1")
     if not env.get("STORAGE_BACKEND"):
         problems.append("STORAGE_BACKEND is not set")
+    # Neither value is safe by default: 0 behind the edge puts every caller in
+    # one bucket, 1 without an edge that overwrites the header lets one forge it.
+    if env.get("TRUST_X_REAL_IP") not in ("0", "1"):
+        problems.append("TRUST_X_REAL_IP is not set to 0 or 1")
     return problems

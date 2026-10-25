@@ -13,7 +13,7 @@ from ..schemas import piece_detail_to_dict, piece_to_dict
 from ..services.images import InvalidImage, process_upload
 from ..services.slugs import slugify
 from ..services.tiles import clear_tiles, write_tiles
-from .helpers import bounded_text, parse_focal, parse_focal_zoom, parse_uuid
+from .helpers import bounded_text, json_object, parse_focal, parse_focal_zoom, parse_uuid
 
 bp = Blueprint("pieces", __name__, url_prefix="/pieces")
 
@@ -84,14 +84,22 @@ def _resolve_tags(session, names: list[str]) -> list[Tag]:
     Two uploads introducing the same new tag at once race; the unique
     constraint on tags.slug is what makes that safe rather than lucky.
     """
+    if len(names) > MAX_TAGS:
+        raise ApiError(f"A piece has at most {MAX_TAGS} tags.", details={"tags": str(len(names))})
     tags: list[Tag] = []
     for raw in names:
-        name = (raw or "").strip().lower()
+        if not isinstance(raw, str):
+            raise ApiError("Each tag is text.", details={"tags": str(raw)})
+        name = bounded_text(raw, "tags", TAG_MAX).lower()
         if not name:
             continue
         slug = slugify(name)
         if not slug:
             continue
+        if len(slug) > TAG_MAX:
+            raise ApiError(
+                f"tags must be at most {TAG_MAX} characters.", details={"tags": "too long"}
+            )
         tag = session.scalars(select(Tag).where(Tag.slug == slug)).first()
         if tag is None:
             tag = Tag(name=name, slug=slug)
@@ -107,6 +115,7 @@ FOCAL_ZOOM_MAX = 500
 
 YEAR_MIN, YEAR_MAX = 1900, 2100
 TITLE_MAX, DESCRIPTION_MAX, MEDIUM_MAX, FILENAME_MAX = 255, 4000, 100, 255
+TAG_MAX, MAX_TAGS = 100, 50
 
 
 def _parse_position(raw):
@@ -173,7 +182,7 @@ def _parse_year(raw):
         return None
     try:
         year = int(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise ApiError("year must be a number.", details={"year": raw})
     if not YEAR_MIN <= year <= YEAR_MAX:
         raise ApiError(
@@ -380,9 +389,7 @@ def update_piece(piece_id):
     optional field -- that is an edit, not an omission. The image is replaced
     through PUT .../image.
     """
-    data = request.get_json(silent=True)
-    if not isinstance(data, dict):
-        raise ApiError("Expected a JSON object body.")
+    data = json_object()
 
     session = SessionLocal()
     piece = session.get(Piece, piece_id)
@@ -566,7 +573,7 @@ def restore_piece(piece_id):
     if not piece.is_waived:
         raise ApiError("That piece is not waived.", status=409)
 
-    body = request.get_json(silent=True) or {}
+    body = json_object(optional=True)
     _join_collections(session, piece, body.get("collectionIds"))
     piece.waived_at = None
     session.commit()
@@ -593,7 +600,7 @@ def set_piece_collections(piece_id):
             "Restore this piece before adding it to collections.", status=409
         )
 
-    body = request.get_json(silent=True) or {}
+    body = json_object(optional=True)
     if "collectionIds" not in body:
         raise ApiError(
             "collectionIds is required.", details={"collectionIds": "required"}

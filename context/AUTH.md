@@ -123,7 +123,12 @@ on, and tags are the only candidate the data model has.
 cookie; Flask-Login stores the owner's `session_token` in it, not the id, and
 reloads the row per request through `user_loader`. `flask set-owner`
 replaces the token along with the password, so changing the password ends
-every session, the remember cookie included.
+every session, the remember cookie included. Signing out replaces it too:
+clearing the browser's cookies alone would leave a copied remember cookie
+valid, since nothing in it expires on the server. The cost is that signing
+out on one device signs out every device -- one owner, one token. The app's
+database role may update that one column of `users` and nothing else
+(`scripts/app_role.sql`).
 
 Chosen over JWT because a one-user gallery needs no statelessness, and a
 token in JavaScript is the problem being solved rather than a different
@@ -206,12 +211,20 @@ Five failed attempts per IP per fifteen minutes, held in memory. No
 dependency, no table, and it resets on restart -- acceptable when the thing
 being protected is one password on a site with one user.
 
-**It must fail open on identifying the client.** Behind any reverse proxy,
-`request.remote_addr` is the proxy, so every attempt on earth lands in one
-bucket and a stranger's typos lock the owner out. This needs `ProxyFix`
-reading `X-Forwarded-For`, and that cannot be configured correctly until
-deployment is decided. Until then the limiter counts what it can see and
-never refuses a request it cannot attribute.
+**The client is whoever the edge says, and only the edge.** Behind a reverse
+proxy, `request.remote_addr` is the proxy, so every attempt on earth lands in
+one bucket and a stranger's typos lock the owner out. `client_ip()` reads
+Railway's `X-Real-IP` when `TRUST_X_REAL_IP=1`. A request with no usable
+header (absent, empty, not an address) did not come through the edge, so its
+socket address is the caller and it is counted; it is never let through
+uncounted, which would be unlimited guesses. IPv6 is keyed by its /64.
+
+Neither setting is safe by default -- 0 behind the edge is the shared
+bucket, 1 without an edge that overwrites the header lets a caller pick its
+own key -- so with debug off the app refuses to start until
+`TRUST_X_REAL_IP` is set explicitly. It goes to 1 once the edge is proven to
+overwrite a forged header (`current-feature.md`). The limiter still never
+refuses an empty key; only a misconfigured test client produces one now.
 
 ---
 

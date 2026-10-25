@@ -11,9 +11,9 @@ import { VisitStats } from '../components/VisitStats';
 import { useAsync, useSession } from '../hooks';
 import {
   isValidRange,
-  lastDays,
   previousPeriodLabel,
   rangeDays,
+  thisMonth,
 } from '../lib/visitRange';
 import { fetchVisitSummary } from '../services';
 import type { VisitRange, VisitSummary } from '../types';
@@ -39,7 +39,7 @@ const MetricsSection = ({
 
 const MetricsPage = () => {
   const { role } = useSession();
-  const [range, setRange] = useState<VisitRange>(() => lastDays(30));
+  const [range, setRange] = useState<VisitRange>(() => thisMonth());
   const valid = isValidRange(range);
 
   // Keyed on the two dates: the loader is `useAsync`'s dependency, and a new
