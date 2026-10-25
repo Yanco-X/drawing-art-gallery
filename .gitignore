@@ -29,3 +29,11 @@ context/DEPLOYMENT-NOTES.md
 # churns on every build.
 graphify-out/
 *.graphify-bak
+
+# Third-party skills installed with `npx skills add`, bundling licensed music.
+# No trailing slash on the Claude Code entry: it is a symlink, which a
+# directory pattern does not match.
+.agents/
+.claude/skills/brag
+skills-lock.json
+brag-output/
